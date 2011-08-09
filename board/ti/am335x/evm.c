@@ -464,7 +464,6 @@ int board_init(void)
 	/* Configure the i2c0 pin mux */
 	enable_i2c0_pin_mux();
 
-#if 0
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 
 	/* Check if baseboard eeprom is available */
@@ -510,13 +509,6 @@ int board_init(void)
 			(daughter_board_id == IPP_DAUGHTER_BOARD))
 		configure_evm_pin_mux(IPP_DAUGHTER_BOARD, PROFILE_NONE,
 							dghtr_brd_valid);
-	else
-		/*
-		printf("AM335X: Invalid configuration. Board %s, sku %s, "
-				"evm Id %d\n", brd_name, sku_config,
-				daughter_board_id);
-		*/
-#endif
 #ifdef CONFIG_AM335X_MIN_CONFIG
 	board_min_init();
 #else
