@@ -174,21 +174,11 @@
 		"bootm ${loadaddr}\0" \
 
 #define CONFIG_BOOTCOMMAND \
-	"if mmc init 0; then " \
-		"if run loadbootscript; then " \
-			"run bootscript; " \
-		"else " \
-			"if run mmc_load_uimage; then " \
-				"run mmc_boot; " \
-			"else " \
-				"run nand_boot; " \
-			"fi; " \
-		"fi; " \
-	"else " \
-		"run nand_boot; " \
-	"fi"
-
-
+	"setenv bootargs 'console=ttyO0,115200n8 mem=128M root=/dev/ram rw initrd=0x82000000,16MB ramdisk_size=65536 earlyprintk init=/bin/ash'; "\
+	"mmc init;" \
+	"fatload mmc 0 82000000 ramdisk.ext2.gz;" \
+	"fatload mmc 0 81000000 uImage;" \
+	"bootm 81000000" \
 
 #endif /* CONFIG_AM335X_MIN_CONFIG */
 
@@ -196,7 +186,7 @@
 #define CONFIG_SYS_GBL_DATA_SIZE	128	/* size in bytes reserved for
 						   initial data */
 #define CONFIG_MISC_INIT_R		1
-#define CONFIG_SYS_AUTOLOAD		"yes"
+#define CONFIG_SYS_AUTOLOAD		"no"
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_ECHO
 

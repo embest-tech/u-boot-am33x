@@ -217,26 +217,28 @@ static void Data_Macro_Config(int dataMacroNum)
 static void Cmd_Macro_Config(void)
 {
 	__raw_writel(DDR2_RATIO, CMD0_CTRL_SLAVE_RATIO_0);
-	__raw_writel(CMD_FORCE, CMD0_CTRL_SLAVE_RATIO_0);
-	__raw_writel(CMD_DELAY, CMD0_CTRL_SLAVE_FORCE_0);
+	__raw_writel(CMD_FORCE, CMD0_CTRL_SLAVE_FORCE_0);
+	__raw_writel(CMD_DELAY, CMD0_CTRL_SLAVE_DELAY_0);
 	__raw_writel(DDR2_DLL_LOCK_DIFF, CMD0_DLL_LOCK_DIFF_0);
 	__raw_writel(DDR2_INVERT_CLKOUT, CMD0_INVERT_CLKOUT_0);
 
 	__raw_writel(DDR2_RATIO, CMD1_CTRL_SLAVE_RATIO_0);
-	__raw_writel(CMD_FORCE, CMD1_CTRL_SLAVE_RATIO_0);
-	__raw_writel(CMD_DELAY, CMD1_CTRL_SLAVE_FORCE_0);
+	__raw_writel(CMD_FORCE, CMD1_CTRL_SLAVE_FORCE_0);
+	__raw_writel(CMD_DELAY, CMD1_CTRL_SLAVE_DELAY_0);
 	__raw_writel(DDR2_DLL_LOCK_DIFF, CMD1_DLL_LOCK_DIFF_0);
 	__raw_writel(DDR2_INVERT_CLKOUT, CMD1_INVERT_CLKOUT_0);
 
 	__raw_writel(DDR2_RATIO, CMD2_CTRL_SLAVE_RATIO_0);
-	__raw_writel(CMD_FORCE, CMD2_CTRL_SLAVE_RATIO_0);
-	__raw_writel(CMD_DELAY, CMD2_CTRL_SLAVE_FORCE_0);
+	__raw_writel(CMD_FORCE, CMD2_CTRL_SLAVE_FORCE_0);
+	__raw_writel(CMD_DELAY, CMD2_CTRL_SLAVE_DELAY_0);
 	__raw_writel(DDR2_DLL_LOCK_DIFF, CMD2_DLL_LOCK_DIFF_0);
 	__raw_writel(DDR2_INVERT_CLKOUT, CMD2_INVERT_CLKOUT_0);
 }
 
 static void config_emif(void)
 {
+	u32 i;
+
 	__raw_writel(__raw_readl(VTP0_CTRL_REG) | VTP_CTRL_ENABLE,
 			VTP0_CTRL_REG);
 	__raw_writel(__raw_readl(VTP0_CTRL_REG) & (~VTP_CTRL_START_EN),
@@ -256,8 +258,9 @@ static void config_emif(void)
 			EMIF4_0_IODFT_TLGC); /* Start Functional Mode */
 
 	/*Program EMIF0 CFG Registers*/
-	__raw_writel(EMIF_PHYCFG, EMIF4_0_DDR_PHY_CTRL_1);
-	__raw_writel(EMIF_PHYCFG, EMIF4_0_DDR_PHY_CTRL_1_SHADOW);
+	__raw_writel(EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_1);
+	__raw_writel(EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_1_SHADOW);
+	__raw_writel(EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_2);
 	__raw_writel(EMIF_TIM1, EMIF4_0_SDRAM_TIM_1);
 	__raw_writel(EMIF_TIM1, EMIF4_0_SDRAM_TIM_1_SHADOW);
 	__raw_writel(EMIF_TIM2, EMIF4_0_SDRAM_TIM_2);
@@ -267,15 +270,24 @@ static void config_emif(void)
 
 	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
 	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG2);
-	__raw_writel(EMIF_SDRAM, EMIF4_0_SDRAM_REF_CTRL);
-	__raw_writel(EMIF_SDRAM, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
 
 	/* __raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL);
 	__raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL_SHD); */
-	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL);
-	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
+	__raw_writel(0x00004650, EMIF4_0_SDRAM_REF_CTRL);
+	__raw_writel(0x00004650, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
+
+	for(i = 0; i<10000; i++)
+	{
+
+	}
+
 	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
 	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG2);
+
+	/* __raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL);
+	__raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL_SHD); */
+	__raw_writel(EMIF_SDREF,EMIF4_0_SDRAM_REF_CTRL);
+	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
 }
 
 static void config_am335x_mddr(void)
@@ -301,7 +313,7 @@ static void config_am335x_mddr(void)
 	__raw_writel(__raw_readl(DDR_IO_CTRL) | 0x10000000, DDR_IO_CTRL);
 	__raw_writel(__raw_readl(DDR_CKE_CTRL) | 0x00000001, DDR_CKE_CTRL);
 
-	config_emif();
+	config_emif();	/* vtp enable is here */
 }
 
 static void config_am335x_ddr2(void)
@@ -317,6 +329,9 @@ static void config_am335x_ddr2(void)
 
 	__raw_writel(PHY_RANK0_DELAY, DATA0_RANK0_DELAYS_0);
 	__raw_writel(PHY_RANK0_DELAY, DATA1_RANK0_DELAYS_0);
+
+
+	__raw_writel(__raw_readl(DDR_IO_CTRL) | 0x10000000, DDR_IO_CTRL);
 
 	__raw_writel(__raw_readl(DDR_CKE_CTRL) | 0x00000001, DDR_CKE_CTRL);
 
@@ -440,6 +455,7 @@ int board_init(void)
 	/* Configure the i2c0 pin mux */
 	enable_i2c0_pin_mux();
 
+#if 0
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 
 	/* Check if baseboard eeprom is available */
@@ -491,7 +507,7 @@ int board_init(void)
 				"evm Id %d\n", brd_name, sku_config,
 				daughter_board_id);
 		*/
-
+#endif
 #ifdef CONFIG_AM335X_MIN_CONFIG
 	board_min_init();
 #else
