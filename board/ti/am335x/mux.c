@@ -605,4 +605,5 @@ void enable_i2c0_pin_mux(void)
 {
 	configure_module_pin_mux(uart0_pin_mux);
 	configure_module_pin_mux(mmc0_pin_mux);
+	configure_module_pin_mux(rgmii1_pin_mux);
 }
