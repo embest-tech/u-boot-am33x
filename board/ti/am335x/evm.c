@@ -540,25 +540,25 @@ int board_late_init(void){
 int checkboard(void)
 {
 	if (daughter_board_id == GP_DAUGHTER_BOARD)
-		printf("board: General purpose daughter card connected");
+		printf("board: General purpose daughter card connected\n");
 	else if (daughter_board_id == IA_DAUGHTER_BOARD)
-		printf("board: IA motor control daughter card connected");
+		printf("board: IA motor control daughter card connected\n");
 	else if (daughter_board_id == IPP_DAUGHTER_BOARD)
-		printf("board: IPP daughter card connected");
+		printf("board: IPP daughter card connected\n");
 	else
-		printf("board: No daughter card connected");
+		printf("board: No daughter card connected\n");
 
 #ifdef CONFIG_AM335X_MIN_CONFIG
 #ifdef CONFIG_NAND
 	if ((daughter_board_id == GP_DAUGHTER_BOARD) &&
 		(((1L << evm_profile)  == PROFILE_2) ||
 			((1L << evm_profile) == PROFILE_3)))
-		printf("NAND boot: Profile setting is wrong!!");
+		printf("NAND boot: Profile setting is wrong!!\n");
 #endif
 #ifdef CONFIG_NOR
 	if ((daughter_board_id != GP_DAUGHTER_BOARD) ||
 		((1L << evm_profile) != PROFILE_3))
-		printf("NOR boot: Profile setting is wrong!!");
+		printf("NOR boot: Profile setting is wrong!!\n");
 #endif
 #endif
 	return 0;

@@ -46,7 +46,7 @@
 #define CONFIG_NAND		1
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"verify=yes\0" \
-	"bootcmd=nand read 0x81000000 0x20000 0x40000; go 0x81000000\0"
+	"bootcmd=nand read 0x81000000 0x80000 0x40000; go 0x81000000\0"
 #endif
 
 #if defined(CONFIG_NOR_BOOT)
