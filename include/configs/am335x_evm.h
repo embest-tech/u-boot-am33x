@@ -267,7 +267,7 @@
 #ifdef CONFIG_NAND
 #define CONFIG_CMD_NAND
 #define CONFIG_NAND_TI81XX
-#define GPMC_NAND_ECC_LP_x8_LAYOUT	1
+#define GPMC_NAND_ECC_LP_x16_LAYOUT	1
 #define NAND_BASE			(0x08000000)
 #define CONFIG_SYS_NAND_ADDR		NAND_BASE	/* physical address */
 							/* to access nand */
