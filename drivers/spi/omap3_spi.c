@@ -103,10 +103,10 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
 #ifdef CONFIG_TI81XX
 #ifndef CONFIG_AM335X
 	if ((bus == 0) && (cs > 3)) {
-		ds->data_lines_reversed = 1;
 #else
 	if (((bus == 0) && (cs > 1))
 			|| ((bus == 1) && (cs > 1))) {
+		ds->data_lines_reversed = 1;
 #endif
 #else
 	if (((bus == 0) && (cs > 3)) ||
