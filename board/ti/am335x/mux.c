@@ -604,7 +604,7 @@ static void set_evm_pin_mux(struct evm_pin_mux *pin_mux,
 void configure_evm_pin_mux(unsigned char dghtr_brd_id, unsigned short
 		profile, unsigned char daughter_board_flag)
 {
-	if (dghtr_brd_id > BASE_BOARD_ONLY)
+	if (dghtr_brd_id > BASE_BOARD)
 		return;
 
 	set_evm_pin_mux(am335x_evm_pin_mux[dghtr_brd_id], profile,
