@@ -110,7 +110,7 @@
 	"nand_root_fs_type=jffs2\0" \
 	"spi_root_fs_type=jffs2\0" \
 	"nor_root_fs_type=jffs2\0" \
-	"nand_src_addr=0x280000\0" \
+	"nand_src_addr=0x2e0000\0" \
 	"spi_src_addr=0x62000\0" \
 	"nor_src_addr=0x08080000\0" \
 	"nand_img_siz=0x440000\0" \
