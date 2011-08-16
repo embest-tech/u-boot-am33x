@@ -387,7 +387,7 @@ int board_min_init(void)
 	u32 uart_base = DEFAULT_UART_BASE;
 
 	/* IA Motor Control Board has default console on UART3*/
-	if (daughter_board_id == IA_DAUGHTER_BOARD) {
+	if (board_id == IA_BOARD) {
 		uart_base = UART3_BASE;
 	}
 

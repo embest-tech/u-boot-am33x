@@ -614,8 +614,12 @@ void configure_evm_pin_mux(unsigned char dghtr_brd_id, unsigned short
 void enable_i2c0_pin_mux(void)
 {
 	configure_module_pin_mux(i2c0_pin_mux);
+#ifdef CONFIG_SPI
 	configure_module_pin_mux(spi0_pin_mux);
+#endif
 	configure_module_pin_mux(uart0_pin_mux);
+#ifdef CONFIG_NAND
 	configure_module_pin_mux(nand_pin_mux);
+#endif
 	//configure_module_pin_mux(rgmii1_pin_mux);
 }
