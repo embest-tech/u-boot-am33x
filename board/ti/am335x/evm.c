@@ -113,8 +113,8 @@ struct am335x_baseboard_id {
 
 static struct am335x_baseboard_id header;
 extern void cpsw_eth_set_mac_addr(const u_int8_t *addr);
-unsigned char daughter_board_connected;
-int board_id = BASE_BOARD;
+static unsigned char daughter_board_connected = FALSE;
+static volatile int board_id = BASE_BOARD;
 
 static void init_timer(void)
 {
@@ -363,6 +363,7 @@ static void detect_daughter_board(void)
 		return;
 	} else {
 		printf("Found a daughter card connected\n");
+		daughter_board_connected = TRUE;
 	}
 }
 
@@ -443,6 +444,7 @@ struct serial_device *default_serial_console(void)
 int board_init(void)
 {
 	/* Configure the i2c0 pin mux */
+#if (CONFIG_AM335X_USE_EEPROM_DATA == 1)
 	enable_i2c0_pin_mux();
 
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
@@ -485,8 +487,43 @@ int board_init(void)
 		printf("Did not find a recognized configuration, "
 			"assuming just a base board\n");
 	}
-		
+
 	configure_evm_pin_mux(board_id, profile, daughter_board_connected);
+
+#else
+
+	header.mac_addr[0][0] = 00;
+	header.mac_addr[0][1] = 11;
+	header.mac_addr[0][2] = 22;
+	header.mac_addr[0][3] = 33;
+	header.mac_addr[0][4] = 44;
+	header.mac_addr[0][5] = 55;
+
+#if (CONFIG_AM335X_EVM_IS_LOW_COST_EVM == 1)
+	board_id = BASE_BOARD;
+	configure_evm_pin_mux(BASE_BOARD, 1 << CONFIG_AM335X_EVM_IN_PROFILE,
+						CONFIG_AM335X_EVM_DB_STATUS);
+#endif
+
+#if (CONFIG_AM335X_EVM_IS_GEN_PURP_EVM == 1)
+	board_id = GP_BOARD;
+	configure_evm_pin_mux(GP_BOARD, 1 << CONFIG_AM335X_EVM_IN_PROFILE,
+						CONFIG_AM335X_EVM_DB_STATUS);
+#endif
+
+#if (CONFIG_AM335X_EVM_IS_IA_MTR_CTRL_EVM == 1)
+	board_id = IA_BOARD;
+	configure_evm_pin_mux(IA_BOARD, 1 << CONFIG_AM335X_EVM_IN_PROFILE,
+						CONFIG_AM335X_EVM_DB_STATUS);
+#endif
+
+#if (CONFIG_AM335X_EVM_IS_IP_PHN_EVM == 1)
+	board_id = IPP_BOARD;
+	configure_evm_pin_mux(IPP_BOARD, 1 << CONFIG_AM335X_EVM_IN_PROFILE,
+						CONFIG_AM335X_EVM_DB_STATUS);
+#endif
+
+#endif
 
 #ifdef CONFIG_AM335X_MIN_CONFIG
 	board_min_init();

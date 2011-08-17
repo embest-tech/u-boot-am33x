@@ -15,6 +15,46 @@
 
 #define CONFIG_AM335X_HSMMC_INSTANCE	0	/* 0 - MMC0, 1 - MMC1 */
 
+/*
+ * 1 - Read from EEPROM & setup EVM configuration
+ * 0 - Setup EVM configuration using CONFIG_EVM_IS_<xxxx> option
+*/
+#define CONFIG_AM335X_USE_EEPROM_DATA		0
+
+/*
+ * Below options will be in effect iff CONFIG_AM335X_USE_EEPROM_DATA == 0
+*/
+
+/*
+ * Manual EVM Configuration
+ * 0 - Low Cost EVM
+ * 1 - General Purpose EVM
+ * 2 - IA Motor Control EVM
+ * 3 - IP-Phone EVM
+*/
+#define CONFIG_AM335X_EVM_IS_LOW_COST_EVM	0
+#define CONFIG_AM335X_EVM_IS_GEN_PURP_EVM	1
+#define CONFIG_AM335X_EVM_IS_IA_MTR_CTRL_EVM	0
+#define CONFIG_AM335X_EVM_IS_IP_PHN_EVM		0
+
+/*
+ * Profile to set
+ * Low Cost EVM 	- No Profile
+ * General Purpose EVM	- 0 - 7
+ * IA Motor Control EVM	- 0 Only
+ * IP-Phone EVM		- No Profile
+*/
+#define CONFIG_AM335X_EVM_IN_PROFILE		0
+
+/*
+ * Daughter Board Status
+ *
+ * 0 - Absent
+ * 1 - Present
+*/
+#define CONFIG_AM335X_EVM_DB_STATUS		1
+
+
 /* In the 1st stage we have just 110K, so cut down wherever possible */
 #ifdef CONFIG_AM335X_MIN_CONFIG
 #define CONFIG_CMD_MEMORY	/* for mtest */
@@ -182,6 +222,54 @@
 	"bootm 81000000" \
 
 #endif /* CONFIG_AM335X_MIN_CONFIG */
+
+
+/*
+ * Setup EVM config priority
+ * This will be in effect iff CONFIG_AM335X_USE_EEPROM_DATA == 0
+ * Low Cost EVM - Top priority
+ * GP EVM - Next
+ * IA EVM - NExt
+ * IP Ph - Next
+*/
+#if (CONFIG_AM335X_USE_EEPROM_DATA == 1)
+	#define CONFIG_AM335X_EVM_IS_LOW_COST_EVM	0
+	#define CONFIG_AM335X_EVM_IS_GEN_PURP_EVM	0
+	#define CONFIG_AM335X_EVM_IS_IA_MTR_CTRL_EVM	0
+	#define CONFIG_AM335X_EVM_IS_IP_PHN_EVM		0
+
+	#define CONFIG_AM335X_EVM_IN_PROFILE		0
+#endif
+
+/* setup for Low Cost evm */
+#if (CONFIG_AM335X_EVM_IS_LOW_COST_EVM == 1)
+	#define CONFIG_AM335X_EVM_IN_PROFILE		0
+	#define CONFIG_AM335X_EVM_IDB_STATUS		0
+
+	#define CONFIG_AM335X_EVM_IS_GEN_PURP_EVM	0
+	#define CONFIG_AM335X_EVM_IS_IA_MTR_CTRL_EVM	0
+	#define CONFIG_AM335X_EVM_IS_IP_PHN_EVM		0
+#endif
+
+/* setup for GP evm */
+#if (CONFIG_AM335X_EVM_IS_GEN_PURP_EVM == 1)
+#if ( (CONFIG_AM335X_EVM_IN_PROFILE < 0) || (CONFIG_AM335X_EVM_IN_PROFILE > 7) )
+	#define CONFIG_AM335X_EVM_IN_PROFILE		0
+#endif
+	#define CONFIG_AM335X_EVM_IS_IA_MTR_CTRL_EVM	0
+	#define CONFIG_AM335X_EVM_IS_IP_PHN_EVM		0
+#endif
+
+/* setup for IA evm */
+#if (CONFIG_AM335X_EVM_IS_IA_MTR_CTRL_EVM == 1)
+	#define CONFIG_AM335X_EVM_IN_PROFILE		0
+	#define CONFIG_AM335X_EVM_IS_IP_PHN_EVM		0
+#endif
+
+/* setup for IP Phone evm */
+#if (CONFIG_AM335X_EVM_IS_IP_PHN_EVM == 1)
+	#define CONFIG_AM335X_EVM_IN_PROFILE		0
+#endif
 
 #define CONFIG_DISPLAY_BOARDINFO
 #define CONFIG_SYS_GBL_DATA_SIZE	128	/* size in bytes reserved for
