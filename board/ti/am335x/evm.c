@@ -214,6 +214,19 @@ static void Cmd_Macro_Config(void)
 	__raw_writel(DDR2_INVERT_CLKOUT, CMD2_INVERT_CLKOUT_0);
 }
 
+static void config_vtp(void)
+{
+	__raw_writel(__raw_readl(VTP0_CTRL_REG) | VTP_CTRL_ENABLE,
+			VTP0_CTRL_REG);
+	__raw_writel(__raw_readl(VTP0_CTRL_REG) & (~VTP_CTRL_START_EN),
+			VTP0_CTRL_REG);
+	__raw_writel(__raw_readl(VTP0_CTRL_REG) | VTP_CTRL_START_EN,
+			VTP0_CTRL_REG);
+
+	/* Poll for READY */
+	while ((__raw_readl(VTP0_CTRL_REG) & VTP_CTRL_READY) != VTP_CTRL_READY);
+}
+
 static void config_emif(void)
 {
 	u32 i;
@@ -269,6 +282,42 @@ static void config_emif(void)
 	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
 }
 
+static void config_emif_ddr2(void)
+{
+	u32 i;
+
+	/*Program EMIF0 CFG Registers*/
+	__raw_writel(EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_1);
+	__raw_writel(EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_1_SHADOW);
+	__raw_writel(EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_2);
+	__raw_writel(EMIF_TIM1, EMIF4_0_SDRAM_TIM_1);
+	__raw_writel(EMIF_TIM1, EMIF4_0_SDRAM_TIM_1_SHADOW);
+	__raw_writel(EMIF_TIM2, EMIF4_0_SDRAM_TIM_2);
+	__raw_writel(EMIF_TIM2, EMIF4_0_SDRAM_TIM_2_SHADOW);
+	__raw_writel(EMIF_TIM3, EMIF4_0_SDRAM_TIM_3);
+	__raw_writel(EMIF_TIM3, EMIF4_0_SDRAM_TIM_3_SHADOW);
+
+	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
+	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG2);
+
+	/* __raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL);
+	__raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL_SHD); */
+	__raw_writel(0x00004650, EMIF4_0_SDRAM_REF_CTRL);
+	__raw_writel(0x00004650, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
+
+	for (i = 0; i < 5000; i++) {
+
+	}
+
+	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
+	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG2);
+
+	/* __raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL);
+	__raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL_SHD); */
+	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL);
+	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
+}
+
 static void config_am335x_mddr(void)
 {
 	int data_macro_0 = 0;
@@ -301,6 +350,8 @@ static void config_am335x_ddr2(void)
 	int data_macro_1 = 1;
 	enable_ddr_clocks();
 
+	config_vtp();
+
 	Cmd_Macro_Config();
 
 	Data_Macro_Config(data_macro_0);
@@ -309,12 +360,16 @@ static void config_am335x_ddr2(void)
 	__raw_writel(PHY_RANK0_DELAY, DATA0_RANK0_DELAYS_0);
 	__raw_writel(PHY_RANK0_DELAY, DATA1_RANK0_DELAYS_0);
 
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD0_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD1_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD2_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA0_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA1_IOCTRL);
 
 	__raw_writel(__raw_readl(DDR_IO_CTRL) | 0x10000000, DDR_IO_CTRL);
-
 	__raw_writel(__raw_readl(DDR_CKE_CTRL) | 0x00000001, DDR_CKE_CTRL);
 
-	config_emif();
+	config_emif_ddr2();
 }
 
 static void config_am335x_ddr(void)
