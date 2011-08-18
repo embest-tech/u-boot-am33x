@@ -201,7 +201,7 @@ void per_pll_config(void)
 	clksel = clksel | ((PERPLL_M << 0x8) | PERPLL_N);
 	__raw_writel(clksel, CM_CLKSEL_DPLL_PER);
 
-	div_m2 = div_m2 & ~0x1f;
+	div_m2 = div_m2 & ~0x7f;
 	div_m2 = div_m2 | PERPLL_M2;
 	__raw_writel(div_m2, CM_DIV_M2_DPLL_PER);
 
@@ -220,22 +220,23 @@ void ddr_pll_config(void)
 	div_m2 = __raw_readl(CM_DIV_M2_DPLL_DDR);
 
 	/* Set the PLL to bypass Mode */
-	__raw_writel(PLL_BYPASS_MODE, CM_CLKMODE_DPLL_DDR);
+	clkmode = (clkmode & 0xfffffff8) | 0x00000004;
+	__raw_writel(clkmode, CM_CLKMODE_DPLL_DDR);
 
-	while(__raw_readl(CM_IDLEST_DPLL_DDR) != 0x00000100);
+	while ((__raw_readl(CM_IDLEST_DPLL_DDR) & 0x00000100) != 0x00000100);
 
 	clksel = clksel & (~0x7ffff);
 	clksel = clksel | ((DDRPLL_M << 0x8) | DDRPLL_N);
 	__raw_writel(clksel, CM_CLKSEL_DPLL_DDR);
 
-	div_m2 = div_m2 & ~0x1f;
+	div_m2 = div_m2 & 0xFFFFFFE0;
 	div_m2 = div_m2 | DDRPLL_M2;
 	__raw_writel(div_m2, CM_DIV_M2_DPLL_DDR);
 
-	clkmode = clkmode | 0x7;
+	clkmode = (clkmode & 0xfffffff8) | 0x7;
 	__raw_writel(clkmode, CM_CLKMODE_DPLL_DDR);
 
-	while(__raw_readl(CM_IDLEST_DPLL_DDR) != 0x1);
+	while ((__raw_readl(CM_IDLEST_DPLL_DDR) & 0x00000001) != 0x1);
 }
 
 void enable_ddr_clocks(void)
