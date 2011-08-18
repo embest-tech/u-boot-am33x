@@ -344,32 +344,10 @@ static void config_am335x_mddr(void)
 	config_emif();	/* vtp enable is here */
 }
 
+void DDR2_EMIF_Config(void);
 static void config_am335x_ddr2(void)
 {
-	int data_macro_0 = 0;
-	int data_macro_1 = 1;
-	enable_ddr_clocks();
-
-	config_vtp();
-
-	Cmd_Macro_Config();
-
-	Data_Macro_Config(data_macro_0);
-	Data_Macro_Config(data_macro_1);
-
-	__raw_writel(PHY_RANK0_DELAY, DATA0_RANK0_DELAYS_0);
-	__raw_writel(PHY_RANK0_DELAY, DATA1_RANK0_DELAYS_0);
-
-	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD0_IOCTRL);
-	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD1_IOCTRL);
-	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD2_IOCTRL);
-	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA0_IOCTRL);
-	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA1_IOCTRL);
-
-	__raw_writel(__raw_readl(DDR_IO_CTRL) | 0x10000000, DDR_IO_CTRL);
-	__raw_writel(__raw_readl(DDR_CKE_CTRL) | 0x00000001, DDR_CKE_CTRL);
-
-	config_emif_ddr2();
+	DDR2_EMIF_Config();
 }
 
 static void config_am335x_ddr(void)
