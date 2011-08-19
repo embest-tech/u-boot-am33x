@@ -632,8 +632,7 @@ int checkboard(void)
 	}
 #endif
 
- #endif
-
+#if 0
 	printf("Base Board EEPROM Data\n");
 	valPtr = (unsigned char *)&header;
 	for(cntr = 0; cntr < sizeof(header); cntr++) {
@@ -646,10 +645,11 @@ int checkboard(void)
 
 	printf("Board identification EEPROM contents:\n");
 	printf("\tBoard id %x, profile %x\n", board_id, profile);
-	printf("\tBoard name:		%8s\n", header.name);
-	printf("\tBoard version:	%4s\n", header.version);
-	printf("\tBoard serial:		%12s\n", header.serial);
-	printf("\tBoard config:		%6s\n", header.config);
+	printf("\tBoard name   : %.8s\n", header.name);
+	printf("\tBoard version: %.4s\n", header.version);
+	printf("\tBoard serial : %.12s\n", header.serial);
+	printf("\tBoard config : %.6s\n\n", header.config);
+#endif
 
 	return 0;
 }
