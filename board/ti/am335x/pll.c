@@ -28,7 +28,7 @@
 #define PLL_LOCK_MODE	0x7
 #define PLL_MULTIPLIER_SHIFT	 8
 
-void interface_clocks_enable(void)
+static void interface_clocks_enable(void)
 {
 	/* Enable all the Interconnect Modules */
 	__raw_writel(PRCM_MOD_EN, CM_PER_L3_CLKCTRL);
@@ -50,7 +50,7 @@ void interface_clocks_enable(void)
 	while (__raw_readl(CM_PER_L4HS_CLKCTRL) != PRCM_MOD_EN);
 }
 
-void power_domain_transition_enable(void)
+static void power_domain_transition_enable(void)
 {
 	/*
 	 * Force power domain wake up transition
@@ -71,7 +71,7 @@ void power_domain_transition_enable(void)
 /*
  * Enable the module clock and the power domain for required peripherals
  */
-void per_clocks_enable(void)
+static void per_clocks_enable(void)
 {
 	/* Enable the module clock */
 	__raw_writel(PRCM_MOD_EN, CM_PER_TIMER2_CLKCTRL);
@@ -119,7 +119,7 @@ void per_clocks_enable(void)
 	while (__raw_readl(CM_PER_SPI1_CLKCTRL) != PRCM_MOD_EN);
 }
 
-void mpu_pll_config(void)
+static void mpu_pll_config(void)
 {
 	u32 clkmode, clksel, div_m2, idlest_dpll;
 
@@ -146,7 +146,7 @@ void mpu_pll_config(void)
 	while(__raw_readl(CM_IDLEST_DPLL_MPU) != 0x1);
 }
 
-void core_pll_config(void)
+static void core_pll_config(void)
 {
 	u32 clkmode, clksel, div_m4, div_m5, div_m6, idlest_dpll;
 
@@ -184,7 +184,7 @@ void core_pll_config(void)
 	while(__raw_readl(CM_IDLEST_DPLL_CORE) != 0x1);
 }
 
-void per_pll_config(void)
+static void per_pll_config(void)
 {
 	u32 clkmode, clksel, div_m2, idlest_dpll;
 
@@ -211,7 +211,7 @@ void per_pll_config(void)
 	while(__raw_readl(CM_IDLEST_DPLL_PER) != 0x1);
 }
 
-void ddr_pll_config(void)
+static void ddr_pll_config(void)
 {
 	u32 clkmode, clksel, div_m2, idlest_dpll;
 

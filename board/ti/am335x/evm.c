@@ -322,6 +322,7 @@ static void config_am335x_mddr(void)
 {
 	int data_macro_0 = 0;
 	int data_macro_1 = 1;
+
 	enable_ddr_clocks();
 
 	Cmd_Macro_Config();
@@ -347,7 +348,35 @@ static void config_am335x_mddr(void)
 void DDR2_EMIF_Config(void);
 static void config_am335x_ddr2(void)
 {
+#if 1
 	DDR2_EMIF_Config();
+#else
+	int data_macro_0 = 0;
+	int data_macro_1 = 1;
+
+	enable_ddr_clocks();
+
+	config_vtp();
+
+	Cmd_Macro_Config();
+
+	Data_Macro_Config(data_macro_0);
+	Data_Macro_Config(data_macro_1);
+
+	__raw_writel(PHY_RANK0_DELAY, DATA0_RANK0_DELAYS_0);
+	__raw_writel(PHY_RANK0_DELAY, DATA1_RANK0_DELAYS_0);
+
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD0_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD1_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD2_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA0_IOCTRL);
+	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA1_IOCTRL);
+
+	__raw_writel(__raw_readl(DDR_IO_CTRL) | 0x10000000, DDR_IO_CTRL);
+	__raw_writel(__raw_readl(DDR_CKE_CTRL) | 0x00000001, DDR_CKE_CTRL);
+
+	config_emif_ddr2();
+#endif
 }
 
 static void config_am335x_ddr(void)
@@ -392,10 +421,10 @@ static void detect_daughter_board(void)
 {
 	/* Check if daughter board is conneted */
 	if (i2c_probe(I2C_DAUGHTER_BOARD_ADDR)) {
-		printf("No daughter card present\n");	
+		//printf("No daughter card present\n");
 		return;
 	} else {
-		printf("Found a daughter card connected\n");
+		//printf("Found a daughter card connected\n");
 		daughter_board_connected = TRUE;
 	}
 }
@@ -476,35 +505,32 @@ struct serial_device *default_serial_console(void)
 
 int board_init(void)
 {
+
 	/* Configure the i2c0 pin mux */
-#if (CONFIG_AM335X_USE_EEPROM_DATA == 1)
 	enable_i2c0_pin_mux();
 
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 
+#if (CONFIG_AM335X_USE_EEPROM_DATA == 1)
 	/* Check if baseboard eeprom is available */
 	if (i2c_probe(I2C_BASE_BOARD_ADDR)) {
-		printf("Could not probe the EEPROM; something fundamentally "
-			"wrong on the I2C bus.\n");
+		//printf("Could not probe the EEPROM; something fundamentally "
+		//	"wrong on the I2C bus.\n");
 		return 1;
 	}
 
 	/* read the eeprom using i2c */
 	if (i2c_read(I2C_BASE_BOARD_ADDR, 0, 1, (uchar *)&header,
 							sizeof(header))) {
-		printf("Could not read the EEPROM; something fundamentally"
-			" wrong on the I2C bus.\n");
+		//printf("Could not read the EEPROM; something fundamentally"
+		//	" wrong on the I2C bus.\n");
 		return 1;
 	}
 
-	if (header.magic != 0xAA5533EE)
-		printf("Incorrect magic number in EEPROM\n");
-
-	printf("Board identification EEPROM contents:\n");
-	printf("\tBoard name:		%s\n", header.name);
-	printf("\tBoard version:	%s\n", header.version);
-	printf("\tBoard serial:		%s\n", header.serial);
-	printf("\tBoard config:		%s\n", header.config);
+	if (header.magic != 0xEE3355AA) {
+		//printf("Incorrect magic number in EEPROM\n");
+		return 0;
+	}
 
 	detect_daughter_board();
 
@@ -517,8 +543,8 @@ int board_init(void)
 	} else if (!strncmp("SKU#03", header.config, 6)) {
 		board_id = IPP_BOARD;
 	} else {
-		printf("Did not find a recognized configuration, "
-			"assuming just a base board\n");
+		//printf("Did not find a recognized configuration, "
+		//	"assuming just a base board\n");
 	}
 
 	configure_evm_pin_mux(board_id, profile, daughter_board_connected);
@@ -588,6 +614,9 @@ int board_late_init(void){
 /* Display the board info */
 int checkboard(void)
 {
+	unsigned int cntr;
+	unsigned char *valPtr;
+
 #ifdef CONFIG_AM335X_MIN_CONFIG
 	if (board_id == GP_BOARD) {
 #ifdef CONFIG_NAND
@@ -602,6 +631,26 @@ int checkboard(void)
 #endif
 	}
 #endif
+
+ #endif
+
+	printf("Base Board EEPROM Data\n");
+	valPtr = (unsigned char *)&header;
+	for(cntr = 0; cntr < sizeof(header); cntr++) {
+		if(cntr % 16 == 0)
+			printk("\n0x%02x :", cntr);
+
+		printk(" 0x%02x", (unsigned int)valPtr[cntr]);
+	}
+	printk("\n\n");
+
+	printf("Board identification EEPROM contents:\n");
+	printf("\tBoard id %x, profile %x\n", board_id, profile);
+	printf("\tBoard name:		%8s\n", header.name);
+	printf("\tBoard version:	%4s\n", header.version);
+	printf("\tBoard serial:		%12s\n", header.serial);
+	printf("\tBoard config:		%6s\n", header.config);
+
 	return 0;
 }
 
