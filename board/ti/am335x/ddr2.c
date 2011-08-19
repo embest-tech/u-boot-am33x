@@ -61,9 +61,9 @@
 //*****************************************************************************
 //Read write prototype
 //*****************************************************************************
-#define WR_MEM_32(addr, data) *(unsigned int*)(addr) = (unsigned int)(data)
-#define RD_MEM_32(addr) 	 *(unsigned int*)(addr)
-#define UWORD32 		 unsigned int
+#define WR_MEM_32(addr, data) *(volatile unsigned int*)(addr) = (unsigned int)(data)
+#define RD_MEM_32(addr) 	 *(volatile unsigned int*)(addr)
+#define UWORD32 		 volatile unsigned int
 
 //*****************************************************************************
 //Global variables
