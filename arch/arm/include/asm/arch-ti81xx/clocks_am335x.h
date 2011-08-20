@@ -52,7 +52,7 @@
 #if	(CONFIG_AM335X_DDR_IS_MDDR == 1)
 #define DDRPLL_M	166	/* M/N + 1 = 25/3 */
 #else
-#define DDRPLL_M	266
+#define DDRPLL_M	200	/* Make it 266 when its stable */
 #endif
 
 #define DDRPLL_N	23
