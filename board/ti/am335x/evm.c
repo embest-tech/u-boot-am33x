@@ -497,7 +497,7 @@ struct serial_device *default_serial_console(void)
 		return &eserial1_device;	/* UART0 */
 	} else {
 		/* Change console to tty03 for IA Motor Control EVM */
-		setenv("console", "ttyO3,115200n8");
+		//setenv("console", "ttyO3,115200n8");
 
 		return &eserial4_device;	/* UART3 */
 	}
@@ -601,8 +601,8 @@ int board_init(void)
  * motor control EVM.
  */
 static void set_spi_bus_on_board_detect(void){
-	if (board_id == IA_BOARD)
-		setenv("spi_bus_no", "1");
+//	if (board_id == IA_BOARD)
+//		setenv("spi_bus_no", "1");
 }
 
 int board_late_init(void){
