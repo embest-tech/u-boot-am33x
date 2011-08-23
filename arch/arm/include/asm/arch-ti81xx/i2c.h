@@ -39,10 +39,8 @@
 #define I2C_INTERNAL_SAMPLING_CLK	12000000
 
 #define I2C_REV		(I2C_DEFAULT_BASE + 0x00)
-#define I2C_SYSC	(I2C_DEFAULT_BASE + 0x10)
 #define I2C_IE		(I2C_DEFAULT_BASE + 0x2C)
 #define I2C_STAT	(I2C_DEFAULT_BASE + 0x28)
-#define I2C_SYSS	(I2C_DEFAULT_BASE + 0x90)
 #define I2C_BUF		(I2C_DEFAULT_BASE + 0x94)
 #define I2C_CNT		(I2C_DEFAULT_BASE + 0x98)
 #define I2C_DATA	(I2C_DEFAULT_BASE + 0x9c)
@@ -55,11 +53,6 @@
 #define I2C_SYSTEST	(I2C_DEFAULT_BASE + 0xBc)
 
 /* I2C masks */
-
-/* I2C System Conf Register (I2C_SYST)*/
-#define I2C_SYST_NOIDLE     (1 << 3)
-#define I2C_SYST_RESET      (1 << 2)
-#define I2C_SYST_AUTOIDLE   (1 << 0)
 
 /* I2C Interrupt Enable Register (I2C_IE): */
 #define I2C_IE_GC_IE	(1 << 5)
@@ -93,15 +86,10 @@
 #define I2C_INTCODE_RRDY	4	/* Rcv data ready */
 #define I2C_INTCODE_XRDY	5	/* Xmit data ready */
 
-/* I2C System Status Register (I2C_SYST)*/
-#define I2C_SYST_RESETDONE   (1 << 0)
-
 /* I2C Buffer Configuration Register (I2C_BUF): */
 
 #define I2C_BUF_RDMA_EN		(1 << 15) /* Receive DMA channel enable */
 #define I2C_BUF_XDMA_EN		(1 << 7)  /* Transmit DMA channel enable */
-#define I2C_TXFIFO_CLEAR        (1 << 6)
-#define I2C_RXFIFO_CLEAR        (1 << 14)
 
 /* I2C Configuration Register (I2C_CON): */
 

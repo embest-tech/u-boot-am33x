@@ -470,7 +470,7 @@ extern unsigned int boot_flash_type;
 # define CONFIG_SYS_I2C_SLAVE		1
 # define CONFIG_SYS_I2C_BUS		0
 # define CONFIG_SYS_I2C_BUS_SELECT	1
-# define CONFIG_DRIVER_AM335X_I2C	1
+# define CONFIG_DRIVER_TI81XX_I2C	1
 
 /* HSMMC support */
 #ifdef CONFIG_MMC
