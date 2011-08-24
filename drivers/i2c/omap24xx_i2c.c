@@ -26,9 +26,8 @@
 #include <asm/io.h>
 
 #define I2C_TIMEOUT   ( 1 << 31)
-static void wait_for_bb (void);
-static u16 wait_for_pin (void);
-static u16 wait_for_status_mask(u16 mask);
+static u32 wait_for_bb (void);
+static u32 wait_for_status_mask(u16 mask);
 static void flush_fifo(void);
 
 static struct i2c *i2c_base = (struct i2c *)I2C_DEFAULT_BASE;
@@ -152,13 +151,18 @@ static void flush_fifo(void)
 int i2c_probe (uchar chip)
 {
 	int res = 1; /* default = fail */
+	u32 status;
 
 	if (chip == readw (I2C_OA)) {
 		return res;
 	}
 
 	/* wait until bus not busy */
-	wait_for_bb ();
+	status = wait_for_bb();
+
+	/* exiting on BUS busy */
+	if (status & I2C_TIMEOUT)
+		return res;
 
 	/* try to read one byte */
 	writew (1, I2C_CNT);
@@ -179,6 +183,11 @@ int i2c_probe (uchar chip)
 		writew(readw(I2C_CON) | I2C_CON_STP, I2C_CON);
 		udelay(20000);
 		wait_for_bb();
+		status = wait_for_bb();
+
+		/* exiting on BUS busy */
+		if (status & I2C_TIMEOUT)
+			return res; 
 	}
 	flush_fifo();
 	/* don't allow any more data in...we don't want it.*/
@@ -190,7 +199,7 @@ int i2c_probe (uchar chip)
 int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 {
 	int i2c_error = 0, i;
-	u16 status;
+	u32 status;
 
 	if ((alen > 2) || (alen < 0)) {
 		printf("I2C read: addr len %d not supported\n", alen);
@@ -203,7 +212,11 @@ int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 	}
 
 	/* wait until bus not busy */
-	wait_for_bb();
+	status = wait_for_bb();
+
+	/* exiting on BUS busy */
+	if (status & I2C_TIMEOUT)
+		return 1;
 
 	/* one byte only */
 	writew((alen & 0xFF), I2C_CNT);
@@ -254,7 +267,7 @@ int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 				/* Clearing XRDY event */
 				writew((status & I2C_STAT_XRDY), I2C_STAT);
 				/*waiting for Transmit ready * condition */
-				status = wait_for_status_mask(I2C_STAT_XRDY |
+				status = wait_for_status_mask(I2C_STAT_ARDY |
 						I2C_STAT_NACK);
 
 				if (status & (I2C_STAT_NACK |
@@ -340,8 +353,9 @@ int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 int i2c_write(uchar chip, uint addr, int alen,
 		uchar *buffer, int len)
 {
-	int i, i2c_error = 0, status;
+	int i, i2c_error = 0;
 	u16 writelen;
+	u32 status;
 
 	if (alen > 2) {
 		printf("I2C Write: addr len %d not supported\n", alen);
@@ -354,7 +368,12 @@ int i2c_write(uchar chip, uint addr, int alen,
 	}
 
 	/* wait until bus not busy */
-	wait_for_bb();
+	status = wait_for_bb();
+
+	/* exiting on BUS busy */
+	if (status & I2C_TIMEOUT)
+		return 1;
+
 	writelen = (len & 0xFFFF) + alen;
 
 	/* two bytes */
@@ -487,10 +506,10 @@ int i2c_write(uchar chip, uint addr, int alen,
 	return 0;
 }
 
-static void wait_for_bb (void)
+static u32 wait_for_bb (void)
 {
 	int timeout = 10;
-	u16 stat;
+	u32 stat;
 
 	writew(0xFFFF, I2C_STAT);	 /* clear current interruts...*/
 	while ((stat = readw (I2C_STAT) & I2C_STAT_BB) && timeout--) {
@@ -501,13 +520,15 @@ static void wait_for_bb (void)
 	if (timeout <= 0) {
 		printf ("timed out in wait_for_bb: I2C_STAT=%x\n",
 			readw (I2C_STAT));
+			stat |= I2C_TIMEOUT;
 	}
 	writew(0xFFFF, I2C_STAT);	 /* clear delayed stuff*/
+	return stat;
 }
 
-static u16 wait_for_status_mask(u16 mask)
+static u32 wait_for_status_mask(u16 mask)
 {
-	u16 status;
+	u32 status;
 	int timeout = 10;
 
 	do {
@@ -520,27 +541,6 @@ static u16 wait_for_status_mask(u16 mask)
 				__func__, readw(I2C_STAT));
 			writew(0xFFFF, I2C_STAT);
 			status |= I2C_TIMEOUT;
-	}
-	return status;
-}
-
-static u16 wait_for_pin (void)
-{
-	u16 status;
-	int timeout = 10;
-
-	do {
-		udelay (1000);
-		status = readw (I2C_STAT);
-       } while (  !(status &
-                   (I2C_STAT_ROVR | I2C_STAT_XUDF | I2C_STAT_XRDY |
-                    I2C_STAT_RRDY | I2C_STAT_ARDY | I2C_STAT_NACK |
-                    I2C_STAT_AL)) && timeout--);
-
-	if (timeout <= 0) {
-		printf ("timed out in wait_for_pin: I2C_STAT=%x\n",
-			readw (I2C_STAT));
-			writew(0xFFFF, I2C_STAT);
 	}
 	return status;
 }
