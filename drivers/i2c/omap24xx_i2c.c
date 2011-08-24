@@ -44,7 +44,7 @@
 #define I2C_TIMEOUT   ( 1 << 31)
 static u32 wait_for_bb (void);
 static u32 wait_for_status_mask(u16 mask);
-
+static void flush_fifo(void);
 static u32 i2c_base = (u32)I2C_DEFAULT_BASE;
 
 static unsigned int bus_initialized[I2C_BUS_MAX];
@@ -545,6 +545,7 @@ static u32 wait_for_status_mask(u16 mask)
 	return status;
 }
 
+#if defined(CONFIG_I2C_MULTI_BUS)
 /*
 * Functions for multiple I2C bus handling
 */
