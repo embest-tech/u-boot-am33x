@@ -45,14 +45,12 @@ void i2c_init (int speed, int slaveadd)
 	if ((speed != OMAP_I2C_STANDARD) &&
 	    (speed != OMAP_I2C_FAST_MODE) &&
 	    (speed != OMAP_I2C_HIGH_SPEED)) {
-		printf("Error : I2C unsupported speed %d\n", speed);
 		return;
 	}
 
 	psc = I2C_IP_CLK / I2C_INTERNAL_SAMPLING_CLK;
 	psc -= 1;
 	if (psc < I2C_PSC_MIN) {
-		printf("Error : I2C unsupported prescalar %d\n", psc);
 		return;
 	}
 
@@ -67,7 +65,6 @@ void i2c_init (int speed, int slaveadd)
 		fssclh -= I2C_HIGHSPEED_PHASE_ONE_SCLH_TRIM;
 		if (((fsscll < 0) || (fssclh < 0)) ||
 		    ((fsscll > 255) || (fssclh > 255))) {
-			printf("Error : I2C initializing first phase clock\n");
 			return;
 		}
 
@@ -78,7 +75,6 @@ void i2c_init (int speed, int slaveadd)
 		hssclh -= I2C_HIGHSPEED_PHASE_TWO_SCLH_TRIM;
 		if (((fsscll < 0) || (fssclh < 0)) ||
 		    ((fsscll > 255) || (fssclh > 255))) {
-			printf("Error : I2C initializing second phase clock\n");
 			return;
 		}
 
@@ -93,7 +89,6 @@ void i2c_init (int speed, int slaveadd)
 		fssclh -= I2C_FASTSPEED_SCLH_TRIM;
 		if (((fsscll < 0) || (fssclh < 0)) ||
 		    ((fsscll > 255) || (fssclh > 255))) {
-			printf("Error : I2C initializing clock\n");
 			return;
 		}
 
@@ -202,12 +197,10 @@ int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 	u32 status;
 
 	if ((alen > 2) || (alen < 0)) {
-		printf("I2C read: addr len %d not supported\n", alen);
 		return 1;
 	}
 
 	if (addr + len > 0xFFFF) {
-		printf("I2C read: address out of range\n");
 		return 1;
 	}
 
@@ -327,7 +320,6 @@ int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
 			| I2C_STAT_AL);
 
 	if (i2c_error) {
-		printf("%s() Error %x\n", __func__, readw(I2C_STAT));
 		writew(0, I2C_CON);
 		return 1;
 	}
@@ -358,12 +350,10 @@ int i2c_write(uchar chip, uint addr, int alen,
 	u32 status;
 
 	if (alen > 2) {
-		printf("I2C Write: addr len %d not supported\n", alen);
 		return 1;
 	}
 
 	if (addr + len > 0xFFFF) {
-		printf("I2C Write: address out of range\n");
 		return 1;
 	}
 
@@ -479,7 +469,6 @@ int i2c_write(uchar chip, uint addr, int alen,
 		i2c_error = 1;
 
 	if (i2c_error) {
-		printf("%s() Error %x\n", __func__, readw(I2C_STAT));
 		writew(0, I2C_CON);
 		return 1;
 	}
@@ -518,8 +507,6 @@ static u32 wait_for_bb (void)
 	}
 
 	if (timeout <= 0) {
-		printf ("timed out in wait_for_bb: I2C_STAT=%x\n",
-			readw (I2C_STAT));
 			stat |= I2C_TIMEOUT;
 	}
 	writew(0xFFFF, I2C_STAT);	 /* clear delayed stuff*/
@@ -537,10 +524,8 @@ static u32 wait_for_status_mask(u16 mask)
 	} while (!(status & mask) && timeout--);
 
 	if (timeout <= 0) {
-		printf("Timeout in %s, I2C_STAT=%x\n",
-				__func__, readw(I2C_STAT));
-			writew(0xFFFF, I2C_STAT);
-			status |= I2C_TIMEOUT;
+		writew(0xFFFF, I2C_STAT);
+		status |= I2C_TIMEOUT;
 	}
 	return status;
 }
@@ -548,7 +533,6 @@ static u32 wait_for_status_mask(u16 mask)
 int i2c_set_bus_num(unsigned int bus)
 {
 	if ((bus < 0) || (bus >= I2C_BUS_MAX)) {
-		printf("Bad bus: %d\n", bus);
 		return -1;
 	}
 
