@@ -309,13 +309,13 @@ static void config_emif_ddr2(void)
 
 	}
 
-	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
-	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG2);
-
 	/* __raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL);
 	__raw_writel(EMIF_SDMGT, EMIF0_0_SDRAM_MGMT_CTRL_SHD); */
 	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL);
 	__raw_writel(EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
+
+	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
+	__raw_writel(EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG2);
 }
 
 static void config_am335x_mddr(void)
@@ -333,6 +333,7 @@ static void config_am335x_mddr(void)
 	__raw_writel(PHY_RANK0_DELAY, DATA0_RANK0_DELAYS_0);
 	__raw_writel(PHY_RANK0_DELAY, DATA1_RANK0_DELAYS_0);
 
+	/* set IO control registers */
 	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD0_IOCTRL);
 	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD1_IOCTRL);
 	__raw_writel(DDR_IOCTRL_VALUE, DDR_CMD2_IOCTRL);
@@ -345,12 +346,12 @@ static void config_am335x_mddr(void)
 	config_emif();	/* vtp enable is here */
 }
 
-void DDR2_EMIF_Config(void);
+/*  void DDR2_EMIF_Config(void); */
 static void config_am335x_ddr2(void)
 {
-#if 1
+/*#if 1
 	DDR2_EMIF_Config();
-#else
+#else*/
 	int data_macro_0 = 0;
 	int data_macro_1 = 1;
 
@@ -372,11 +373,11 @@ static void config_am335x_ddr2(void)
 	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA0_IOCTRL);
 	__raw_writel(DDR_IOCTRL_VALUE, DDR_DATA1_IOCTRL);
 
-	__raw_writel(__raw_readl(DDR_IO_CTRL) | 0x10000000, DDR_IO_CTRL);
+	__raw_writel(__raw_readl(DDR_IO_CTRL) & 0x0fffffff, DDR_IO_CTRL);
 	__raw_writel(__raw_readl(DDR_CKE_CTRL) | 0x00000001, DDR_CKE_CTRL);
 
 	config_emif_ddr2();
-#endif
+/* #endif */
 }
 
 static void config_am335x_ddr(void)
