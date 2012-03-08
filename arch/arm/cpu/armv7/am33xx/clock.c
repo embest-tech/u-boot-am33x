@@ -45,6 +45,7 @@
 const struct cm_perpll *cmper = (struct cm_perpll *)CM_PER;
 const struct cm_wkuppll *cmwkup = (struct cm_wkuppll *)CM_WKUP;
 const struct cm_dpll *cmdpll = (struct cm_dpll *)CM_DPLL;
+const struct cm_rtc *cmrtc = (struct cm_rtc *)CM_RTC;
 
 static void enable_interface_clocks(void)
 {
@@ -168,6 +169,11 @@ static void enable_per_clocks(void)
 	/* MUSB */
 	writel(PRCM_MOD_EN, &cmper->usb0clkctrl);
 	while (readl(&cmper->usb0clkctrl) != PRCM_MOD_EN)
+		;
+
+	/* RTC */
+	writel(PRCM_MOD_EN, &cmrtc->rtcclkctrl);
+	while (readl(&cmrtc->rtcclkctrl) != PRCM_MOD_EN)
 		;
 }
 
