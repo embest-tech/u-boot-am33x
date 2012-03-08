@@ -61,6 +61,7 @@
 #define CM_WKUP				0x44E00400
 #define CM_DPLL				0x44E00500
 #define CM_DEVICE			0x44E00700
+#define CM_RTC				0x44E00800
 #define CM_CEFUSE			0x44E00A00
 #define PRM_DEVICE			0x44E00F00
 
@@ -89,5 +90,8 @@
 /* OTG */
 #define AM335X_USB0_OTG_BASE		0x47401000
 #define AM335X_USB1_OTG_BASE		0x47401800
+
+/* RTC base address */
+#define AM335X_RTC_BASE			0x44E3E000
 
 #endif /* __AM33XX_HARDWARE_H */
