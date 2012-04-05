@@ -317,6 +317,15 @@
 #define CONFIG_CMD_TFTP
 #endif /* CONFIG_MUSB_GADGET */
 
+/* ENV in SPI */
+#if defined(CONFIG_SPI_BOOT)
+# undef CONFIG_ENV_IS_NOWHERE
+# define CONFIG_ENV_IS_IN_SPI_FLASH
+# define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
+# define CONFIG_ENV_OFFSET		(384 << 10) /* 384 KB in */
+# define CONFIG_ENV_SECT_SIZE		(4 << 10) /* 4 KB sectors */
+#endif /* SPI support */
+
 /* Unsupported features */
 #undef CONFIG_USE_IRQ
 
@@ -348,10 +357,12 @@
 							/* CS0 */
 #define CONFIG_SYS_MAX_NAND_DEVICE	1		/* Max number of NAND
 							   devices */
+#if !defined(CONFIG_SPI_BOOT)
 #undef CONFIG_ENV_IS_NOWHERE
 #define CONFIG_ENV_IS_IN_NAND
 #define CONFIG_ENV_OFFSET		0x260000 /* environment starts here */
 #define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB */
+#endif
 #endif
 
 #endif	/* ! __CONFIG_AM335X_EVM_H */
