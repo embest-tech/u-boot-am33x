@@ -19,8 +19,11 @@
 #include <asm/arch/hardware.h>
 #include "common_def.h"
 
-#define PRCM_MOD_EN		0x2
-#define	PRCM_FORCE_WAKEUP	0x2
+#define PRCM_MOD_EN					0x2
+#define	PRCM_FORCE_WAKEUP			0x2
+#define PRCM_IDLEST					0x30000
+
+#define DPLL_CLKDCOLDO_GATE_CTRL	0x100
 
 #define PRCM_EMIF_CLK_ACTIVITY	(0x1 << 2)
 #define PRCM_L3_GCLK_ACTIVITY	(0x1 << 4)
@@ -137,6 +140,18 @@ static void per_clocks_enable(void)
 
 	__raw_writel(PRCM_MOD_EN, CM_PER_SPI1_CLKCTRL);
 	while (__raw_readl(CM_PER_SPI1_CLKCTRL) != PRCM_MOD_EN);
+
+	/* USB */
+	/* PLL Gate set up */
+	__raw_writel(DPLL_CLKDCOLDO_GATE_CTRL, CM_CLKDCOLDO_DPLL_PER);
+
+	/* CLOCK */
+	__raw_writel(PRCM_MOD_EN, CM_PER_USB0_CLKCTRL);
+	while (__raw_readl(CM_PER_USB0_CLKCTRL) != PRCM_MOD_EN);
+	/* USB module clock setup */
+
+	while ((__raw_readl(CM_PER_USB0_CLKCTRL) & PRCM_IDLEST) != 0);
+	/* USB module fully functional */
 }
 
 void mpu_pll_config(int mpupll_M)

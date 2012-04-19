@@ -478,6 +478,18 @@ static struct module_pin_mux spi1_pin_mux[] = {
 };
 #endif
 
+#ifdef CONFIG_USB_AM335X
+static struct module_pin_mux usb1_pin_mux[] = {
+	{OFFSET(usb0_dm), MODE(0)}, 	/* usb0_dm */
+	{OFFSET(usb0_dp), MODE(0)},		/* usb0_dp */
+	{OFFSET(usb0_ce), MODE(0)},		/* usb0_ce */
+	{OFFSET(usb0_id), MODE(0)},		/* usb0_id */
+	{OFFSET(usb0_vbus), MODE(0)},	/* usb0_vbus */
+	{OFFSET(usb0_drvvbus), MODE(0)},/* usb0_drvvbus */
+	{-1},
+};
+#endif 
+
 /*
  * Update the structure with the modules present in the general purpose
  * board and the profiles in which the modules are present.
@@ -507,6 +519,9 @@ static struct evm_pin_mux general_purpose_evm_pin_mux[] = {
 #ifdef CONFIG_SPI
 	{spi0_pin_mux, PROFILE_2, DEV_ON_DGHTR_BRD},
 #endif
+#ifdef CONFIG_USB_AM335X
+	{usb1_pin_mux, PROFILE_ALL, DEV_ON_BASEBOARD},
+#endif 
 	{0},
 };
 

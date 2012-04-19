@@ -408,6 +408,22 @@
 #define CONFIG_CMD_EXT2
 #endif
 
+/*
+ * USB configuration
+ * Enable CONFIG_MUSB_HCD for Host functionalities
+ */
+#define CONFIG_USB_AM335X		1
+#define CONFIG_MUSB_HCD			1
+
+#ifdef CONFIG_USB_AM335X
+#ifdef CONFIG_MUSB_HCD
+#define CONFIG_CMD_USB
+#define CONFIG_USB_STORAGE
+#define CONGIG_CMD_STORAGE
+#define CONFIG_CMD_FAT
+#endif /* CONFIG_MUSB_HCD */
+#endif /* CONFIG_USB_AM335X */
+
 /* Unsupported features */
 #undef CONFIG_USE_IRQ
 

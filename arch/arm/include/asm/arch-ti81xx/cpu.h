@@ -255,6 +255,7 @@ struct gptimer {
 #define CM_CLKMODE_DPLL_PER		(CM_WKUP + 0x8c)
 #define CM_DIV_M2_DPLL_PER		(CM_WKUP + 0xAC)
 #define CM_IDLEST_DPLL_PER		(CM_WKUP + 0x70)
+#define CM_CLKDCOLDO_DPLL_PER	(CM_WKUP + 0x7c)
 
 /* Display PLL */
 #define CM_CLKSEL_DPLL_DISP		(CM_WKUP + 0x54)
@@ -308,6 +309,7 @@ struct gptimer {
 #define CM_PER_CPSW_CLKSTCTRL		(CM_PER + 0x144)/* Ethernet */
 #define CM_PER_OCMCRAM_CLKCTRL		(CM_PER	+ 0x2C) /* OCMC RAM */
 #define CM_PER_GPIO2_CLKCTRL		(CM_PER + 0xB0) /* GPIO2 */
+#define CM_PER_UART2_CLKCTRL		(CM_PER + 0x70) /* UART2 */
 #define CM_PER_UART3_CLKCTRL		(CM_PER + 0x74) /* UART3 */
 #define CM_PER_I2C1_CLKCTRL		(CM_PER + 0x48) /* I2C1 */
 #define CM_PER_I2C2_CLKCTRL		(CM_PER + 0x44) /* I2C2 */
@@ -316,6 +318,8 @@ struct gptimer {
 #define CM_PER_MMC0_CLKCTRL     	(CM_PER + 0x3C)
 #define CM_PER_MMC1_CLKCTRL     	(CM_PER + 0xF4)
 #define CM_PER_MMC2_CLKCTRL     	(CM_PER + 0xF8)
+
+#define CM_PER_USB0_CLKCTRL			(CM_PER + 0x1C)
 
 #endif /* CONFIG_AM335X */
 
