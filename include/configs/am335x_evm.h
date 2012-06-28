@@ -44,8 +44,6 @@
 #define CONFIG_CMD_ASKENV
 #define CONFIG_VERSION_VARIABLE
 
-/* set to negative value for no autoboot */
-#define CONFIG_BOOTDELAY		1
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"loadaddr=0x80200000\0" \
 	"fdtaddr=0x80F80000\0" \
@@ -80,6 +78,10 @@
 		"run ramargs; " \
 		"bootm ${loadaddr}\0" \
 
+#ifndef CONFIG_RESTORE_FLASH
+/* set to negative value for no autoboot */
+#define CONFIG_BOOTDELAY		3
+
 #define CONFIG_BOOTCOMMAND \
 	"if mmc rescan ${mmcdev}; then " \
 		"echo SD/MMC found on device ${mmcdev};" \
@@ -95,6 +97,17 @@
 			"run mmcboot;" \
 		"fi;" \
 	"fi;" \
+
+#else
+#define CONFIG_BOOTDELAY		0
+
+#define CONFIG_BOOTCOMMAND			\
+	"setenv autoload no; "			\
+	"dhcp; "				\
+	"if tftp 80000000 debrick.scr; then "	\
+		"source 80000000; "		\
+	"fi"
+#endif
 
 /* Clock Defines */
 #define V_OSCK				24000000  /* Clock output from T2 */
