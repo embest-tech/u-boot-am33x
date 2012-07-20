@@ -831,6 +831,7 @@ static void cpsw_halt(struct eth_device *dev)
 {
 	struct cpsw_priv	*priv = dev->priv;
 
+	udelay(1);
 	writel(0, priv->dma_regs + CPDMA_TXCONTROL);
 	writel(0, priv->dma_regs + CPDMA_RXCONTROL);
 
