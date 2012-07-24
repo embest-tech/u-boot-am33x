@@ -712,12 +712,13 @@ void s_init(void)
 	if (!strncmp("A335X_SK", header.name, 8)) {
 		is_ddr3 = 1;
 
-		/* EVM SK 1.2A uses gpio0_7 to enable DDR3 */
-		if (!strncmp("1.2A", header.version, 4)) {
-			enable_gpio0_7_pin_mux();
-			gpio_request(GPIO_DDR_VTT_EN, "ddr_vtt_en");
-			gpio_direction_output(GPIO_DDR_VTT_EN, 1);
-		}
+		/*
+		 * EVM SK 1.2A and later use gpio0_7 to enable DDR3.
+		 * This is safe enough to do on older revs.
+		 */
+		enable_gpio0_7_pin_mux();
+		gpio_request(GPIO_DDR_VTT_EN, "ddr_vtt_en");
+		gpio_direction_output(GPIO_DDR_VTT_EN, 1);
 	}
 
 	if(is_ddr3 == 1){
