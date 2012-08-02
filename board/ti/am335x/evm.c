@@ -255,12 +255,17 @@ static void config_emif_ddr3(void)
 	writel(DDR3_EMIF_TIM3, EMIF4_0_SDRAM_TIM_3);
 	writel(DDR3_EMIF_TIM3, EMIF4_0_SDRAM_TIM_3_SHADOW);
 
-
 	writel(DDR3_EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL);
 	writel(DDR3_EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
 	writel(DDR3_ZQ_CFG, EMIF0_0_ZQ_CONFIG);
 
 	writel(DDR3_EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
+
+	/*
+	 * Write contents of SDRAM_CONFIG to SECURE_EMIF_SDRAM_CONFIG.
+	 * SDRAM_CONFIG will be reconfigured with this value during resume
+	 */
+	writel(DDR3_EMIF_SDCFG, SECURE_EMIF_SDRAM_CONFIG);
 
 }
 
