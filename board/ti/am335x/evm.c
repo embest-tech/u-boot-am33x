@@ -157,7 +157,9 @@ const struct gpio_bank *const omap_gpio_bank = gpio_bank_am335x;
  */
 int dram_init(void)
 {
-	gd->ram_size = PHYS_DRAM_1_SIZE;
+	gd->ram_size = get_ram_size(
+			(void *)CONFIG_SYS_SDRAM_BASE,
+			CONFIG_MAX_RAM_BANK_SIZE);
 
 	return 0;
 }
