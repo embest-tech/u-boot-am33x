@@ -59,6 +59,7 @@
 #define BOOT_DEVICE_MMC2	9 /* eMMC or daughter card */
 #define BOOT_DEVICE_SPI		11
 #define BOOT_DEVICE_UART	65
+#define BOOT_DEVICE_USB		68
 #define BOOT_DEVICE_CPGMAC	70
 #endif
 
