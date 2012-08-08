@@ -1,0 +1,35 @@
+#
+# for USB OTG silicon based on Mentor Graphics INVENTRA designs
+#
+
+include $(TOPDIR)/config.mk
+
+LIB	:= $(obj)libusb_musb-new.o
+
+COBJS-$(CONFIG_MUSB_GADGET) += musb_gadget.o musb_gadget_ep0.o musb_core.o
+COBJS-$(CONFIG_MUSB_GADGET) += musb_gadget_uboot.o
+
+CFLAGS_NO_WARN := $(call cc-option,-Wno-unused-variable) \
+			$(call cc-option,-Wno-unused-but-set-variable) \
+			$(call cc-option,-Wno-unused-label)
+CFLAGS += $(CFLAGS_NO_WARN)
+
+COBJS	:= $(COBJS-y)
+SRCS	:= $(COBJS:.o=.c)
+OBJS	:= $(addprefix $(obj),$(COBJS))
+
+all:	$(LIB)
+
+#$(LIB):	$(OBJS)
+$(LIB):	$(obj).depend $(OBJS)
+	$(call cmd_link_o_target, $(OBJS))
+
+#########################################################################
+
+# defines $(obj).depend target
+include $(SRCTREE)/rules.mk
+
+sinclude $(obj).depend
+
+#########################################################################
+
