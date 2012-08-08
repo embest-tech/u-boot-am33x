@@ -347,7 +347,8 @@ static struct cpsw_platform_data cpsw_data = {
 #endif
 
 #if defined(CONFIG_DRIVER_TI_CPSW) || \
-	(defined(CONFIG_USB_ETHER) && defined(CONFIG_MUSB_GADGET))
+	(defined(CONFIG_USB_ETHER) && defined(CONFIG_MUSB_GADGET) && \
+	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT)))
 int board_eth_init(bd_t *bis)
 {
 	int rv, n = 0;
@@ -389,7 +390,8 @@ int board_eth_init(bd_t *bis)
 	else
 		n += rv;
 #endif
-#if defined(CONFIG_USB_ETHER) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_USB_ETHER) && \
+	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT))
 	rv = usb_eth_initialize(bis);
 	if (rv < 0)
 		printf("Error %d registering USB_ETHER\n", rv);
