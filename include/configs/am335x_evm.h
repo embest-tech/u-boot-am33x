@@ -231,6 +231,8 @@
 #define CONFIG_SPL_NET_SUPPORT
 #define CONFIG_SPL_NET_VCI_STRING	"AM335x U-Boot SPL"
 #define CONFIG_SPL_ETH_SUPPORT
+#define CONFIG_SPL_MUSB_GADGET_SUPPORT
+#define CONFIG_SPL_USB_ETH_SUPPORT
 #define CONFIG_SPL_LDSCRIPT		"$(CPUDIR)/omap-common/u-boot-spl.lds"
 
 /* NAND boot config */
@@ -449,6 +451,8 @@
 #ifdef CONFIG_MUSB_GADGET
 #define CONFIG_USB_ETHER
 #define CONFIG_USB_ETH_RNDIS
+#define CONFIG_USBNET_DEV_ADDR	"aa:bb:cc:00:11:33"
+#define CONFIG_USBNET_HOST_ADDR	"aa:bb:cc:00:11:44"
 #define CONFIG_CMD_NET
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_TFTP

@@ -1110,7 +1110,8 @@ static struct cpsw_platform_data cpsw_data = {
 };
 #endif
 
-#if defined(CONFIG_MUSB_GADGET) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_MUSB_GADGET) && \
+	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_MUSB_GADGET_SUPPORT))
 #ifdef CONFIG_MUSB_GADGET_PORT0
 #define USB_CTRL_REG	USB_CTRL0
 #define OTG_REGS_BASE	((void *)AM335X_USB0_OTG_BASE)
@@ -1163,7 +1164,7 @@ static struct musb_hdrc_platform_data musb_plat = {
 
 #if defined(CONFIG_DRIVER_TI_CPSW) || \
 	(defined(CONFIG_USB_ETHER) && defined(CONFIG_MUSB_GADGET) && \
-	!defined(CONFIG_SPL_BUILD))
+	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT)))
 int board_eth_init(bd_t *bis)
 {
 	int rv, n = 0;
@@ -1229,7 +1230,8 @@ int board_eth_init(bd_t *bis)
 	else
 		n += rv;
 #endif
-#if defined(CONFIG_USB_ETHER) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_USB_ETHER) && \
+	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT))
 	rv = musb_register(&musb_plat, &musb_board_data, OTG_REGS_BASE);
 	if (rv < 0) {
 		printf("Error %d registering MUSB device\n", rv);
