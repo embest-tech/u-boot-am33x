@@ -205,6 +205,11 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 #endif
 		break;
 #endif
+#ifdef CONFIG_SPL_USB_ETH_SUPPORT
+	case BOOT_DEVICE_USB:
+		spl_net_load_image("usb_ether");
+		break;
+#endif
 	default:
 		debug("SPL: Un-supported Boot Device\n");
 		hang();

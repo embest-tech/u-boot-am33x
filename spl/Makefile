@@ -60,6 +60,8 @@ LIBS-$(CONFIG_SPL_POST_MEM_SUPPORT) += post/drivers/memory.o
 LIBS-$(CONFIG_SPL_NET_SUPPORT) += net/libnet.o
 LIBS-$(CONFIG_SPL_ETH_SUPPORT) += drivers/net/libnet.o
 LIBS-$(CONFIG_SPL_ETH_SUPPORT) += drivers/net/phy/libphy.o
+LIBS-$(CONFIG_SPL_USB_ETH_SUPPORT) += drivers/usb/gadget/libusb_gadget.o
+LIBS-$(CONFIG_SPL_MUSB_GADGET_SUPPORT) += drivers/usb/musb-new/libusb_musb-new.o
 
 ifneq ($(CONFIG_AM33XX)$(CONFIG_OMAP34XX)$(CONFIG_OMAP44XX)$(CONFIG_OMAP54XX),)
 LIBS-y += $(CPUDIR)/omap-common/libomap-common.o
