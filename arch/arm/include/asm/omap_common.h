@@ -34,8 +34,6 @@
 #define OMAP_INIT_CONTEXT_UBOOT_AFTER_SPL	2
 #define OMAP_INIT_CONTEXT_UBOOT_AFTER_CH	3
 
-void preloader_console_init(void);
-
 /* Boot device */
 #ifdef CONFIG_OMAP44XX /* OMAP4 */
 #define BOOT_DEVICE_NONE	0
@@ -55,6 +53,7 @@ void preloader_console_init(void);
 #define BOOT_DEVICE_XIPWAIT	7
 #elif defined(CONFIG_TI81XX) /* AM33XX */
 #define BOOT_DEVICE_NONE	0
+#define BOOT_DEVICE_XIP 	2
 #define BOOT_DEVICE_NAND	5 
 #define BOOT_DEVICE_MMC1	8
 #define BOOT_DEVICE_MMC2	9 /* eMMC or daughter card */
@@ -68,6 +67,8 @@ void preloader_console_init(void);
 #define MMCSD_MODE_RAW		1
 #define MMCSD_MODE_FAT		2
 #define NAND_MODE_HW_ECC	3
+
+#ifndef __ASSEMBLY__
 
 struct spl_image_info {
 	const char *name;
@@ -100,4 +101,7 @@ void spl_ymodem_load_image(void);
 /* Ethernet SPL functions */
 void spl_eth_load_image(void);
 
+void preloader_console_init(void);
+
+#endif
 #endif /* _OMAP_COMMON_H_ */

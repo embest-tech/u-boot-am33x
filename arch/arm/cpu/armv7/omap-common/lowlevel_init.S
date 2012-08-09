@@ -26,7 +26,9 @@
  * MA 02111-1307 USA
  */
 
+#include <config.h>
 #include <asm/arch/omap.h>
+#include <asm/omap_common.h>
 
 .global save_boot_params
 save_boot_params:
@@ -59,9 +61,9 @@ save_boot_params:
 	strb	r2, [r3, #BOOT_DEVICE_OFFSET]	@ omap_boot_device <- r1
 
 	/* boot mode is passed only for devices that can raw/fat mode */
-	cmp	r2, #2
+	cmp	r2, #BOOT_DEVICE_XIP
 	blt	2f
-	cmp	r2, #7
+	cmp	r2, #BOOT_DEVICE_MMC2
 	bgt	2f
 	/* Store the boot mode (raw/FAT) in omap_boot_mode */
 	ldr	r2, [r0, #DEV_DESC_PTR_OFFSET]	@ get the device descriptor ptr
