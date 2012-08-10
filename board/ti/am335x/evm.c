@@ -38,6 +38,11 @@
 #include "tps65217.h"
 #include <i2c.h>
 #include <serial.h>
+#include <asm/errno.h>
+#include <linux/usb/ch9.h>
+#include <linux/usb/gadget.h>
+#include <linux/usb/musb.h>
+#include <asm/omap_musb.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -1103,9 +1108,66 @@ static struct cpsw_platform_data cpsw_data = {
 	.host_port_num		= 0,
 	.version		= CPSW_CTRL_VERSION_2,
 };
+#endif
 
+#if defined(CONFIG_MUSB_GADGET) && !defined(CONFIG_SPL_BUILD)
+#ifdef CONFIG_MUSB_GADGET_PORT0
+#define USB_CTRL_REG	USB_CTRL0
+#define OTG_REGS_BASE	((void *)AM335X_USB0_OTG_BASE)
+#elif defined(CONFIG_MUSB_GADGET_PORT1)
+#define USB_CTRL_REG	USB_CTRL1
+#define OTG_REGS_BASE	((void *)AM335X_USB1_OTG_BASE)
+#else
+#error "Please define CONFIG_MUSB_GADGET_PORT0 or CONFIG_MUSB_GADGET_PORT1"
+#endif
+
+/* USB 2.0 PHY Control */
+#define CM_PHY_PWRDN			(1 << 0)
+#define CM_PHY_OTG_PWRDN		(1 << 1)
+#define OTGVDET_EN			(1 << 19)
+#define OTGSESSENDEN			(1 << 20)
+
+static void am33xx_usb_set_phy_power(u8 on)
+{
+	u32 usb_ctrl_reg;
+
+	usb_ctrl_reg = readl(USB_CTRL_REG);
+	if (on) {
+		usb_ctrl_reg &= ~(CM_PHY_PWRDN | CM_PHY_OTG_PWRDN);
+		usb_ctrl_reg |= (OTGVDET_EN | OTGSESSENDEN);
+	} else {
+		usb_ctrl_reg |= (CM_PHY_PWRDN | CM_PHY_OTG_PWRDN);
+	}
+	writel(usb_ctrl_reg, USB_CTRL_REG);
+}
+
+static struct musb_hdrc_config musb_config = {
+	.multipoint     = 1,
+	.dyn_fifo       = 1,
+	.num_eps        = 16,
+	.ram_bits       = 12,
+};
+
+struct omap_musb_board_data musb_board_data = {
+	.set_phy_power = am33xx_usb_set_phy_power,
+};
+
+static struct musb_hdrc_platform_data musb_plat = {
+	.mode           = MUSB_PERIPHERAL,
+	.config         = &musb_config,
+	.power          = 50,
+	.platform_ops	= &musb_dsps_ops,
+	.board_data	= &musb_board_data,
+};
+#endif
+
+#if defined(CONFIG_DRIVER_TI_CPSW) || \
+	(defined(CONFIG_USB_ETHER) && defined(CONFIG_MUSB_GADGET) && \
+	!defined(CONFIG_SPL_BUILD))
 int board_eth_init(bd_t *bis)
 {
+	int rv, n = 0;
+#ifdef CONFIG_DRIVER_TI_CPSW
 	uint8_t mac_addr[6];
 	uint32_t mac_hi, mac_lo;
 	u_int32_t i;
@@ -1161,7 +1223,25 @@ int board_eth_init(bd_t *bis)
 	if (board_id == GP_BOARD && !strncmp(header.version, "1.0", 3))
 		cpsw_data.gigabit_en = 0;
 
-	return cpsw_register(&cpsw_data);
+	rv = cpsw_register(&cpsw_data);
+	if (rv < 0)
+		printf("Error %d registering CPSW switch\n", rv);
+	else
+		n += rv;
+#endif
+#if defined(CONFIG_USB_ETHER) && !defined(CONFIG_SPL_BUILD)
+	rv = musb_register(&musb_plat, &musb_board_data, OTG_REGS_BASE);
+	if (rv < 0) {
+		printf("Error %d registering MUSB device\n", rv);
+	} else {
+		rv = usb_eth_initialize(bis);
+		if (rv < 0)
+			printf("Error %d registering USB_ETHER\n", rv);
+		else
+			n += rv;
+	}
+#endif
+	return n;
 }
 #endif
 

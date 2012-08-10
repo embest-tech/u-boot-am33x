@@ -21,6 +21,7 @@
 
 #define PRCM_MOD_EN		0x2
 #define	PRCM_FORCE_WAKEUP	0x2
+#define DPLL_CLKDCOLDO_GATE_CTRL	0x300
 
 #define PRCM_EMIF_CLK_ACTIVITY	(0x1 << 2)
 #define PRCM_L3_GCLK_ACTIVITY	(0x1 << 4)
@@ -141,6 +142,10 @@ static void per_clocks_enable(void)
 	/* RTC */
 	writel(PRCM_MOD_EN, CM_RTC_RTC_CLKCTRL);
 	while (readl(CM_RTC_RTC_CLKCTRL) != PRCM_MOD_EN);
+
+	/* OTG */
+	writel(PRCM_MOD_EN, CM_PER_USB0_CLKCTRL);
+	while (readl(CM_PER_USB0_CLKCTRL) != PRCM_MOD_EN);
 }
 
 void mpu_pll_config(int mpupll_M)
@@ -233,6 +238,8 @@ static void per_pll_config(void)
 	writel(clkmode, CM_CLKMODE_DPLL_PER);
 
 	while(readl(CM_IDLEST_DPLL_PER) != 0x1);
+
+	writel(DPLL_CLKDCOLDO_GATE_CTRL, CM_CLKDCOLDO_DPLL_PER);
 }
 
 void ddr_pll_config(unsigned int ddrpll_M)
