@@ -252,6 +252,7 @@ struct gptimer {
 #define CM_CLKMODE_DPLL_PER		(CM_WKUP + 0x8c)
 #define CM_DIV_M2_DPLL_PER		(CM_WKUP + 0xAC)
 #define CM_IDLEST_DPLL_PER		(CM_WKUP + 0x70)
+#define CM_CLKDCOLDO_DPLL_PER		(CM_WKUP + 0x7C)
 
 /* Display PLL */
 #define CM_CLKSEL_DPLL_DISP		(CM_WKUP + 0x54)
@@ -310,6 +311,7 @@ struct gptimer {
 #define CM_PER_I2C2_CLKCTRL		(CM_PER + 0x44) /* I2C2 */
 #define CM_WKUP_GPIO0_CLKCTRL		(CM_WKUP + 0x8) /* GPIO0 */
 #define CM_RTC_RTC_CLKCTRL		(CM_RTC + 0x0) /* RTC */
+#define CM_PER_USB0_CLKCTRL		(CM_PER + 0x1C) /* OTG */
 
 #define CM_PER_MMC0_CLKCTRL     	(CM_PER + 0x3C)
 #define CM_PER_MMC1_CLKCTRL     	(CM_PER + 0xF4)
@@ -723,6 +725,10 @@ extern struct gpmc *gpmc_cfg;
 
 #endif /* __ASSEMBLY__ */
 #endif /* __KERNEL_STRICT_NAMES */
+
+/* OTG PHY regs */
+#define USB_CTRL0	(CTRL_BASE + 0x620)
+#define USB_CTRL1	(CTRL_BASE + 0x628)
 
 /* Ethernet MAC ID from EFuse */
 #define MAC_ID0_LO	(CTRL_BASE + 0x630)
