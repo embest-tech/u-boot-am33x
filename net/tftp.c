@@ -7,6 +7,9 @@
  */
 
 #include <common.h>
+#ifdef CONDIF_SPL_BUILD
+#undef CONFIG_CMD_TFTPSRV
+#endif
 #include <command.h>
 #include <net.h>
 #include "tftp.h"

@@ -76,7 +76,14 @@
 
 #include <common.h>
 #ifdef CONFIG_SPL_BUILD
+#undef CONFIG_CMD_CDP
 #undef CONFIG_CMD_DHCP
+#undef CONFIG_CMD_DNS
+#undef CONFIG_CMD_NFS
+#undef CONFIG_CMD_PING
+#undef CONFIG_CMD_RARP
+#undef CONFIG_CMD_SNTP
+#undef CONFIG_CMD_TFTPSRV
 #endif
 #include <watchdog.h>
 #include <command.h>

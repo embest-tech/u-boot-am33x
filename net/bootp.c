@@ -11,6 +11,8 @@
 #include <common.h>
 #ifdef CONFIG_SPL_BUILD
 #undef CONFIG_CMD_DHCP
+#undef CONFIG_CMD_NFS
+#undef CONFIG_CMD_SNTP
 #endif
 #include <command.h>
 #include <net.h>
