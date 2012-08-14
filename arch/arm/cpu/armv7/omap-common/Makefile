@@ -44,8 +44,8 @@ endif
 ifdef CONFIG_SPL_YMODEM_SUPPORT
 COBJS	+= spl_ymodem.o
 endif
-ifdef CONFIG_SPL_ETH_SUPPORT
-COBJS	+= spl_eth.o
+ifdef CONFIG_SPL_NET_SUPPORT
+COBJS	+= spl_net.o
 endif
 endif
 

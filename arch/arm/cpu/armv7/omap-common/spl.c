@@ -144,7 +144,11 @@ void board_init_r(gd_t *id, ulong dummy)
 #endif
 #ifdef CONFIG_SPL_ETH_SUPPORT
 	case BOOT_DEVICE_CPGMAC:
-		spl_eth_load_image();
+#ifdef CONFIG_SPL_ETH_DEVICE
+		spl_net_load_image(CONFIG_SPL_ETH_DEVICE);
+#else
+		spl_net_load_image(NULL);
+#endif
 		break;
 #endif
 	default:

@@ -98,8 +98,8 @@ void spl_mmc_load_image(void);
 /* YMODEM SPL functions */
 void spl_ymodem_load_image(void);
 
-/* Ethernet SPL functions */
-void spl_eth_load_image(void);
+/* Network SPL functions */
+void spl_net_load_image(const char *device);
 
 void preloader_console_init(void);
 
