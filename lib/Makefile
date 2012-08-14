@@ -60,7 +60,6 @@ endif
 COBJS-$(CONFIG_SPL_NET_SUPPORT) += errno.o
 COBJS-$(CONFIG_SPL_NET_SUPPORT) += hashtable.o
 COBJS-$(CONFIG_SPL_NET_SUPPORT) += net_utils.o
-COBJS-$(CONFIG_SPL_NET_SUPPORT) += qsort.o
 endif
 COBJS-y += ctype.o
 COBJS-y += div64.o
