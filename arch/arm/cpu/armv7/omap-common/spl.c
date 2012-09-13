@@ -121,9 +121,11 @@ void board_init_r(gd_t *id, ulong dummy)
 	boot_device = omap_boot_device();
 	debug("boot device - %d\n", boot_device);
 
+#ifdef CONFIG_UART_THEN_USB_SPL
 	/* Hack: load SPL via UART, then use USB */
 	if (boot_device == BOOT_DEVICE_UART)
 		boot_device = BOOT_DEVICE_USB;
+#endif
 
 	switch (boot_device) {
 #ifdef CONFIG_SPL_MMC_SUPPORT
