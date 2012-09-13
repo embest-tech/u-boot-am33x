@@ -640,58 +640,64 @@ static void musb_peri_ep0(void)
 
 static void musb_peri_rx_ep(unsigned int ep)
 {
-	u16 peri_rxcount = readw(&musbr->ep[ep].epN.rxcount);
+	u16 peri_rxcount;
 
-	if (peri_rxcount) {
-		struct usb_endpoint_instance *endpoint;
-		u32 length;
-		u8 *data;
+	u8 peri_rxcsr = readw(&musbr->ep[ep].epN.rxcsr);
+	if ((peri_rxcsr & MUSB_RXCSR_RXPKTRDY)) {
+		peri_rxcount = readw(&musbr->ep[ep].epN.rxcount);
+		if (peri_rxcount) {
+			struct usb_endpoint_instance *endpoint;
+			u32 length;
+			u8 *data;
 
-		endpoint = GET_ENDPOINT(udc_device, ep);
-		if (endpoint && endpoint->rcv_urb) {
-			struct urb *urb = endpoint->rcv_urb;
-			unsigned int remaining_space = urb->buffer_length -
-				urb->actual_length;
+			endpoint = GET_ENDPOINT(udc_device, ep);
+			if (endpoint && endpoint->rcv_urb) {
+				struct urb *urb = endpoint->rcv_urb;
+				unsigned int remaining_space =
+					urb->buffer_length -
+					urb->actual_length;
 
-			if (remaining_space) {
-				int urb_bad = 0; /* urb is good */
+				if (remaining_space) {
+					int urb_bad = 0; /* urb is good */
 
-				if (peri_rxcount > remaining_space)
-					length = remaining_space;
-				else
-					length = peri_rxcount;
+					if (peri_rxcount > remaining_space)
+						length = remaining_space;
+					else
+						length = peri_rxcount;
 
-				data = (u8 *) urb->buffer_data;
-				data += urb->actual_length;
+					data = (u8 *) urb->buffer_data;
+					data += urb->actual_length;
 
-				/* The common musb fifo reader */
-				read_fifo(ep, length, data);
+					/* The common musb fifo reader */
+					read_fifo(ep, length, data);
 
-				musb_peri_rx_ack(ep);
+					musb_peri_rx_ack(ep);
 
-				/*
-				 * urb's actual_length is updated in
-				 * usbd_rcv_complete
-				 */
-				usbd_rcv_complete(endpoint, length, urb_bad);
+					/*
+					 * urb's actual_length is updated in
+					 * usbd_rcv_complete
+					 */
+					usbd_rcv_complete(endpoint, length,
+							urb_bad);
 
+				} else {
+					if (debug_level > 0)
+						serial_printf("ERROR : %s %d no space "
+							      "in rcv buffer\n",
+							      __PRETTY_FUNCTION__, ep);
+				}
 			} else {
 				if (debug_level > 0)
-					serial_printf("ERROR : %s %d no space "
-						      "in rcv buffer\n",
+					serial_printf("ERROR : %s %d problem with "
+						      "endpoint\n",
 						      __PRETTY_FUNCTION__, ep);
 			}
+
 		} else {
 			if (debug_level > 0)
-				serial_printf("ERROR : %s %d problem with "
-					      "endpoint\n",
+				serial_printf("ERROR : %s %d with nothing to do\n",
 					      __PRETTY_FUNCTION__, ep);
 		}
-
-	} else {
-		if (debug_level > 0)
-			serial_printf("ERROR : %s %d with nothing to do\n",
-				      __PRETTY_FUNCTION__, ep);
 	}
 }
 
