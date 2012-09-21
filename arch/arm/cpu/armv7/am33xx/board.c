@@ -75,6 +75,12 @@ static inline int board_is_evm_sk(void)
 	return !strncmp("A335X_SK", header.name, HDR_NAME_LEN);
 }
 
+int board_is_evm_15_or_later(void)
+{
+	return (!strncmp("A33515BB", header.name, 8) &&
+			strncmp("1.5", header.version, 3) <= 0);
+}
+
 /*
  * Read header information from EEPROM into global structure.
  */
@@ -130,7 +136,7 @@ static int read_eeprom(void)
 static short inline board_memory_type(void)
 {
 	/* The following boards are known to use DDR3. */
-	if (board_is_evm_sk())
+	if (board_is_evm_sk() || board_is_evm_15_or_later())
 		return EMIF_REG_SDRAM_TYPE_DDR3;
 
 	return EMIF_REG_SDRAM_TYPE_DDR2;

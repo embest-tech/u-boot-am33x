@@ -64,6 +64,14 @@
 #define DDR3_PHY_FIFO_WE	0x100
 #define DDR3_IOCTRL_VALUE	0x18B
 
+/* Micron ???? on 1.5 and later EVMs */
+#define DDR3_EMIF_TIM2_EVM	0x26517FDA
+#define DDR3_EMIF_TIM3_EVM	0x501F851F
+#define DDR3_RD_DQS_EVM		0x3A
+#define DDR3_WR_DQS_EVM		0x0CD
+#define DDR3_PHY_FIFO_WE_EVM	0x10B
+#define DDR3_PHY_WR_DATA_EVM	0x106
+
 /**
  * Configure SDRAM
  */

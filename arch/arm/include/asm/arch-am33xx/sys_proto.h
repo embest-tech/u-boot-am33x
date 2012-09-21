@@ -37,6 +37,8 @@ struct am335x_baseboard_id {
 	char mac_addr[HDR_NO_OF_MAC_ADDR][HDR_ETH_ALEN];
 };
 
+int board_is_evm_15_or_later(void);
+
 #define BOARD_REV_ID	0x0
 
 u32 get_cpu_rev(void);
