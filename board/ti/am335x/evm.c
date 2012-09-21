@@ -235,7 +235,7 @@ static void phy_config_cmd(void)
 	writel(DDR3_INVERT_CLKOUT, CMD2_INVERT_CLKOUT_0);
 }
 
-static void phy_config_data(void)
+static void phy_config_data_sk(void)
 {
 
 	writel(DDR3_RD_DQS, DATA0_RD_DQS_SLAVE_RATIO_0);
@@ -249,7 +249,21 @@ static void phy_config_data(void)
 	writel(DDR3_PHY_WR_DATA, DATA1_WR_DATA_SLAVE_RATIO_0);
 }
 
-static void config_emif_ddr3(void)
+static void phy_config_data_evm(void)
+{
+
+	writel(DDR3_RD_DQS, DATA0_RD_DQS_SLAVE_RATIO_0);
+	writel(DDR3_WR_DQS, DATA0_WR_DQS_SLAVE_RATIO_0);
+	writel(DDR3_PHY_FIFO_WE, DATA0_FIFO_WE_SLAVE_RATIO_0);
+	writel(DDR3_PHY_WR_DATA, DATA0_WR_DATA_SLAVE_RATIO_0);
+
+	writel(DDR3_RD_DQS_EVM, DATA1_RD_DQS_SLAVE_RATIO_0);
+	writel(DDR3_WR_DQS_EVM, DATA1_WR_DQS_SLAVE_RATIO_0);
+	writel(DDR3_PHY_FIFO_WE_EVM, DATA1_FIFO_WE_SLAVE_RATIO_0);
+	writel(DDR3_PHY_WR_DATA_EVM, DATA1_WR_DATA_SLAVE_RATIO_0);
+}
+
+static void config_emif_ddr3_sk(void)
 {
 	/*Program EMIF0 CFG Registers*/
 	writel(DDR3_EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_1);
@@ -276,14 +290,36 @@ static void config_emif_ddr3(void)
 
 }
 
-static void config_am335x_ddr3(void)
+static void config_emif_ddr3_evm(void)
+{
+	/*Program EMIF0 CFG Registers*/
+	writel(DDR3_EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_1);
+	writel(DDR3_EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_1_SHADOW);
+	writel(DDR3_EMIF_READ_LATENCY, EMIF4_0_DDR_PHY_CTRL_2);
+	writel(DDR3_EMIF_TIM1, EMIF4_0_SDRAM_TIM_1);
+	writel(DDR3_EMIF_TIM1, EMIF4_0_SDRAM_TIM_1_SHADOW);
+	writel(DDR3_EMIF_TIM2_EVM, EMIF4_0_SDRAM_TIM_2);
+	writel(DDR3_EMIF_TIM2_EVM, EMIF4_0_SDRAM_TIM_2_SHADOW);
+	writel(DDR3_EMIF_TIM3_EVM, EMIF4_0_SDRAM_TIM_3);
+	writel(DDR3_EMIF_TIM3_EVM, EMIF4_0_SDRAM_TIM_3_SHADOW);
+
+
+	writel(DDR3_EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL);
+	writel(DDR3_EMIF_SDREF, EMIF4_0_SDRAM_REF_CTRL_SHADOW);
+	writel(DDR3_ZQ_CFG, EMIF0_0_ZQ_CONFIG);
+
+	writel(DDR3_EMIF_SDCFG, EMIF4_0_SDRAM_CONFIG);
+
+}
+
+static void config_am335_sk_ddr3(void)
 {
 	enable_ddr3_clocks();
 
 	config_vtp();
 
 	phy_config_cmd();
-	phy_config_data();
+	phy_config_data_sk();
 
 	/* set IO control registers */
 	writel(DDR3_IOCTRL_VALUE, DDR_CMD0_IOCTRL);
@@ -297,7 +333,32 @@ static void config_am335x_ddr3(void)
 	/* CKE controlled by EMIF/DDR_PHY */
 	writel(readl(DDR_CKE_CTRL) | CKE_NORMAL_OP, DDR_CKE_CTRL);
 
-	config_emif_ddr3();
+	config_emif_ddr3_sk();
+
+}
+
+static void config_am335_evm_ddr3(void)
+{
+	enable_ddr3_clocks();
+
+	config_vtp();
+
+	phy_config_cmd();
+	phy_config_data_evm();
+
+	/* set IO control registers */
+	writel(DDR3_IOCTRL_VALUE, DDR_CMD0_IOCTRL);
+	writel(DDR3_IOCTRL_VALUE, DDR_CMD1_IOCTRL);
+	writel(DDR3_IOCTRL_VALUE, DDR_CMD2_IOCTRL);
+	writel(DDR3_IOCTRL_VALUE, DDR_DATA0_IOCTRL);
+	writel(DDR3_IOCTRL_VALUE, DDR_DATA1_IOCTRL);
+
+	/* IOs set for DDR3 */
+	writel(readl(DDR_IO_CTRL) & MDDR_SEL_DDR2, DDR_IO_CTRL);
+	/* CKE controlled by EMIF/DDR_PHY */
+	writel(readl(DDR_CKE_CTRL) | CKE_NORMAL_OP, DDR_CKE_CTRL);
+
+	config_emif_ddr3_evm();
 
 }
 
@@ -721,7 +782,12 @@ void s_init(void)
 	}
 
 	u32 is_ddr3 = 0;
-	if (!strncmp("A335X_SK", header.name, 8)) {
+	u32 is_evm_ddr3 = 0;
+	if (!strncmp("A33515BB", header.name, 8) &&
+			strncmp("1.5", header.version, 3) <= 0) {
+	        is_ddr3 = 1;
+	        is_evm_ddr3 = 1;
+	} else if (!strncmp("A335X_SK", header.name, 8)) {
 		is_ddr3 = 1;
 
 		/*
@@ -733,11 +799,13 @@ void s_init(void)
 		gpio_direction_output(GPIO_DDR_VTT_EN, 1);
 	}
 
-	if(is_ddr3 == 1){
+	if (is_ddr3 == 1) {
 		ddr_pll_config(303);
-		config_am335x_ddr3();
-	}
-	else {
+		if (is_evm_ddr3)
+			config_am335_evm_ddr3();
+		else
+			config_am335_sk_ddr3();
+	} else {
 		ddr_pll_config(266);
 		config_am335x_ddr2();
 	}
