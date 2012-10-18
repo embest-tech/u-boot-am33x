@@ -106,4 +106,5 @@ typedef unsigned long dmaaddr_t;
 #define wmb()			asm volatile (""   : : :"memory")
 #endif
 
+#define msleep(a)	udelay(a * 1000)
 #endif /* __LINUX_COMPAT_H__ */
