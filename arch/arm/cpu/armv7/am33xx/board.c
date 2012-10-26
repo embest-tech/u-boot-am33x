@@ -352,26 +352,40 @@ static struct cpsw_platform_data cpsw_data = {
 int board_eth_init(bd_t *bis)
 {
 	int rv, n = 0;
-#ifdef CONFIG_DRIVER_TI_CPSW
+#if defined(CONFIG_DRIVER_TI_CPSW) || (defined(CONFIG_USB_ETHER) && \
+	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT)))
 	uint8_t mac_addr[6];
 	uint32_t mac_hi, mac_lo;
 
-	if (!eth_getenv_enetaddr("ethaddr", mac_addr)) {
+	/* try reading mac address from efuse */
+	mac_lo = readl(&cdev->macid0l);
+	mac_hi = readl(&cdev->macid0h);
+	mac_addr[0] = mac_hi & 0xFF;
+	mac_addr[1] = (mac_hi & 0xFF00) >> 8;
+	mac_addr[2] = (mac_hi & 0xFF0000) >> 16;
+	mac_addr[3] = (mac_hi & 0xFF000000) >> 24;
+	mac_addr[4] = mac_lo & 0xFF;
+	mac_addr[5] = (mac_lo & 0xFF00) >> 8;
+
+#ifdef CONFIG_DRIVER_TI_CPSW
+	if (!getenv("ethaddr")) {
 		debug("<ethaddr> not set. Reading from E-fuse\n");
-		/* try reading mac address from efuse */
-		mac_lo = readl(&cdev->macid0l);
-		mac_hi = readl(&cdev->macid0h);
-		mac_addr[0] = mac_hi & 0xFF;
-		mac_addr[1] = (mac_hi & 0xFF00) >> 8;
-		mac_addr[2] = (mac_hi & 0xFF0000) >> 16;
-		mac_addr[3] = (mac_hi & 0xFF000000) >> 24;
-		mac_addr[4] = mac_lo & 0xFF;
-		mac_addr[5] = (mac_lo & 0xFF00) >> 8;
+
+		if (!is_valid_ether_addr(mac_addr)) {
+			u_int32_t i;
+			debug("Did not find a valid mac address in e-fuse. "
+					"Trying the one present in EEPROM\n");
+
+			for (i = 0; i < HDR_ETH_ALEN; i++)
+				mac_addr[i] = header.mac_addr[0][i];
+		}
 
 		if (is_valid_ether_addr(mac_addr))
 			eth_setenv_enetaddr("ethaddr", mac_addr);
-		else
-			return -1;
+		else {
+			printf("Caution: Using hardcoded mac address. "
+				"Set <ethaddr> variable to overcome this.\n");
+		}
 	}
 
 	if (board_is_bone()) {
@@ -392,11 +406,14 @@ int board_eth_init(bd_t *bis)
 #endif
 #if defined(CONFIG_USB_ETHER) && \
 	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT))
+	if (is_valid_ether_addr(mac_addr))
+		eth_setenv_enetaddr("usbnet_devaddr", mac_addr);
 	rv = usb_eth_initialize(bis);
 	if (rv < 0)
 		printf("Error %d registering USB_ETHER\n", rv);
 	else
 		n += rv;
+#endif
 #endif
 	return n;
 }
