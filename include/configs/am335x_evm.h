@@ -155,6 +155,24 @@
 #define CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_SPEED		(24000000)
 
+/* CPSW ethernet */
+#define CONFIG_CMD_NET
+#define CONFIG_CMD_DHCP
+#define CONFIG_CMD_PING
+#define CONFIG_DRIVER_TI_CPSW
+#define CONFIG_MII
+#define CONFIG_BOOTP_DEFAULT
+#define CONFIG_BOOTP_DNS
+#define CONFIG_BOOTP_DNS2
+#define CONFIG_BOOTP_SEND_HOSTNAME
+#define CONFIG_BOOTP_GATEWAY
+#define CONFIG_BOOTP_SUBNETMASK
+#define CONFIG_NET_RETRY_COUNT         10
+#define CONFIG_NET_MULTI
+#define CONFIG_PHY_GIGE
+#define CONFIG_PHYLIB
+#define CONFIG_PHY_SMSC
+
  /* Physical Memory Map */
 #define CONFIG_NR_DRAM_BANKS		1		/*  1 bank of DRAM */
 #define PHYS_DRAM_1			0x80000000	/* DRAM Bank #1 */
@@ -211,28 +229,57 @@
 #define CONFIG_SPL_MAX_SIZE		(101 * 1024)
 #define CONFIG_SPL_STACK		CONFIG_SYS_INIT_SP_ADDR
 
+#define CONFIG_SPL_LDSCRIPT		"$(CPUDIR)/omap-common/u-boot-spl.lds"
 #define CONFIG_SPL_BSS_START_ADDR	0x80000000
 #define CONFIG_SPL_BSS_MAX_SIZE		0x80000		/* 512 KB */
 
+/* Core features. */
+#define CONFIG_SPL_LIBCOMMON_SUPPORT
+#define CONFIG_SPL_LIBGENERIC_SUPPORT
+#define CONFIG_SPL_SERIAL_SUPPORT
+#define CONFIG_SPL_I2C_SUPPORT
+#define CONFIG_SPL_BOARD_INIT
+#define CONFIG_SPL_GPIO_SUPPORT
+#ifdef CONFIG_SPL_BUILD
+#define CONFIG_PANIC_HANG		/* Do not call do_reset() */
+#endif
+
+/* Core network SPL (USB and CPSW). */
+#define CONFIG_SPL_NET_SUPPORT
+#define CONFIG_SPL_NET_VCI_STRING	"AM335x U-Boot SPL"
+
+/* USB (RNDIS) SPL */
+#ifdef CONFIG_USB_SPL
+#define CONFIG_SPL_MUSB_GADGET_SUPPORT
+#define CONFIG_SPL_USB_ETH_SUPPORT
+#ifdef CONFIG_SPL_BUILD
+#undef CONFIG_PHYLIB			/* Only needed on CPSW */
+#endif
+#endif
+
+/*
+ * Due to size constraints we need to limit what goes into the USB SPL.
+ * For now we allow either USB or CPSW but not both.  This is OK as the
+ * ROM will only support booting over one in a given configuration as well.
+ */
+#ifndef CONFIG_USB_SPL
+/* CPSW SPL */
+#define CONFIG_SPL_ETH_SUPPORT
+#endif
+
+/* SD/MMC/eMMC */
 #define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR	0x300 /* address 0x60000 */
 #define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS	0x200 /* 256 KB */
 #define CONFIG_SYS_MMC_SD_FAT_BOOT_PARTITION	1
 #define CONFIG_SPL_FAT_LOAD_PAYLOAD_NAME	"u-boot.img"
 #define CONFIG_SPL_MMC_SUPPORT
 #define CONFIG_SPL_FAT_SUPPORT
-#define CONFIG_SPL_I2C_SUPPORT
-
-#define CONFIG_SPL_LIBCOMMON_SUPPORT
 #define CONFIG_SPL_LIBDISK_SUPPORT
-#define CONFIG_SPL_LIBGENERIC_SUPPORT
-#define CONFIG_SPL_SERIAL_SUPPORT
-#define CONFIG_SPL_GPIO_SUPPORT
+
+/* Y-Modem. */
 #define CONFIG_SPL_YMODEM_SUPPORT
-#define CONFIG_SPL_NET_SUPPORT
-#define CONFIG_SPL_NET_VCI_STRING	"AM335x U-Boot SPL"
-#define CONFIG_SPL_ETH_SUPPORT
-#define CONFIG_SPL_MUSB_GADGET_SUPPORT
-#define CONFIG_SPL_USB_ETH_SUPPORT
+
+/* SPI */
 #define CONFIG_SPL_SPI_SUPPORT
 #define CONFIG_SPL_SPI_FLASH_SUPPORT
 #define CONFIG_SPL_SPI_LOAD
@@ -240,9 +287,8 @@
 #define CONFIG_SPL_SPI_CS		0
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
 #define CONFIG_SYS_SPI_U_BOOT_SIZE	0x40000
-#define CONFIG_SPL_LDSCRIPT		"$(CPUDIR)/omap-common/u-boot-spl.lds"
 
-#define CONFIG_SPL_BOARD_INIT
+/* NAND */
 #define CONFIG_SPL_NAND_AM33XX_BCH
 #define CONFIG_SPL_NAND_SUPPORT
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
@@ -328,23 +374,6 @@
 
 /* Unsupported features */
 #undef CONFIG_USE_IRQ
-
-#define CONFIG_CMD_NET
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_PING
-#define CONFIG_DRIVER_TI_CPSW
-#define CONFIG_MII
-#define CONFIG_BOOTP_DEFAULT
-#define CONFIG_BOOTP_DNS
-#define CONFIG_BOOTP_DNS2
-#define CONFIG_BOOTP_SEND_HOSTNAME
-#define CONFIG_BOOTP_GATEWAY
-#define CONFIG_BOOTP_SUBNETMASK
-#define CONFIG_NET_RETRY_COUNT         10
-#define CONFIG_NET_MULTI
-#define CONFIG_PHY_GIGE
-#define CONFIG_PHYLIB
-#define CONFIG_PHY_SMSC
 
 #define CONFIG_NAND
 /* NAND support */

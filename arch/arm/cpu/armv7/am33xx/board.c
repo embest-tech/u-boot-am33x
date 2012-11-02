@@ -309,7 +309,8 @@ int board_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_DRIVER_TI_CPSW
+#if (defined(CONFIG_DRIVER_TI_CPSW) && !defined(CONFIG_SPL_BUILD)) || \
+	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
 static void cpsw_control(int enabled)
 {
 	/* VTP can be added here */
@@ -350,13 +351,10 @@ static struct cpsw_platform_data cpsw_data = {
 #endif
 
 #if defined(CONFIG_DRIVER_TI_CPSW) || \
-	(defined(CONFIG_USB_ETHER) && defined(CONFIG_MUSB_GADGET) && \
-	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT)))
+	(defined(CONFIG_USB_ETHER) && defined(CONFIG_MUSB_GADGET))
 int board_eth_init(bd_t *bis)
 {
-	int rv, n = 0;
-#if defined(CONFIG_DRIVER_TI_CPSW) || (defined(CONFIG_USB_ETHER) && \
-	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT)))
+	int rv, ret = 0;
 	uint8_t mac_addr[6];
 	uint32_t mac_hi, mac_lo;
 
@@ -370,7 +368,8 @@ int board_eth_init(bd_t *bis)
 	mac_addr[4] = mac_lo & 0xFF;
 	mac_addr[5] = (mac_lo & 0xFF00) >> 8;
 
-#ifdef CONFIG_DRIVER_TI_CPSW
+#if (defined(CONFIG_DRIVER_TI_CPSW) && !defined(CONFIG_SPL_BUILD)) || \
+	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
 	if (!getenv("ethaddr")) {
 		debug("<ethaddr> not set. Reading from E-fuse\n");
 
@@ -402,22 +401,33 @@ int board_eth_init(bd_t *bis)
 	}
 
 	rv = cpsw_register(&cpsw_data);
-	if (rv < 0)
+	if (rv < 0) {
+		ret = -1;
 		printf("Error %d registering CPSW switch\n", rv);
-	else
-		n += rv;
+	}
 #endif
 #if defined(CONFIG_USB_ETHER) && \
 	(!defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_USB_ETH_SUPPORT))
 	if (is_valid_ether_addr(mac_addr))
 		eth_setenv_enetaddr("usbnet_devaddr", mac_addr);
+	/*
+	 * SPL does not call arch_misc_init and the ROM only supports using
+	 * USB0 for boot.
+	 */
+#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_USB_ETH_SUPPORT)
+	rv = musb_register(&otg0_plat, &otg0_board_data,
+			(void *)AM335X_USB0_OTG_BASE);
+	if (rv < 0) {
+		printf("Error %d registering MUSB device\n", rv);
+		return -1;
+	}
+#endif
 	rv = usb_eth_initialize(bis);
-	if (rv < 0)
+	if (rv < 0) {
 		printf("Error %d registering USB_ETHER\n", rv);
-	else
-		n += rv;
+		return -1;
+	}
 #endif
-#endif
-	return n;
+	return ret;
 }
 #endif
