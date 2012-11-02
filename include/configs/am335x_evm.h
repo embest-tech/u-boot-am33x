@@ -53,7 +53,7 @@
 	"optargs=\0" \
 	"mmcdev=0\0" \
 	"mmcroot=/dev/mmcblk0p2 ro\0" \
-	"mmcrootfstype=ext4 rootwait\0" \
+	"mmcrootfstype=ext3 rootwait\0" \
 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
 	"ramrootfstype=ext2\0" \
 	"mmcargs=setenv bootargs console=${console} " \
