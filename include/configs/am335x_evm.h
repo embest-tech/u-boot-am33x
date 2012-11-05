@@ -59,9 +59,13 @@
 	"nandrootfstype=ubifs rootwait=1\0" \
 	"nandsrcaddr=0x280000\0" \
 	"nandimgsize=0x500000\0" \
+	"rootpath=/export/rootfs\0" \
+	"nfsopts=nolock\0" \
 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
 	"ramrootfstype=ext2\0" \
 	"ip_method=none\0" \
+	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
+		"::off\0" \
 	"bootargs_defaults=setenv bootargs " \
 		"console=${console} " \
 		"${optargs}\0" \
@@ -82,8 +86,12 @@
 	"ramrootfstype=ext2\0" \
 	"spiargs=run bootargs_defaults;" \
 		"setenv bootargs ${bootargs} " \
-		"root=${spiroot} " \
 		"rootfstype=${spirootfstype} ip=${ip_method}\0" \
+	"netargs=run bootargs_defaults;" \
+		"setenv bootargs ${bootargs} " \
+		"root=/dev/nfs " \
+		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
+		"ip=dhcp\0" \
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
@@ -106,6 +114,12 @@
 		"run spiargs; " \
 		"sf probe ${spibusno}:0; " \
 		"sf read ${kloadaddr} ${spisrcaddr} ${spiimgsize}; " \
+		"bootm ${kloadaddr}\0" \
+	"netboot=echo Booting from network ...; " \
+		"setenv autoload no; " \
+		"dhcp; " \
+		"tftp ${kloadaddr} ${bootfile}; " \
+		"run netargs; " \
 		"bootm ${kloadaddr}\0" \
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
