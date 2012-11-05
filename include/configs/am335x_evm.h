@@ -59,6 +59,11 @@
     "nand_root_fs_type=ubifs rootwait=1\0" \
     "nand_src_addr=0x280000\0" \
     "nand_img_siz=0x500000\0" \
+    "spi_root=/dev/mtdblock4 rw\0" \
+    "spi_root_fs_type=jffs2\0" \
+    "spi_src_addr=0x62000\0" \
+    "spi_img_siz=0x380000\0" \
+    "spi_bus_no=0\0" \
 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
 	"ramrootfstype=ext2\0" \
     "ip_method=none\0" \
@@ -73,6 +78,10 @@
         "setenv bootargs ${bootargs} " \
         "root=${nand_root} noinitrd " \
         "rootfstype=${nand_root_fs_type} ip=${ip_method}\0" \
+    "spi_args=run bootargs_defaults;" \
+        "setenv bootargs ${bootargs} " \
+        "root=${spi_root} " \
+        "rootfstype=${spi_root_fs_type} ip=${ip_method}\0" \
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
@@ -91,6 +100,11 @@
         "run nand_args; " \
         "nandecc hw 2; " \
         "nand read.i ${kloadaddr} ${nand_src_addr} ${nand_img_siz}; " \
+        "bootm ${kloadaddr}\0" \
+    "spi_boot=echo Booting from spi ...; " \
+        "run spi_args; " \
+        "sf probe ${spi_bus_no}:0; " \
+        "sf read ${kloadaddr} ${spi_src_addr} ${spi_img_siz}; " \
         "bootm ${kloadaddr}\0" \
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
