@@ -55,6 +55,10 @@
 	"mmcdev=0\0" \
 	"mmcroot=/dev/mmcblk0p2 ro\0" \
 	"mmcrootfstype=ext3 rootwait\0" \
+	"nandroot=ubi0:rootfs rw ubi.mtd=7,2048\0" \
+	"nandrootfstype=ubifs rootwait=1\0" \
+	"nandsrcaddr=0x280000\0" \
+	"nandimgsize=0x500000\0" \
 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
 	"ramrootfstype=ext2\0" \
 	"ip_method=none\0" \
@@ -65,6 +69,10 @@
 		"setenv bootargs ${bootargs} " \
 		"root=${mmcroot} " \
 		"rootfstype=${mmcrootfstype} ip=${ip_method}\0" \
+	"nandargs=run bootargs_defaults;" \
+		"setenv bootargs ${bootargs} " \
+		"root=${nandroot} noinitrd " \
+		"rootfstype=${nandrootfstype} ip=${ip_method}\0" \
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
@@ -78,6 +86,10 @@
 	"loaduimage=ext2load mmc ${mmcdev}:2 ${kloadaddr} /boot/${bootfile}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"run mmcargs; " \
+		"bootm ${kloadaddr}\0" \
+	"nandboot=echo Booting from nand ...; " \
+		"run nandargs; " \
+		"nand read.i ${kloadaddr} ${nandsrcaddr} ${nandimgsize}; " \
 		"bootm ${kloadaddr}\0" \
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
@@ -105,6 +117,8 @@
 		"else " \
 			"echo Cound not find ${bootfile} ;" \
 		"fi;" \
+	"else " \
+		"run nandboot;" \
 	"fi;" \
 
 #else
