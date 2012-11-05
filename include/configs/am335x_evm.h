@@ -73,6 +73,17 @@
 		"setenv bootargs ${bootargs} " \
 		"root=${nandroot} noinitrd " \
 		"rootfstype=${nandrootfstype} ip=${ip_method}\0" \
+	"spiroot=/dev/mtdblock4 rw\0" \
+	"spirootfstype=jffs2\0" \
+	"spisrcaddr=0x62000\0" \
+	"spiimgsize=0x380000\0" \
+	"spibusno=0\0" \
+	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
+	"ramrootfstype=ext2\0" \
+	"spiargs=run bootargs_defaults;" \
+		"setenv bootargs ${bootargs} " \
+		"root=${spiroot} " \
+		"rootfstype=${spirootfstype} ip=${ip_method}\0" \
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
@@ -90,6 +101,11 @@
 	"nandboot=echo Booting from nand ...; " \
 		"run nandargs; " \
 		"nand read.i ${kloadaddr} ${nandsrcaddr} ${nandimgsize}; " \
+		"bootm ${kloadaddr}\0" \
+	"spiboot=echo Booting from spi ...; " \
+		"run spiargs; " \
+		"sf probe ${spibusno}:0; " \
+		"sf read ${kloadaddr} ${spisrcaddr} ${spiimgsize}; " \
 		"bootm ${kloadaddr}\0" \
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
