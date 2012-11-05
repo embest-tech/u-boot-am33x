@@ -64,8 +64,12 @@
     "spi_src_addr=0x62000\0" \
     "spi_img_siz=0x380000\0" \
     "spi_bus_no=0\0" \
+    "rootpath=/export/rootfs\0" \
+    "nfsopts=nolock\0" \
 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
 	"ramrootfstype=ext2\0" \
+    "static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
+            "::off\0" \
     "ip_method=none\0" \
     "bootargs_defaults=setenv bootargs " \
         "console=${console} " \
@@ -82,6 +86,11 @@
         "setenv bootargs ${bootargs} " \
         "root=${spi_root} " \
         "rootfstype=${spi_root_fs_type} ip=${ip_method}\0" \
+    "net_args=run bootargs_defaults;" \
+        "setenv bootargs ${bootargs} " \
+        "root=/dev/nfs " \
+        "nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
+        "ip=dhcp\0" \
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
@@ -105,6 +114,12 @@
         "run spi_args; " \
         "sf probe ${spi_bus_no}:0; " \
         "sf read ${kloadaddr} ${spi_src_addr} ${spi_img_siz}; " \
+        "bootm ${kloadaddr}\0" \
+    "net_boot=echo Booting from network ...; " \
+        "setenv autoload no; " \
+        "dhcp; " \
+        "tftp ${kloadaddr} ${bootfile}; " \
+        "run net_args; " \
         "bootm ${kloadaddr}\0" \
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
