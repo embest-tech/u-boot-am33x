@@ -115,6 +115,11 @@ static void enable_per_clocks(void)
 	while (readl(&cmwkup->wkup_uart0ctrl) != PRCM_MOD_EN)
 		;
 
+	/* GPMC */
+	writel(PRCM_MOD_EN, &cmper->gpmcclkctrl);
+	while (readl(&cmper->gpmcclkctrl) != PRCM_MOD_EN)
+		;
+
 	/* MMC0*/
 	writel(PRCM_MOD_EN, &cmper->mmc0clkctrl);
 	while (readl(&cmper->mmc0clkctrl) != PRCM_MOD_EN)
