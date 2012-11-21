@@ -56,6 +56,7 @@ void mpu_pll_config(int mpupll_M);
 void sdelay(unsigned long);
 void gpmc_init(void);
 void omap_nand_switch_ecc(int);
+void am33xx_spl_board_init(void);
 
 /*
  * We have three pin mux functions that must exist.  We must be able to enable
