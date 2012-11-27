@@ -773,6 +773,15 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			if (value >= 0)
 				value = min(w_length, (u16) value);
 			break;
+
+#ifdef CONFIG_DFU_FUNCTION
+		case DFU_DT_FUNC:	/* DFU */
+			value = config_desc(cdev, w_value);
+			if (value >= 0)
+				value = min(w_length, (u16) value);
+			break;
+#endif
+
 		default:
 			goto unknown;
 		}
