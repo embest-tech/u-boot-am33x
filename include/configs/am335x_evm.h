@@ -38,6 +38,8 @@
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_INITRD_TAG
 
+#define CONFIG_SYS_CACHELINE_SIZE       64
+
 /* commands to include */
 #include <config_cmd_default.h>
 
@@ -124,6 +126,7 @@
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
 		"bootm ${loadaddr}\0" \
+	CONFIG_DFU_ALT
 
 #ifndef CONFIG_RESTORE_FLASH
 /* set to negative value for no autoboot */
@@ -197,6 +200,7 @@
 #define CONFIG_DOS_PARTITION
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_EXT2
+#define CONFIG_FAT_WRITE
 
 #define CONFIG_SPI
 #define CONFIG_OMAP3_SPI
@@ -205,6 +209,28 @@
 #define CONFIG_SPI_FLASH_WINBOND
 #define CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_SPEED		(24000000)
+
+/* USB Composite download gadget - g_dnl */
+#define CONFIG_USB_GADGET
+#define CONFIG_USBDOWNLOAD_GADGET
+#define CONFIG_DFU_FUNCTION
+#define CONFIG_DFU_MMC
+
+/* USB TI's IDs */
+#define CONFIG_USBD_HS
+#define CONFIG_G_DNL_VENDOR_NUM 0x0525
+#define CONFIG_G_DNL_PRODUCT_NUM 0xa4a7
+#define CONFIG_G_DNL_MANUFACTURER "Texas Instruments"
+
+#define CONFIG_DFU_ALT \
+	"dfu_alt_info=" \
+	"boot part 0 1;" \
+	"rootfs part 0 2;" \
+	"MLO fat 0 1;" \
+	"u-boot.img fat 0 1;" \
+	"uEnv.txt fat 0 1\0"
+
+#define CONFIG_CMD_DFU
 
 /* CPSW ethernet */
 #define CONFIG_CMD_NET
@@ -393,6 +419,7 @@
 #define CONFIG_MUSB_GADGET
 #define CONFIG_MUSB_PIO_ONLY
 #define CONFIG_USB_GADGET_DUALSPEED
+#define CONFIG_USB_GADGET_VBUS_DRAW	2
 #define CONFIG_MUSB_HOST
 #define CONFIG_AM335X_USB0
 #define CONFIG_AM335X_USB0_MODE	MUSB_PERIPHERAL
