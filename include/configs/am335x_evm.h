@@ -46,6 +46,7 @@
 #define CONFIG_CMD_ASKENV
 #define CONFIG_VERSION_VARIABLE
 
+#if !(defined(CONFIG_USB_SPL) && defined(CONFIG_SPL_BUILD))
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"loadaddr=0x80200000\0" \
     "kloadaddr=0x80007fc0\0" \
@@ -128,7 +129,6 @@
 		"bootm ${loadaddr}\0" \
 	CONFIG_DFU_ALT
 
-#ifndef CONFIG_RESTORE_FLASH
 /* set to negative value for no autoboot */
 #define CONFIG_BOOTDELAY		3
 
