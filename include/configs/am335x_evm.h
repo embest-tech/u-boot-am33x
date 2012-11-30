@@ -301,6 +301,31 @@
 
 #define CONFIG_ENV_IS_NOWHERE
 
+/* NAND Configuration. */
+#define CONFIG_SYS_NAND_5_ADDR_CYCLE
+#define CONFIG_SYS_NAND_PAGE_COUNT	(CONFIG_SYS_NAND_BLOCK_SIZE / \
+					 CONFIG_SYS_NAND_PAGE_SIZE)
+#define CONFIG_SYS_NAND_PAGE_SIZE	2048
+#define CONFIG_SYS_NAND_OOBSIZE		64
+#define CONFIG_SYS_NAND_BLOCK_SIZE	(128*1024)
+#define CONFIG_SYS_NAND_BAD_BLOCK_POS	NAND_LARGE_BADBLOCK_POS
+#define CONFIG_SYS_NAND_ECCPOS		{ 2, 3, 4, 5, 6, 7, 8, 9, \
+					 10, 11, 12, 13, 14, 15, 16, 17, \
+					 18, 19, 20, 21, 22, 23, 24, 25, \
+					 26, 27, 28, 29, 30, 31, 32, 33, \
+					 34, 35, 36, 37, 38, 39, 40, 41, \
+					 42, 43, 44, 45, 46, 47, 48, 49, \
+					 50, 51, 52, 53, 54, 55, 56, 57, }
+
+
+#define CONFIG_SYS_NAND_ECCSIZE		512
+#define CONFIG_SYS_NAND_ECCBYTES	14
+#define CONFIG_SYS_NAND_ECCSTEPS	4
+#define	CONFIG_SYS_NAND_ECCTOTAL	(CONFIG_SYS_NAND_ECCBYTES * \
+						CONFIG_SYS_NAND_ECCSTEPS)
+
+
+#ifndef CONFIG_NOR_BOOT
 /* Defines for SPL */
 #define CONFIG_SPL
 #define CONFIG_SPL_FRAMEWORK
@@ -370,31 +395,10 @@
 /* NAND */
 #define CONFIG_SPL_NAND_AM33XX_BCH
 #define CONFIG_SPL_NAND_SUPPORT
-#define CONFIG_SYS_NAND_5_ADDR_CYCLE
-#define CONFIG_SYS_NAND_PAGE_COUNT	(CONFIG_SYS_NAND_BLOCK_SIZE / \
-					 CONFIG_SYS_NAND_PAGE_SIZE)
-#define CONFIG_SYS_NAND_PAGE_SIZE	2048
-#define CONFIG_SYS_NAND_OOBSIZE		64
-#define CONFIG_SYS_NAND_BLOCK_SIZE	(128*1024)
-#define CONFIG_SYS_NAND_BAD_BLOCK_POS	NAND_LARGE_BADBLOCK_POS
-#define CONFIG_SYS_NAND_ECCPOS		{ 2, 3, 4, 5, 6, 7, 8, 9, \
-					 10, 11, 12, 13, 14, 15, 16, 17, \
-					 18, 19, 20, 21, 22, 23, 24, 25, \
-					 26, 27, 28, 29, 30, 31, 32, 33, \
-					 34, 35, 36, 37, 38, 39, 40, 41, \
-					 42, 43, 44, 45, 46, 47, 48, 49, \
-					 50, 51, 52, 53, 54, 55, 56, 57, }
-
-#define CONFIG_SYS_NAND_ECCSIZE		512
-#define CONFIG_SYS_NAND_ECCBYTES	14
-
-#define CONFIG_SYS_NAND_ECCSTEPS	4
-#define	CONFIG_SYS_NAND_ECCTOTAL	(CONFIG_SYS_NAND_ECCBYTES * \
-						CONFIG_SYS_NAND_ECCSTEPS)
-
 #define	CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_TEXT_BASE
 
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x80000
+#endif
 
 /*
  * 1MB into the SDRAM to allow for SPL's bss at the beginning of SDRAM
@@ -402,14 +406,18 @@
  * header. That is 0x800FFFC0--0x80100000 should not be used for any
  * other needs.
  */
+#ifdef CONFIG_NOR_BOOT
+#define CONFIG_SYS_TEXT_BASE		0x08000000
+#else
 #define CONFIG_SYS_TEXT_BASE		0x80800000
+#endif
 #define CONFIG_SYS_SPL_MALLOC_START	0x80208000
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000
 
 /* Since SPL did pll and ddr initialization for us,
  * we don't need to do it twice.
  */
-#ifndef CONFIG_SPL_BUILD
+#if !defined(CONFIG_SPL_BUILD) && !defined(CONFIG_NOR_BOOT)
 #define CONFIG_SKIP_LOWLEVEL_INIT
 #endif
 
@@ -466,12 +474,46 @@
 							/* CS0 */
 #define CONFIG_SYS_MAX_NAND_DEVICE	1		/* Max number of NAND
 							   devices */
-#if !defined(CONFIG_SPI_BOOT)
+#if !defined(CONFIG_SPI_BOOT) && !defined(CONFIG_NOR_BOOT)
 #undef CONFIG_ENV_IS_NOWHERE
 #define CONFIG_ENV_IS_IN_NAND
 #define CONFIG_ENV_OFFSET		0x260000 /* environment starts here */
 #define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB */
 #endif
 #endif
+
+/*
+ * NOR Size = 16 MB
+ * No.Of Sectors/Blocks = 128
+ * Sector Size = 128 KB
+ * Word lenght = 16 bits
+ */
+#if defined(CONFIG_NOR)
+#undef CONFIG_SYS_NO_FLASH
+#undef CONFIG_SYS_MALLOC_LEN
+#define CONFIG_SYS_FLASH_USE_BUFFER_WRITE 1
+#define CONFIG_SYS_FLASH_PROTECTION
+#define CONFIG_SYS_MALLOC_LEN		(0x100000)
+#define CONFIG_SYS_FLASH_CFI
+#define CONFIG_FLASH_CFI_DRIVER
+#define CONFIG_FLASH_CFI_MTD
+#define CONFIG_SYS_MAX_FLASH_SECT	128
+#define CONFIG_SYS_MAX_FLASH_BANKS	1
+#define CONFIG_SYS_FLASH_BASE		(0x08000000)
+#define CONFIG_SYS_FLASH_CFI_WIDTH	FLASH_CFI_16BIT
+#define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_FLASH_BASE
+#define NOR_SECT_SIZE			(128 * 1024)
+#ifdef CONFIG_NOR_BOOT
+#undef CONFIG_ENV_IS_NOWHERE
+#define CONFIG_ENV_IS_IN_FLASH	1
+#define CONFIG_SYS_ENV_SECT_SIZE	(2 * NOR_SECT_SIZE)
+#define CONFIG_ENV_SECT_SIZE		(2 * NOR_SECT_SIZE)
+#define CONFIG_ENV_OFFSET		(2 * NOR_SECT_SIZE) /* After 1 MB */
+#define CONFIG_ENV_ADDR		(CONFIG_SYS_FLASH_BASE + \
+	 CONFIG_ENV_OFFSET)
+#endif
+#define CONFIG_MTD_DEVICE
+#define CONFIG_CMD_FLASH
+#endif	/* NOR support */
 
 #endif	/* ! __CONFIG_AM335X_EVM_H */

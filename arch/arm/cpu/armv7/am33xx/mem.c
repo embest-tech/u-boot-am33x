@@ -46,6 +46,19 @@ static const u32 gpmc_m_nand[GPMC_MAX_REG] = {
 };
 #endif
 
+#if defined(CONFIG_CMD_FLASH)
+static const u32 gpmc_nor[GPMC_MAX_REG] = {
+	STNOR_GPMC_CONFIG1,
+	STNOR_GPMC_CONFIG2,
+	STNOR_GPMC_CONFIG3,
+	STNOR_GPMC_CONFIG4,
+	STNOR_GPMC_CONFIG5,
+	STNOR_GPMC_CONFIG6,
+	STNOR_GPMC_CONFIG7
+};
+
+#define GPMC_CS 0
+#endif
 
 void enable_gpmc_cs_config(const u32 *gpmc_config, struct gpmc_cs *cs, u32 base,
 			u32 size)
@@ -75,7 +88,7 @@ void gpmc_init(void)
 	/* putting a blanket check on GPMC based on ZeBu for now */
 	gpmc_cfg = (struct gpmc *)GPMC_BASE;
 
-#ifdef CONFIG_CMD_NAND
+#if defined(CONFIG_CMD_NAND) || defined(CONFIG_NOR)
 	const u32 *gpmc_config = NULL;
 	u32 base = 0;
 	u32 size = 0;
@@ -97,5 +110,26 @@ void gpmc_init(void)
 	base = PISMO1_NAND_BASE;
 	size = PISMO1_NAND_SIZE;
 	enable_gpmc_cs_config(gpmc_config, &gpmc_cfg->cs[0], base, size);
+#endif
+
+#ifdef CONFIG_NOR
+	/* NOR - CS0 */
+	/* nor reset is gpio2_25 */
+#define GPIO2_25_MUX	0x44E1089C
+#define GPIO2_25_OE	0x481AC134
+#define GPIO2_25_DO	0x481AC13C
+
+	u32 tmp = 0;
+
+	tmp = readl(GPIO2_25_OE);
+	tmp &= 0xfdffffff;
+	writel(tmp, GPIO2_25_OE);
+	writel(0x02000000, 0x481ac194);
+
+	gpmc_config = gpmc_nor;
+	base = CONFIG_SYS_FLASH_BASE;
+	size = GPMC_SIZE_16M;
+	enable_gpmc_cs_config(gpmc_config, &gpmc_cfg->cs[0], base, size);
+	writel(0x00000a00, 0x50000050);
 #endif
 }

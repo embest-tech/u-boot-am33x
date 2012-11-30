@@ -264,7 +264,7 @@ int voltage_update(unsigned int module, unsigned char vddx_op_vol_sel)
 }
 
 /* UART Defines */
-#ifdef CONFIG_SPL_BUILD
+#if defined(CONFIG_SPL_BUILD) || defined(CONFIG_NOR_BOOT)
 #define UART_RESET		(0x1 << 1)
 #define UART_CLK_RUNNING_MASK	0x1
 #define UART_SMART_IDLE_EN	(0x1 << 0x3)
@@ -375,7 +375,7 @@ void s_init(void)
 	while (readl(&wdtimer->wdtwwps) != 0x0)
 		;
 
-#ifdef CONFIG_SPL_BUILD
+#if defined(CONFIG_SPL_BUILD) || defined(CONFIG_NOR_BOOT)
 	/* Setup the PLLs and the clocks for the peripherals */
 	pll_init();
 
@@ -399,9 +399,11 @@ void s_init(void)
 	regVal |= UART_SMART_IDLE_EN;
 	writel(regVal, &uart_base->uartsyscfg);
 
+#ifdef CONFIG_SPL_BUILD
 	gd = &gdata;
 
 	preloader_console_init();
+#endif
 
 	/* Initalize the board header */
 	enable_i2c0_pin_mux();
@@ -418,6 +420,10 @@ void s_init(void)
 		gpio_request(GPIO_DDR_VTT_EN, "ddr_vtt_en");
 		gpio_direction_output(GPIO_DDR_VTT_EN, 1);
 	}
+
+#ifdef CONFIG_NOR_BOOT
+	am33xx_spl_board_init();
+#endif
 
 	config_ddr(board_memory_type());
 #endif
