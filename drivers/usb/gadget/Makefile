@@ -25,16 +25,14 @@ include $(TOPDIR)/config.mk
 
 LIB	:= $(obj)libusb_gadget.o
 
-# new USB gadget layer dependencies
-
-# ugh; ugh; ugh common objects included twice
-ifdef CONFIG_USB_GADGET
-   COBJS-y += epautoconf.o config.o usbstring.o
-else
-  ifdef CONFIG_USB_ETHER
-     COBJS-y += epautoconf.o config.o usbstring.o
-  endif
+# if defined(CONFIG_USB_GADGET) || defined(CONFIG_USB_ETHER)
+#   Everytime you forget how crufty makefiles can get things like
+#   this remind you...
+ifneq (,$(CONFIG_USB_GADGET)$(CONFIG_USB_ETHER))
+COBJS-y += epautoconf.o config.o usbstring.o
 endif
+
+# new USB gadget layer dependencies
 
 ifdef CONFIG_USB_GADGET
 COBJS-$(CONFIG_USB_GADGET_S3C_UDC_OTG) += s3c_udc_otg.o
