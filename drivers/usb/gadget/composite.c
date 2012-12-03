@@ -775,8 +775,26 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			break;
 
 #ifdef CONFIG_DFU_FUNCTION
-		case DFU_DT_FUNC:	/* DFU */
-			value = config_desc(cdev, w_value);
+		/* DFU is mighty weird */
+		case DFU_DT_FUNC:
+			w_value &= 0xff;
+			list_for_each_entry(c, &cdev->configs, list) {
+				if (w_value != 0) {
+					w_value--;
+					continue;
+				}
+
+				list_for_each_entry(f, &c->functions, list) {
+
+					/* DFU function only */
+					if (strcmp(f->name, "dfu") != 0)
+						continue;
+
+					value = f->setup(f, ctrl);
+					goto dfu_func_done;
+				}
+			}
+dfu_func_done:
 			if (value >= 0)
 				value = min(w_length, (u16) value);
 			break;
