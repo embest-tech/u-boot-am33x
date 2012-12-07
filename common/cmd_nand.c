@@ -219,6 +219,9 @@ static int arg_off_size(int argc, char *const argv[], int *idx,
 	}
 
 print:
+	if (getenv("nandsilent") != NULL)
+		return 0;
+
 	printf("device %d ", *idx);
 	if (*size == nand_info[*idx].size)
 		puts("whole chip\n");
@@ -556,7 +559,9 @@ int do_nand(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 		if (argc != o + args)
 			goto usage;
 
-		printf("\nNAND %s: ", cmd);
+		if (getenv("nandsilent") == NULL)
+			printf("\nNAND %s: ", cmd);
+
 		/* skip first two or three arguments, look for offset and size */
 		if (arg_off_size(argc - o, argv + o, &dev, &off, &size) != 0)
 			return 1;
@@ -590,7 +595,9 @@ int do_nand(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 			}
 		}
 		ret = nand_erase_opts(nand, &opts);
-		printf("%s\n", ret ? "ERROR" : "OK");
+
+		if (getenv("nandsilent") == NULL)
+			printf("%s\n", ret ? "ERROR" : "OK");
 
 		return ret == 0 ? 0 : 1;
 	}
@@ -617,7 +624,9 @@ int do_nand(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 		addr = (ulong)simple_strtoul(argv[2], NULL, 16);
 
 		read = strncmp(cmd, "read", 4) == 0; /* 1 = read, 0 = write */
-		printf("\nNAND %s: ", read ? "read" : "write");
+
+		if (getenv("nandsilent") == NULL)
+			printf("\nNAND %s: ", read ? "read" : "write");
 
 		nand = &nand_info[dev];
 
@@ -695,8 +704,9 @@ int do_nand(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 			return 1;
 		}
 
-		printf(" %zu bytes %s: %s\n", rwsize,
-		       read ? "read" : "written", ret ? "ERROR" : "OK");
+		if (getenv("nandsilent") == NULL)
+			printf(" %zu bytes %s: %s\n", rwsize,
+			       read ? "read" : "written", ret ? "ERROR" : "OK");
 
 		return ret == 0 ? 0 : 1;
 	}
