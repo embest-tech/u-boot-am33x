@@ -24,7 +24,6 @@
 #define CONFIG_DMA_COHERENT
 #define CONFIG_DMA_COHERENT_SIZE	(1 << 20)
 
-#define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB */
 #define CONFIG_SYS_MALLOC_LEN		(1024 << 10)
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser */
@@ -91,8 +90,8 @@
 		"rootfstype=${nandrootfstype} ip=${ip_method}\0" \
 	"spiroot=/dev/mtdblock4 rw\0" \
 	"spirootfstype=jffs2\0" \
-	"spisrcaddr=0x62000\0" \
-	"spiimgsize=0x380000\0" \
+	"spisrcaddr=0x80000\0" \
+	"spiimgsize=0x362000\0" \
 	"spibusno=0\0" \
 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
 	"ramrootfstype=ext2\0" \
@@ -414,7 +413,6 @@
 #define CONFIG_SPL_SPI_BUS		0
 #define CONFIG_SPL_SPI_CS		0
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
-#define CONFIG_SYS_SPI_U_BOOT_SIZE	0x40000
 
 /* NAND */
 #define CONFIG_SPL_NAND_AM33XX_BCH
@@ -480,8 +478,9 @@
 # undef CONFIG_ENV_IS_NOWHERE
 # define CONFIG_ENV_IS_IN_SPI_FLASH
 # define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
-# define CONFIG_ENV_OFFSET		(384 << 10) /* 384 KB in */
+# define CONFIG_ENV_OFFSET		(508 << 10) /* 508 KB in */
 # define CONFIG_ENV_SECT_SIZE		(4 << 10) /* 4 KB sectors */
+# define CONFIG_ENV_SIZE		CONFIG_ENV_SECT_SIZE
 #endif /* SPI support */
 
 /* Unsupported features */
@@ -502,7 +501,7 @@
 #undef CONFIG_ENV_IS_NOWHERE
 #define CONFIG_ENV_IS_IN_NAND
 #define CONFIG_ENV_OFFSET		0x260000 /* environment starts here */
-#define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB */
+#define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB */
 #endif
 #endif
 
