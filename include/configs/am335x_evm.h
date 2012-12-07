@@ -43,6 +43,13 @@
 /* commands to include */
 #include <config_cmd_default.h>
 
+#define CONFIG_CMD_MTDPARTS
+#define MTDIDS_DEFAULT		"nand0=omap2-nand.0"
+#define MTDPARTS_DEFAULT	"mtdparts=omap2-nand.0:128k(SPL)," \
+				"128k(SPL.backup1),128k(SPL.backup2)," \
+				"128k(SPL.backup3),1920k(u-boot)," \
+				"128k(u-boot-env),5m(kernel),-(rootfs)" \
+
 #define CONFIG_CMD_ASKENV
 #define CONFIG_VERSION_VARIABLE
 
@@ -62,6 +69,8 @@
 	"nandrootfstype=ubifs rootwait=1\0" \
 	"nandsrcaddr=0x280000\0" \
 	"nandimgsize=0x500000\0" \
+	"mtdids=" MTDIDS_DEFAULT "\0" \
+	"mtdparts=" MTDPARTS_DEFAULT "\0" \
 	"rootpath=/export/rootfs\0" \
 	"nfsopts=nolock\0" \
 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=${rdaddr},64M\0" \
@@ -127,8 +136,6 @@
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
 		"bootm ${loadaddr}\0" \
-    "mtdids=nand0=cpsw-nand0\0" \
-    "mtdparts=mtdparts=cpsw-nand0:16m(boot),-(rootfs)\0" \
     CONFIG_DFU_ALT
 
 /* set to negative value for no autoboot */
@@ -214,14 +221,9 @@
 #define CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_SPEED		(24000000)
 
-#define CONFIG_CMD_MTDPARTS
-
 /* USB Composite download gadget - g_dnl */
 #define CONFIG_USB_GADGET
 #define CONFIG_USBDOWNLOAD_GADGET
-#define CONFIG_DFU_FUNCTION
-#define CONFIG_DFU_MMC
-#define CONFIG_DFU_NAND
 
 /* USB TI's IDs */
 #define CONFIG_USBD_HS
@@ -229,7 +231,18 @@
 #define CONFIG_G_DNL_PRODUCT_NUM 0xBD00
 #define CONFIG_G_DNL_MANUFACTURER "Texas Instruments"
 
-#define CONFIG_DFU_ALT \
+/* USB Device Firmware Update (DFU) support */
+#define DFU_ALT_INFO_NAND \
+	"dfu_alt_info=" \
+	"SPL part 0 1;" \
+	"SPL.backup1 part 0 2;" \
+	"SPL.backup2 part 0 3;" \
+	"SPL.backup3 part 0 4;" \
+	"u-boot part 0 5;" \
+	"kernel part 0 7;" \
+	"rootfs part 0 8\0" \
+
+#define DFU_ALT_INFO_MMC \
 	"dfu_alt_info=" \
 	"boot part 0 1;" \
 	"rootfs part 0 2;" \
@@ -237,6 +250,12 @@
 	"u-boot.img fat 0 1;" \
 	"uEnv.txt fat 0 1\0"
 
+#define CONFIG_DFU_FUNCTION
+#ifdef CONFIG_DFU_MMC
+#define CONFIG_DFU_ALT			DFU_ALT_INFO_MMC
+#elif CONFIG_DFU_NAND
+#endif
+#define CONFIG_DFU_ALT			DFU_ALT_INFO_NAND
 #define CONFIG_CMD_DFU
 
 /* CPSW ethernet */
