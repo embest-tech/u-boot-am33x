@@ -1,5 +1,3 @@
-# set NAND ECC mode to HW
-nandecc hw 2
 # erase NAND
 nand erase.chip
 # get MLO
