@@ -167,3 +167,5 @@ __attribute__((noreturn)) void nand_boot(void);
 #define ENV_OFFSET_SIZE 8
 int get_nand_env_oob(nand_info_t *nand, unsigned long *result);
 #endif
+
+loff_t nand_extent_skip_bad(nand_info_t *nand, loff_t offset, size_t length);

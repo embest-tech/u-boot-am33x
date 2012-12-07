@@ -127,7 +127,9 @@
 	"ramboot=echo Booting from ramdisk ...; " \
 		"run ramargs; " \
 		"bootm ${loadaddr}\0" \
-	CONFIG_DFU_ALT
+    "mtdids=nand0=cpsw-nand0\0" \
+    "mtdparts=mtdparts=cpsw-nand0:16m(boot),-(rootfs)\0" \
+    CONFIG_DFU_ALT
 
 /* set to negative value for no autoboot */
 #define CONFIG_BOOTDELAY		3
@@ -212,11 +214,14 @@
 #define CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_SPEED		(24000000)
 
+#define CONFIG_CMD_MTDPARTS
+
 /* USB Composite download gadget - g_dnl */
 #define CONFIG_USB_GADGET
 #define CONFIG_USBDOWNLOAD_GADGET
 #define CONFIG_DFU_FUNCTION
 #define CONFIG_DFU_MMC
+#define CONFIG_DFU_NAND
 
 /* USB TI's IDs */
 #define CONFIG_USBD_HS

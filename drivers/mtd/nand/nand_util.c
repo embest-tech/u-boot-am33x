@@ -683,3 +683,53 @@ int nand_read_skip_bad(nand_info_t *nand, loff_t offset, size_t *length,
 
 	return 0;
 }
+
+/**
+ * nand_extent_skip_bad:
+ *
+ * Find the extent of a chunk, return the offset where it ends
+ * Blocks that are marked bad are skipped and the next block is examined
+ * instead as long as the extend is short enough to fit even after skipping the
+ * bad blocks.
+ *
+ * @param nand NAND device
+ * @param offset offset in flash
+ * @param length extend length
+ * @return next offset in case of success (loff_t)-1 on error
+ */
+loff_t nand_extent_skip_bad(nand_info_t *nand, loff_t offset, size_t length)
+{
+	size_t block_len, block_off;
+	loff_t block_start;
+
+	if ((offset & (nand->writesize - 1)) != 0) {
+		printf ("%s: Attempt to check extend non page aligned data\n",
+				__func__);
+		return (loff_t)-1;
+	}
+
+	while (length > 0) {
+
+		if (offset >= nand->size) {
+			printf("%s: offset >= nand->size (%llx >= %llx)\n",
+					__func__, offset, nand->size);
+			return (loff_t)-1;
+		}
+
+		block_start = offset & ~(loff_t)(nand->erasesize - 1);
+		block_off = offset & (nand->erasesize - 1);
+		block_len = nand->erasesize - block_off;
+		if (block_len > length)		/* left over */
+			block_len = length;
+
+		if (!nand_block_isbad(nand, block_start))
+			length -= block_len;
+		else
+			debug("%s: bad block at %llx (left %x)\n",
+					__func__, block_start, length);
+
+		offset += block_len;
+	}
+
+	return offset;
+}
