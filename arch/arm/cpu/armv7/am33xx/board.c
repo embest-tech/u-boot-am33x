@@ -125,18 +125,6 @@ static int read_eeprom(void)
 	return 0;
 }
 
-/*
- * Determine what type of DDR we have.
- */
-static short inline board_memory_type(void)
-{
-	/* The following boards are known to use DDR3. */
-	if (board_is_evm_sk() || board_is_evm_15_or_later())
-		return EMIF_REG_SDRAM_TYPE_DDR3;
-
-	return EMIF_REG_SDRAM_TYPE_DDR2;
-}
-
 /**
  * tps65217_reg_read() - Generic function that can read a TPS65217 register
  * @src_reg:          Source register address
@@ -365,6 +353,21 @@ void am33xx_spl_board_init(void)
  */
 void s_init(void)
 {
+	__maybe_unused struct am335x_baseboard_id header;
+
+#ifdef CONFIG_NOR_BOOT
+	asm("stmfd	sp!, {r2 - r4}");
+	asm("movw	r4, #0x8A4");
+	asm("movw	r3, #0x44E1");
+	asm("orr	r4, r4, r3, lsl #16");
+	asm("mov	r2, #9");
+	asm("mov	r3, #8");
+	asm("gpmc_mux:	str	r2, [r4], #4");
+	asm("subs	r3, r3, #1");
+	asm("bne	gpmc_mux");
+	asm("ldmfd	sp!, {r2 - r4}");
+#endif
+
 	/* WDT1 is already running when the bootloader gets control
 	 * Disable it to avoid "random" resets
 	 */
@@ -399,7 +402,13 @@ void s_init(void)
 	regVal |= UART_SMART_IDLE_EN;
 	writel(regVal, &uart_base->uartsyscfg);
 
-#ifdef CONFIG_SPL_BUILD
+#if defined(CONFIG_NOR_BOOT)
+	/* NOR booting - enable serial console */
+	gd = (gd_t *) ((CONFIG_SYS_INIT_SP_ADDR) & ~0x07);
+	gd->baudrate = CONFIG_BAUDRATE;
+	serial_init();
+	gd->have_console = 1;
+#else
 	gd = &gdata;
 
 	preloader_console_init();
@@ -408,11 +417,45 @@ void s_init(void)
 	/* Initalize the board header */
 	enable_i2c0_pin_mux();
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+#ifndef CONFIG_NOR_BOOT
 	if (read_eeprom() < 0)
 		puts("Could not get board ID.\n");
+#endif
+
+	/* Check if baseboard eeprom is available */
+	if (i2c_probe(CONFIG_SYS_I2C_EEPROM_ADDR)) {
+		puts("Could not probe the EEPROM; something fundamentally "
+			"wrong on the I2C bus.\n");
+	}
+
+	/* read the eeprom using i2c */
+	if (i2c_read(CONFIG_SYS_I2C_EEPROM_ADDR, 0, 2, (uchar *)&header,
+							sizeof(header))) {
+		puts("Could not read the EEPROM; something fundamentally"
+			" wrong on the I2C bus.\n");
+	}
+
+	if (header.magic != 0xEE3355AA) {
+		/*
+		 * read the eeprom using i2c again,
+		 * but use only a 1 byte address
+		 */
+		if (i2c_read(CONFIG_SYS_I2C_EEPROM_ADDR, 0, 1,
+					(uchar *)&header, sizeof(header))) {
+			puts("Could not read the EEPROM; something "
+				"fundamentally wrong on the I2C bus.\n");
+			hang();
+		}
+
+		if (header.magic != 0xEE3355AA) {
+			printf("Incorrect magic number (0x%x) in EEPROM\n",
+					header.magic);
+			hang();
+		}
+	}
 
 	enable_board_pin_mux(&header);
-	if (board_is_evm_sk()) {
+	if (!strncmp("A335X_SK", header.name, HDR_NAME_LEN)) {
 		/*
 		 * EVM SK 1.2A and later use gpio0_7 to enable DDR3.
 		 * This is safe enough to do on older revs.
@@ -425,7 +468,13 @@ void s_init(void)
 	am33xx_spl_board_init();
 #endif
 
-	config_ddr(board_memory_type());
+	/* The following boards are known to use DDR3. */
+	if ((!strncmp("A335X_SK", header.name, HDR_NAME_LEN)) || 
+			(!strncmp("A33515BB", header.name, 8) &&
+			 strncmp("1.5", header.version, 3) <= 0))
+		config_ddr(EMIF_REG_SDRAM_TYPE_DDR3);
+	else
+		config_ddr(EMIF_REG_SDRAM_TYPE_DDR2);
 #endif
 }
 
