@@ -41,8 +41,12 @@ enum dfu_layout {
 	DFU_FS_EXT4,
 };
 
+/* forward decl. */
+struct mmc;
+
 struct mmc_internal_data {
 	/* RAW programming */
+	struct mmc *mmc;
 	unsigned int lba_start;
 	unsigned int lba_size;
 	unsigned int lba_blk_size;

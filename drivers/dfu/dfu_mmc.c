@@ -33,8 +33,9 @@ enum dfu_mmc_op {
 static int mmc_block_op(enum dfu_mmc_op op, struct dfu_entity *dfu,
 			u64 offset, void *buf, long *len)
 {
-	char cmd_buf[DFU_CMD_BUF_SIZE];
 	u32 blk_start, blk_count;
+	struct mmc *mmc;
+	unsigned long n;
 
 	/* if buf == NULL return total size of the area */
 	if (buf == NULL) {
@@ -51,12 +52,19 @@ static int mmc_block_op(enum dfu_mmc_op op, struct dfu_entity *dfu,
 		return -1;
 	}
 
-	sprintf(cmd_buf, "mmc %s %p %x %x",
-		op == DFU_OP_READ ? "read" : "write",
-		 buf, blk_start, blk_count);
+	mmc = dfu->data.mmc.mmc;
+	BUG_ON(mmc == NULL);
 
-	debug("%s: %s 0x%p\n", __func__, cmd_buf, cmd_buf);
-	return run_command(cmd_buf, 0);
+	if (op == DFU_OP_READ) {
+		BUG_ON(mmc->block_dev.block_read == NULL);
+		n = mmc->block_dev.block_read(dfu->data.mmc.dev,
+				blk_start, blk_count, buf);
+	} else {
+		BUG_ON(mmc->block_dev.block_write == NULL);
+		n = mmc->block_dev.block_write(dfu->data.mmc.dev,
+				blk_start, blk_count, buf);
+	}
+	return n != blk_count ? -1 : 0;
 }
 
 static inline int mmc_block_write(struct dfu_entity *dfu,
@@ -187,6 +195,16 @@ int dfu_fill_entity_mmc(struct dfu_entity *dfu, char *s)
 	st = strsep(&s, " ");
 	if (!strcmp(st, "mmc")) {
 		dfu->layout = DFU_RAW_ADDR;
+
+		dfu->data.mmc.dev = dfu->dev_num;
+		mmc = find_mmc_device(dfu->data.mmc.dev);
+		if (mmc == NULL || mmc_init(mmc)) {
+			printf("%s: could not find mmc device #%d!\n",
+					__func__, dfu->data.mmc.dev);
+			return -1;
+		}
+
+		dfu->data.mmc.mmc = mmc;
 		dfu->data.mmc.lba_start = simple_strtoul(s, &s, 16);
 		dfu->data.mmc.lba_size = simple_strtoul(++s, &s, 16);
 		dfu->data.mmc.lba_blk_size = get_mmc_blk_size(dfu->dev_num);
@@ -201,6 +219,7 @@ int dfu_fill_entity_mmc(struct dfu_entity *dfu, char *s)
 		dev = simple_strtoul(s, &s, 10);
 		part = simple_strtoul(++s, &s, 10);
 
+		dfu->data.mmc.dev = dev;
 		mmc = find_mmc_device(dev);
 		if (mmc == NULL || mmc_init(mmc)) {
 			printf("%s: could not find mmc device #%d!\n", __func__, dev);
@@ -215,6 +234,7 @@ int dfu_fill_entity_mmc(struct dfu_entity *dfu, char *s)
 			return -1;
 		}
 
+		dfu->data.mmc.mmc = mmc;
 		dfu->data.mmc.lba_start = partinfo.start;
 		dfu->data.mmc.lba_size = partinfo.size;
 		dfu->data.mmc.lba_blk_size = partinfo.blksz;
@@ -225,8 +245,17 @@ int dfu_fill_entity_mmc(struct dfu_entity *dfu, char *s)
 	}
 
 	if (dfu->layout == DFU_FS_EXT4 || dfu->layout == DFU_FS_FAT) {
+
 		dfu->data.mmc.dev = simple_strtoul(s, &s, 10);
 		dfu->data.mmc.part = simple_strtoul(++s, &s, 10);
+
+		mmc = find_mmc_device(dfu->data.mmc.dev);
+		if (mmc == NULL || mmc_init(mmc)) {
+			printf("%s: could not find mmc device #%d!\n",
+					__func__, dfu->data.mmc.dev);
+			return -1;
+		}
+		dfu->data.mmc.mmc = mmc;
 	}
 
 	dfu->read_medium = dfu_read_medium_mmc;
