@@ -253,8 +253,8 @@
 #ifdef CONFIG_DFU_MMC
 #define CONFIG_DFU_ALT			DFU_ALT_INFO_MMC
 #elif CONFIG_DFU_NAND
-#endif
 #define CONFIG_DFU_ALT			DFU_ALT_INFO_NAND
+#endif
 #define CONFIG_CMD_DFU
 
 /* CPSW ethernet */
