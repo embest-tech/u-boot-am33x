@@ -23,7 +23,7 @@
 
 /* Put the pll config values over here */
 
-#define OSC	24
+#define OSC	(V_OSCK/1000000)
 
 /* MAIN PLL Fdll = 1 GHZ, */
 #define MPUPLL_M_500	500	/* 125 * n */
@@ -31,12 +31,12 @@
 #define MPUPLL_M_600	600	/* 125 * n */
 #define MPUPLL_M_720	720	/* 125 * n */
 
-#define MPUPLL_N	23	/* (n -1 ) */
+#define MPUPLL_N	(OSC-1)	/* (n -1 ) */
 #define MPUPLL_M2	1
 
 /* Core PLL Fdll = 1 GHZ, */
 #define COREPLL_M	1000	/* 125 * n */
-#define COREPLL_N	23	/* (n -1 ) */
+#define COREPLL_N	(OSC-1)	/* (n -1 ) */
 
 #define COREPLL_M4	10	/* CORE_CLKOUTM4 = 200 MHZ */
 #define COREPLL_M5	8	/* CORE_CLKOUTM5 = 250 MHZ */
@@ -48,13 +48,13 @@
  * For clkout = 192 MHZ, Fdll = 960 MHZ, divider values are given below
  */
 #define PERPLL_M	960
-#define PERPLL_N	23
+#define PERPLL_N	(OSC-1)
 #define PERPLL_M2	5
 
 /* DDR Freq is 266 MHZ for now*/
 /* Set Fdll = 400 MHZ , Fdll = M * 2 * CLKINP/ N + 1; clkout = Fdll /(2 * M2) */
 #define DDRPLL_M	266
-#define DDRPLL_N	23
+#define DDRPLL_N	(OSC-1)
 #define DDRPLL_M2	1
 
 #endif	/* endif _CLOCKS_AM335X_H_ */

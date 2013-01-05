@@ -124,16 +124,19 @@ void board_init_r(gd_t *id, ulong dummy)
 #ifdef CONFIG_SPL_MMC_SUPPORT
 	case BOOT_DEVICE_MMC1:
 	case BOOT_DEVICE_MMC2:
+		printk("Booting from MMC...\n");
 		spl_mmc_load_image();
 		break;
 #endif
 #ifdef CONFIG_SPL_NAND_SUPPORT
 	case BOOT_DEVICE_NAND:
+		printk("Booting from NAND...\n");
 		spl_nand_load_image();
 		break;
 #endif
 #ifdef CONFIG_SPL_YMODEM_SUPPORT
 	case BOOT_DEVICE_UART:
+		printk("Booting from UART...\n");
 		spl_ymodem_load_image();
 		break;
 #endif
