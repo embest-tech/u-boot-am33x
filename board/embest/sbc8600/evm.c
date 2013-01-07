@@ -453,7 +453,7 @@ void s_init(void)
 int board_evm_init(void)
 {
 	/* mach type passed to kernel */
-	gd->bd->bi_arch_number = MACH_TYPE_TIAM335EVM;
+	gd->bd->bi_arch_number = MACH_TYPE_SBC8600;
 
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_DRAM_1 + 0x100;
