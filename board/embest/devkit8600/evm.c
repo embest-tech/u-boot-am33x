@@ -34,6 +34,7 @@
 #include <netdev.h>
 #include <spi_flash.h>
 #include "common_def.h"
+#include "pmic.h"
 #include <i2c.h>
 #include <serial.h>
 
@@ -360,14 +361,66 @@ static void rtc32k_enable(void)
 }
 #endif
 
+
 #if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_BOARD_INIT)
+
+
+/*
+ * voltage switching for MPU frequency switching.
+ * @module = mpu - 0, core - 1
+ * @vddx_op_vol_sel = vdd voltage to set
+ */
+
+#define MPU	0
+#define CORE	1
+
+int voltage_update(unsigned int module, unsigned char vddx_op_vol_sel)
+{
+	uchar buf[4];
+	unsigned int reg_offset;
+
+	if(module == MPU)
+		reg_offset = PMIC_VDD1_OP_REG;
+	else
+		reg_offset = PMIC_VDD2_OP_REG;
+
+	/* Select VDDx OP   */
+	if (i2c_read(PMIC_CTRL_I2C_ADDR, reg_offset, 1, buf, 1))
+		return 1;
+
+	buf[0] &= ~PMIC_OP_REG_CMD_MASK;
+
+	if (i2c_write(PMIC_CTRL_I2C_ADDR, reg_offset, 1, buf, 1))
+		return 1;
+
+	/* Configure VDDx OP  Voltage */
+	if (i2c_read(PMIC_CTRL_I2C_ADDR, reg_offset, 1, buf, 1))
+		return 1;
+
+	buf[0] &= ~PMIC_OP_REG_SEL_MASK;
+	buf[0] |= vddx_op_vol_sel;
+
+	if (i2c_write(PMIC_CTRL_I2C_ADDR, reg_offset, 1, buf, 1))
+		return 1;
+
+	if (i2c_read(PMIC_CTRL_I2C_ADDR, reg_offset, 1, buf, 1))
+		return 1;
+
+	if ((buf[0] & PMIC_OP_REG_SEL_MASK ) != vddx_op_vol_sel)
+		return 1;
+
+	return 0;
+}
+
 void spl_board_init(void)
 {
 	uchar pmic_status_reg;
 
-	/* init board_id, configure muxes */
-//	board_init();
-#if 0
+        /* Configure the i2c0 pin mux */
+        enable_i2c0_pin_mux();
+
+        i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+
 	uchar buf[4];
 	/*
 	 * EVM PMIC code.  All boards currently want an MPU voltage
@@ -386,13 +439,20 @@ void spl_board_init(void)
 	if (i2c_write(PMIC_CTRL_I2C_ADDR, PMIC_DEVCTRL_REG, 1, buf, 1))
 		return;
 
+        /* add by embest */
+        if (i2c_read(PMIC_CTRL_I2C_ADDR, PMIC_VIO_REG, 1, buf, 1))
+                return;
+
+        buf[0] &= ~(0x3 << 2);  /* VIO set to 1.5V */
+
+        if (i2c_write(PMIC_CTRL_I2C_ADDR, PMIC_VIO_REG, 1, buf, 1))
+                return;
+        /* end add */
+
 	if (!voltage_update(MPU, PMIC_OP_REG_SEL_1_2_6) &&
 			!voltage_update(CORE, PMIC_OP_REG_SEL_1_1_3))
 		/* Frequency switching for OPP 120 */
 		mpu_pll_config(MPUPLL_M_720);
-#else
-	mpu_pll_config(MPUPLL_M_720);
-#endif
 }
 #endif
 
@@ -441,8 +501,19 @@ void s_init(void)
 
 	preloader_console_init();
 
-	ddr_pll_config(303);
-	config_am335x_ddr3();
+
+	u32 is_ddr3 = 0;
+	is_ddr3 = 1;
+
+	if(is_ddr3 == 1){
+		ddr_pll_config(303);
+		config_am335x_ddr3();
+	}
+	else {
+		ddr_pll_config(266);
+		config_am335x_ddr2();
+	}
+
 #endif
 }
 
@@ -453,7 +524,7 @@ void s_init(void)
 int board_evm_init(void)
 {
 	/* mach type passed to kernel */
-	gd->bd->bi_arch_number = MACH_TYPE_SBC8600;
+	gd->bd->bi_arch_number = MACH_TYPE_DEVKIT8600;
 
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_DRAM_1 + 0x100;
@@ -470,7 +541,7 @@ int board_init(void)
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 
 	board_id = GP_BOARD;
-	profile = 1;
+	profile = 1;	/* profile 0 is internally considered as 1 */
 	daughter_board_connected = 1;
 
 	configure_evm_pin_mux(board_id, header.version, profile, daughter_board_connected);
@@ -478,6 +549,7 @@ int board_init(void)
 #ifndef CONFIG_SPL_BUILD
 	board_evm_init();
 #endif
+
 	gpmc_init();
 
 	return 0;
@@ -537,6 +609,7 @@ static void evm_phy_init(char *name, int addr)
 	if ((miiphy_read(name, addr, MII_PHYSID1, &phyid1) != 0) ||
 			(miiphy_read(name, addr, MII_PHYSID2, &phyid2) != 0))
 		return;
+
 
 	/* Enable Autonegotiation */
 	if (miiphy_read(name, addr, MII_BMCR, &val) != 0) {
