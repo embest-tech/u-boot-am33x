@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (C) 2011 Embest Incorporated - http://www.embedinfo.com/
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -52,6 +52,7 @@
 	"rdloadaddr=0x81600000\0" \
 	"script_addr=0x81900000\0" \
 	"console=ttyO0,115200n8\0" \
+	"consoleblank=0\0" \
 	"mmc_dev=0\0" \
 	"mmc_root=/dev/ram rw\0" \
 	"nand_root=ubi0:rootfs rw ubi.mtd=7,2048\0" \
@@ -85,10 +86,12 @@
 		"${optargs}\0" \
 	"mmc_args=run bootargs_defaults;" \
 		"setenv bootargs ${bootargs} " \
+		"consoleblank=${consoleblank} " \
 		"root=${mmc_root} initrd=${rdloadaddr},32MB " \
 		"rootfstype=${mmc_root_fs_type} ip=${ip_method}\0" \
 	"nand_args=run bootargs_defaults;" \
 		"setenv bootargs ${bootargs} " \
+		"consoleblank=${consoleblank} " \
 		"root=${nand_root} noinitrd " \
 		"rootfstype=${nand_root_fs_type} ip=${ip_method}\0" \
 	"spi_args=run bootargs_defaults;" \
