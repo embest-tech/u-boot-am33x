@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Embest Incorporated - http://www.embedinfo.com/
+ * Copyright (C) 2012 Embest Incorporated - http://www.embedinfo.com/
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -43,32 +43,22 @@
 #define CONFIG_NAND
 #define CONFIG_SPI
 
-#if 1
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"bootfile=uImage\0" \
 	"ramdisk=ramdisk.gz\0" \
 	"loadaddr=0x82000000\0" \
 	"kloadaddr=0x80007fc0\0" \
 	"rdloadaddr=0x81600000\0" \
-	"script_addr=0x81900000\0" \
 	"console=ttyO0,115200n8\0" \
 	"consoleblank=0\0" \
 	"mmc_dev=0\0" \
-	"mmc_root=/dev/ram rw\0" \
+	"mmc_root=/dev/ram rw \0" \
 	"nand_root=ubi0:rootfs rw ubi.mtd=7,2048\0" \
-	"spi_root=/dev/mtdblock4 rw\0" \
-	"nor_root=/dev/mtdblock3 rw\0" \
 	"mmc_root_fs_type=ext2\0" \
-	"nand_root_fs_type=ubifs rootwait=1\0" \
-	"spi_root_fs_type=jffs2\0" \
-	"nor_root_fs_type=jffs2\0" \
+	"dispmode=4.3inch_LCD\0" \
+	"nand_root_fs_type=ubifs\0" \
 	"nand_src_addr=0x280000\0" \
-	"spi_src_addr=0x62000\0" \
-	"nor_src_addr=0x08080000\0" \
 	"nand_img_siz=0x400000\0" \
-	"spi_img_siz=0x280000\0" \
-	"nor_img_siz=0x280000\0" \
-	"spi_bus_no=0\0" \
 	"rootpath=/export/rootfs\0" \
 	"nfsopts=nolock\0" \
 	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
@@ -77,37 +67,33 @@
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=fatload mmc ${mmc_dev} ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
-		"env import -t $loadaddr $filesize\0" \
-	"mmc_load_image=fatload mmc ${mmc_dev} ${kloadaddr} ${bootfile};"  \
-			"fatload mmc ${mmc_dev} ${rdloadaddr} ${ramdisk}\0" \
+		"env import -t ${loadaddr} ${filesize}\0" \
+	"mmc_load_image=fatload mmc ${mmc_dev} ${kloadaddr} ${bootfile};" \
+		      "fatload mmc ${mmc_dev} ${rdloadaddr} ${ramdisk}\0" \
 	"optargs=\0" \
 	"bootargs_defaults=setenv bootargs " \
 		"console=${console} " \
 		"${optargs}\0" \
 	"mmc_args=run bootargs_defaults;" \
 		"setenv bootargs ${bootargs} " \
+		"dispmode=${dispmode} " \
 		"consoleblank=${consoleblank} " \
 		"root=${mmc_root} initrd=${rdloadaddr},32MB " \
 		"rootfstype=${mmc_root_fs_type} ip=${ip_method}\0" \
 	"nand_args=run bootargs_defaults;" \
 		"setenv bootargs ${bootargs} " \
+		"dispmode=${dispmode} " \
 		"consoleblank=${consoleblank} " \
 		"root=${nand_root} noinitrd " \
 		"rootfstype=${nand_root_fs_type} ip=${ip_method}\0" \
-	"spi_args=run bootargs_defaults;" \
-		"setenv bootargs ${bootargs} " \
-		"root=${spi_root} " \
-		"rootfstype=${spi_root_fs_type} ip=${ip_method}\0" \
-	"nor_args=run bootargs_defaults;" \
-		"setenv bootargs ${bootargs} " \
-		"root={nor_root} " \
-		"rootfstype=${nor_root_fs_type} ip=${ip_method}\0" \
 	"net_args=run bootargs_defaults;" \
 		"setenv bootargs ${bootargs} " \
+		"dispmode=${dispmode} " \
 		"root=/dev/nfs " \
 		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
 		"ip=dhcp\0" \
 	"mmc_boot=run mmc_args; " \
+                "mmc rescan; " \
 		"run mmc_load_image; " \
 		"bootm ${kloadaddr}\0" \
 	"nand_boot=echo Booting from nand ...; " \
@@ -115,57 +101,41 @@
 		"nandecc hw 2; " \
 		"nand read.i ${kloadaddr} ${nand_src_addr} ${nand_img_siz}; " \
 		"bootm ${kloadaddr}\0" \
-	"spi_boot=echo Booting from spi ...; " \
-		"run spi_args; " \
-		"sf probe ${spi_bus_no}:0; " \
-		"sf read ${kloadaddr} ${spi_src_addr} ${spi_img_siz}; " \
-		"bootm ${kloadaddr}\0" \
-	"nor_boot=echo Booting from NOR ...; " \
-		"run nor_args; " \
-		"cp.b ${0x08080000} ${kloadaddr} ${nor_img_siz}; " \
-		"bootm ${kloadaddr}\0" \
 	"net_boot=echo Booting from network ...; " \
 		"setenv autoload no; " \
 		"dhcp; " \
 		"tftp ${kloadaddr} ${bootfile}; " \
 		"run net_args; " \
 		"bootm ${kloadaddr}\0" \
-        "updatesys=nand erase.chip;mmc rescan; "\
-                "fatload mmc 0 82000000 MLO;nandecc hw 2;nand write.i 82000000 0 ${filesize}; "\
-                /*"fatload mmc 0 82000000 flash-uboot.img;nandecc hw 2;nand write.i 82000000 80000 ${filesize};"*/\
-                "fatload mmc 0 82000000 u-boot.img;nandecc hw 2;nand write.i 82000000 80000 ${filesize}; "\
-                "fatload mmc 0 82000000 uImage;nandecc hw 2;nand write.i 82000000 280000 ${filesize}; "\
-                "fatload mmc 0 82000000 ubi.img;nandecc sw;nand write.i 82000000 780000 ${filesize};"\
+        "updatesys=nand erase.chip;mmc rescan;" \
+                "fatload mmc 0 82000000 MLO;nandecc hw 2;nand write.i 82000000 0 ${filesize};" \
+		"fatload mmc 0 82000000 u-boot.img;nandecc hw 2;nand write.i 82000000 80000 ${filesize};" \
+                "fatload mmc 0 82000000 uImage;nandecc hw 2;nand write.i 82000000 280000 ${filesize};" \
+                "fatload mmc 0 82000000 ubi.img;nandecc sw;nand write.i 82000000 780000 ${filesize};" \
                 "led flash all"
 
 #define CONFIG_BOOTDELAY		3
 
 #define CONFIG_BOOTCOMMAND \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmc_dev};" \
-		"if run loadbootenv; then " \
-			"echo Loaded environment from ${bootenv};" \
-			"run importbootenv;" \
-		"fi;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run mmc_load_image; then " \
-			"run mmc_args;" \
-			"bootm ${kloadaddr};" \
-		"fi;" \
-	"fi;" \
-	"run nand_boot;" 
+        "if mmc rescan; then " \
+                "echo SD/MMC found on device ${mmc_dev};" \
+                "if run loadbootenv; then " \
+                        "echo Loaded environment from ${bootenv};" \
+                        "run importbootenv;" \
+                "fi;" \
+                "if test -n ${uenvcmd}; then " \
+                        "echo Running uenvcmd ...;" \
+                        "run uenvcmd;" \
+                "fi;" \
+                "if run mmc_load_image; then " \
+                        "run mmc_args;" \
+                        "bootm ${kloadaddr};" \
+                "fi;" \
+        "fi;" \
+        "run nand_boot"
 
-#else
-#define CONFIG_BOOTARGS "console=ttyO0,115200n8 earlyprintk ubi.mtd=7,2048 root=ubi0:rootfs rootfstype=ubifs init=/init androidboot.console=ttyO0"
-#define CONFIG_BOOTCOMMAND "nandecc hw 2;nand read.i 80007fc0 280000 400000;bootm 80007fc0"
-#endif
-
-
-#define CONFIG_MISC_INIT_R
 /*#define AUTO_UPDATESYS*/
+#define CONFIG_MISC_INIT_R
 #define CONFIG_SYS_AUTOLOAD		"yes"
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_ECHO

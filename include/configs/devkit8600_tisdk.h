@@ -10,8 +10,8 @@
  * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#ifndef __CONFIG_SBC8600_H
-#define __CONFIG_SBC8600_H
+#ifndef __CONFIG_DEVKIT8600_H
+#define __CONFIG_DEVKIT8600_H
 
 #define CONFIG_AM335X
 #define CONFIG_TI81XX
@@ -31,7 +31,7 @@
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (32 * 1024))
 #define CONFIG_ENV_OVERWRITE
 #define CONFIG_SYS_LONGHELP
-#define CONFIG_SYS_PROMPT		"SBC8600# "
+#define CONFIG_SYS_PROMPT		"DEVKIT8600# "
 /* Use HUSH parser to allow command parsing */
 #define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
@@ -45,62 +45,40 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"bootfile=uImage\0" \
-	"ramdisk=ramdisk.gz\0" \
 	"loadaddr=0x82000000\0" \
 	"kloadaddr=0x80007fc0\0" \
-	"rdloadaddr=0x81600000\0" \
 	"console=ttyO0,115200n8\0" \
-	"consoleblank=0\0" \
 	"mmc_dev=0\0" \
-	"mmc_root=/dev/ram rw \0" \
-	"nand_root=ubi0:rootfs rw ubi.mtd=7,2048\0" \
-	"mmc_root_fs_type=ext2\0" \
+	"dvsdk_root=/dev/mmcblk0p2 rw \0" \
 	"dispmode=4.3inch_LCD\0" \
-	"nand_root_fs_type=ubifs\0" \
-	"nand_src_addr=0x280000\0" \
-	"nand_img_siz=0x400000\0" \
+	"dvsdk_root_fs_type=ext3 rootwait\0" \
 	"rootpath=/export/rootfs\0" \
 	"nfsopts=nolock\0" \
 	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
 			"::off\0" \
 	"ip_method=none\0" \
-	"bootenv=uEnv.txt\0" \
-	"loadbootenv=fatload mmc ${mmc_dev} ${loadaddr} ${bootenv}\0" \
-	"importbootenv=echo Importing environment from mmc ...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-	"mmc_load_image=fatload mmc ${mmc_dev} ${kloadaddr} ${bootfile};" \
-		      "fatload mmc ${mmc_dev} ${rdloadaddr} ${ramdisk}\0" \
+        "dvsdk_load_image=fatload mmc ${mmc_dev} ${kloadaddr} ${bootfile};\0" \
 	"optargs=\0" \
 	"bootargs_defaults=setenv bootargs " \
 		"console=${console} " \
 		"${optargs}\0" \
-	"mmc_args=run bootargs_defaults;" \
-		"setenv bootargs ${bootargs} " \
-		"dispmode=${dispmode} " \
-		"consoleblank=${consoleblank} " \
-		"root=${mmc_root} initrd=${rdloadaddr},32MB " \
-		"rootfstype=${mmc_root_fs_type} ip=${ip_method}\0" \
-	"nand_args=run bootargs_defaults;" \
-		"setenv bootargs ${bootargs} " \
-		"dispmode=${dispmode} " \
-		"consoleblank=${consoleblank} " \
-		"root=${nand_root} noinitrd " \
-		"rootfstype=${nand_root_fs_type} ip=${ip_method}\0" \
+        "dvsdk_args=run bootargs_defaults;" \
+                "setenv bootargs ${bootargs} " \
+                "dispmode=${dispmode} " \
+                "root=${dvsdk_root}  " \
+                "rootfstype=${dvsdk_root_fs_type} " \
+                "earlyprintk\0 " \
 	"net_args=run bootargs_defaults;" \
 		"setenv bootargs ${bootargs} " \
 		"dispmode=${dispmode} " \
 		"root=/dev/nfs " \
 		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
 		"ip=dhcp\0" \
-	"mmc_boot=run mmc_args; " \
+        "dvsdk_boot=echo Booting from dvsdk ...; " \
+                "run dvsdk_args; " \
                 "mmc rescan; " \
-		"run mmc_load_image; " \
-		"bootm ${kloadaddr}\0" \
-	"nand_boot=echo Booting from nand ...; " \
-		"run nand_args; " \
-		"nandecc hw 2; " \
-		"nand read.i ${kloadaddr} ${nand_src_addr} ${nand_img_siz}; " \
-		"bootm ${kloadaddr}\0" \
+		"run dvsdk_load_image;" \
+                "bootm ${kloadaddr}\0" \
 	"net_boot=echo Booting from network ...; " \
 		"setenv autoload no; " \
 		"dhcp; " \
@@ -116,23 +94,8 @@
 
 #define CONFIG_BOOTDELAY		3
 
-#define CONFIG_BOOTCOMMAND \
-        "if mmc rescan; then " \
-                "echo SD/MMC found on device ${mmc_dev};" \
-                "if run loadbootenv; then " \
-                        "echo Loaded environment from ${bootenv};" \
-                        "run importbootenv;" \
-                "fi;" \
-                "if test -n ${uenvcmd}; then " \
-                        "echo Running uenvcmd ...;" \
-                        "run uenvcmd;" \
-                "fi;" \
-                "if run mmc_load_image; then " \
-                        "run mmc_args;" \
-                        "bootm ${kloadaddr};" \
-                "fi;" \
-        "fi;" \
-        "run nand_boot"
+/* dvsdk */
+#define CONFIG_BOOTCOMMAND "run dvsdk_boot"
 
 /*#define AUTO_UPDATESYS*/
 #define CONFIG_MISC_INIT_R
@@ -410,4 +373,4 @@
 /* Unsupported features */
 #undef CONFIG_USE_IRQ
 
-#endif	/* ! __CONFIG_SBC8600_H */
+#endif	/* ! __CONFIG_DEVKIT8600_H */
