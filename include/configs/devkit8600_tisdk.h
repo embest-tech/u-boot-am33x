@@ -34,6 +34,7 @@
 #define CONFIG_SYS_PROMPT		"DEVKIT8600# "
 /* Use HUSH parser to allow command parsing */
 #define CONFIG_SYS_HUSH_PARSER
+#define CONFIG_AUTO_COMPLETE            1
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 #define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
 #define CONFIG_SETUP_MEMORY_TAGS

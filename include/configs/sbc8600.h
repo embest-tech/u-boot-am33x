@@ -34,6 +34,7 @@
 #define CONFIG_SYS_PROMPT		"SBC8600# "
 /* Use HUSH parser to allow command parsing */
 #define CONFIG_SYS_HUSH_PARSER
+#define CONFIG_AUTO_COMPLETE            1
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 #define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
 #define CONFIG_SETUP_MEMORY_TAGS
@@ -109,6 +110,7 @@
 		"bootm ${kloadaddr}\0" \
         "updatesys=nand erase.chip;mmc rescan;" \
                 "fatload mmc 0 82000000 MLO;nandecc hw 2;nand write.i 82000000 0 ${filesize};" \
+		/*"fatload mmc 0 82000000 flash-uboot.img;nandecc hw 2;nand write.i 82000000 80000 ${filesize};"*/\
 		"fatload mmc 0 82000000 u-boot.img;nandecc hw 2;nand write.i 82000000 80000 ${filesize};" \
                 "fatload mmc 0 82000000 uImage;nandecc hw 2;nand write.i 82000000 280000 ${filesize};" \
                 "fatload mmc 0 82000000 ubi.img;nandecc sw;nand write.i 82000000 780000 ${filesize};" \
