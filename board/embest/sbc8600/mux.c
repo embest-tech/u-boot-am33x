@@ -512,8 +512,7 @@ static struct evm_pin_mux general_purpose_evm_pin_mux[] = {
 #endif
 #ifndef CONFIG_NO_ETH
 	{rgmii1_pin_mux, PROFILE_ALL, DEV_ON_BASEBOARD},
-	{rgmii2_pin_mux, PROFILE_1 | PROFILE_2 | PROFILE_4 | PROFILE_6,
-							DEV_ON_DGHTR_BRD},
+	{rgmii2_pin_mux, PROFILE_ALL, DEV_ON_BASEBOARD},
 #endif
 #ifdef CONFIG_NOR
 	{nor_pin_mux, PROFILE_3, DEV_ON_DGHTR_BRD},
