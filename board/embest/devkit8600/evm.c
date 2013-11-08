@@ -447,6 +447,8 @@ void spl_board_init(void)
 
         if (i2c_write(PMIC_CTRL_I2C_ADDR, PMIC_VIO_REG, 1, buf, 1))
                 return;
+
+	udelay(10000);  //wait for ddr to be stable
         /* end add */
 
 	if (!voltage_update(MPU, PMIC_OP_REG_SEL_1_2_6) &&
