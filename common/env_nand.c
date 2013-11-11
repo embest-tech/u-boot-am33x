@@ -432,12 +432,13 @@ void env_relocate_spec (void)
 	}
 #endif
 
+#if !defined(AUTO_UPDATESYS)
 	ret = readenv(CONFIG_ENV_OFFSET, (u_char *)buf);
 	if (ret) {
 		set_default_env("!readenv() failed");
 		return;
 	}
-
+#endif
 	env_import(buf, 1);
 #endif /* ! ENV_IS_EMBEDDED */
 }

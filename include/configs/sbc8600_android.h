@@ -98,7 +98,7 @@
         "clearenv=nand erase 260000 20000\0"\
         "update_MLO=nand erase 0 80000;mmc rescan;"\
                 "fatload mmc 0 82000000 MLO;nandecc hw 2;nand write.i 82000000 0 ${filesize}; \0"\
-        "update_u-boot=nand erase 80000 260000;mmc rescan; "\
+        "update_u-boot=nand erase 80000 180000;mmc rescan; "\
                 "fatload mmc 0 82000000 u-boot.img;nandecc hw 2;nand write.i 82000000 80000 ${filesize}; \0"\
         "update_uImage=nand erase 280000 500000;mmc rescan;"\
                 "fatload mmc 0 82000000 uImage;nandecc hw 2;nand write.i 82000000 280000 ${filesize}; \0"\
