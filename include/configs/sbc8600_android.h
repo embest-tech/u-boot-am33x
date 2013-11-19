@@ -54,7 +54,7 @@
 	"calibration=1\0" \
 	"nand_root_fs_type=ubifs\0" \
 	"nand_src_addr=0x280000\0" \
-	"nand_img_siz=0x400000\0" \
+	"nand_img_siz=0x450000\0" \
 	"rootpath=/export/rootfs\0" \
 	"nfsopts=nolock\0" \
 	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
