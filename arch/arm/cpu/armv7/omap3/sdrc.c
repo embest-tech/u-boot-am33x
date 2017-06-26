@@ -19,20 +19,7 @@
  *      Shashi Ranjan <shashiranjanmca05@gmail.com>
  *      Manikandan Pillai <mani.pillai@ti.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -113,18 +100,18 @@ u32 get_sdr_cs_offset(u32 cs)
  *  - Test CS to make sure it's OK for use
  */
 static void write_sdrc_timings(u32 cs, struct sdrc_actim *sdrc_actim_base,
-		u32 mcfg, u32 ctrla, u32 ctrlb, u32 rfr_ctrl, u32 mr)
+			struct board_sdrc_timings *timings)
 {
 	/* Setup timings we got from the board. */
-	writel(mcfg, &sdrc_base->cs[cs].mcfg);
-	writel(ctrla, &sdrc_actim_base->ctrla);
-	writel(ctrlb, &sdrc_actim_base->ctrlb);
-	writel(rfr_ctrl, &sdrc_base->cs[cs].rfr_ctrl);
+	writel(timings->mcfg, &sdrc_base->cs[cs].mcfg);
+	writel(timings->ctrla, &sdrc_actim_base->ctrla);
+	writel(timings->ctrlb, &sdrc_actim_base->ctrlb);
+	writel(timings->rfr_ctrl, &sdrc_base->cs[cs].rfr_ctrl);
 	writel(CMD_NOP, &sdrc_base->cs[cs].manual);
 	writel(CMD_PRECHARGE, &sdrc_base->cs[cs].manual);
 	writel(CMD_AUTOREFRESH, &sdrc_base->cs[cs].manual);
 	writel(CMD_AUTOREFRESH, &sdrc_base->cs[cs].manual);
-	writel(mr, &sdrc_base->cs[cs].mr);
+	writel(timings->mr, &sdrc_base->cs[cs].mr);
 
 	/*
 	 * Test ram in this bank
@@ -143,10 +130,13 @@ static void write_sdrc_timings(u32 cs, struct sdrc_actim *sdrc_actim_base,
 void do_sdrc_init(u32 cs, u32 early)
 {
 	struct sdrc_actim *sdrc_actim_base0, *sdrc_actim_base1;
-	u32 mcfg, ctrla, ctrlb, rfr_ctrl, mr;
+	struct board_sdrc_timings timings;
 
 	sdrc_actim_base0 = (struct sdrc_actim *)SDRC_ACTIM_CTRL0_BASE;
 	sdrc_actim_base1 = (struct sdrc_actim *)SDRC_ACTIM_CTRL1_BASE;
+
+	/* set some default timings */
+	timings.sharing = SDRC_SHARING;
 
 	/*
 	 * When called in the early context this may be SPL and we will
@@ -158,7 +148,8 @@ void do_sdrc_init(u32 cs, u32 early)
 	 * setup CS1.
 	 */
 #ifdef CONFIG_SPL_BUILD
-	get_board_mem_timings(&mcfg, &ctrla, &ctrlb, &rfr_ctrl, &mr);
+	/* set/modify board-specific timings */
+	get_board_mem_timings(&timings);
 #endif
 	if (early) {
 		/* reset sdrc controller */
@@ -168,7 +159,7 @@ void do_sdrc_init(u32 cs, u32 early)
 		writel(0, &sdrc_base->sysconfig);
 
 		/* setup sdrc to ball mux */
-		writel(SDRC_SHARING, &sdrc_base->sharing);
+		writel(timings.sharing, &sdrc_base->sharing);
 
 		/* Disable Power Down of CKE because of 1 CKE on combo part */
 		writel(WAKEUPPROC | SRFRONRESET | PAGEPOLICY_HIGH,
@@ -177,11 +168,9 @@ void do_sdrc_init(u32 cs, u32 early)
 		writel(ENADLL | DLLPHASE_90, &sdrc_base->dlla_ctrl);
 		sdelay(0x20000);
 #ifdef CONFIG_SPL_BUILD
-		write_sdrc_timings(CS0, sdrc_actim_base0, mcfg, ctrla, ctrlb,
-				rfr_ctrl, mr);
+		write_sdrc_timings(CS0, sdrc_actim_base0, &timings);
 		make_cs1_contiguous();
-		write_sdrc_timings(CS1, sdrc_actim_base1, mcfg, ctrla, ctrlb,
-				rfr_ctrl, mr);
+		write_sdrc_timings(CS1, sdrc_actim_base1, &timings);
 #endif
 
 	}
@@ -193,14 +182,12 @@ void do_sdrc_init(u32 cs, u32 early)
 	 * so we may be asked now to setup CS1.
 	 */
 	if (cs == CS1) {
-		mcfg = readl(&sdrc_base->cs[CS0].mcfg),
-		rfr_ctrl = readl(&sdrc_base->cs[CS0].rfr_ctrl);
-		ctrla = readl(&sdrc_actim_base0->ctrla),
-		ctrlb = readl(&sdrc_actim_base0->ctrlb);
-		mr = readl(&sdrc_base->cs[CS0].mr);
-		write_sdrc_timings(cs, sdrc_actim_base1, mcfg, ctrla, ctrlb,
-				rfr_ctrl, mr);
-
+		timings.mcfg = readl(&sdrc_base->cs[CS0].mcfg),
+		timings.rfr_ctrl = readl(&sdrc_base->cs[CS0].rfr_ctrl);
+		timings.ctrla = readl(&sdrc_actim_base0->ctrla);
+		timings.ctrlb = readl(&sdrc_actim_base0->ctrlb);
+		timings.mr = readl(&sdrc_base->cs[CS0].mr);
+		write_sdrc_timings(cs, sdrc_actim_base1, &timings);
 	}
 }
 

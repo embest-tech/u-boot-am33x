@@ -4,23 +4,7 @@
  * (C) Copyright 2000
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -33,8 +17,8 @@ extern void ft_qe_setup(void *blob);
 DECLARE_GLOBAL_DATA_PTR;
 
 #if defined(CONFIG_BOOTCOUNT_LIMIT) && \
-	(defined(CONFIG_QE))
-#include <asm/immap_qe.h>
+	(defined(CONFIG_QE) && !defined(CONFIG_MPC831x))
+#include <linux/immap_qe.h>
 
 void fdt_fixup_muram (void *blob)
 {
@@ -88,7 +72,8 @@ void ft_cpu_setup(void *blob, bd_t *bd)
 				u32 tmp[] = { 32, 0x8, 33, 0x8, 34, 0x8 };
 
 				path = fdt_path_offset(blob, prop);
-				prop = fdt_getprop(blob, path, "interrupts", 0);
+				prop = fdt_getprop(blob, path, "interrupts",
+						   NULL);
 				if (prop)
 					fdt_setprop(blob, path, "interrupts",
 						    &tmp, sizeof(tmp));
@@ -100,7 +85,8 @@ void ft_cpu_setup(void *blob, bd_t *bd)
 				u32 tmp[] = { 35, 0x8, 36, 0x8, 37, 0x8 };
 
 				path = fdt_path_offset(blob, prop);
-				prop = fdt_getprop(blob, path, "interrupts", 0);
+				prop = fdt_getprop(blob, path, "interrupts",
+						   NULL);
 				if (prop)
 					fdt_setprop(blob, path, "interrupts",
 						    &tmp, sizeof(tmp));
@@ -116,7 +102,7 @@ void ft_cpu_setup(void *blob, bd_t *bd)
 	do_fixup_by_prop_u32(blob, "device_type", "cpu", 4,
 		"bus-frequency", bd->bi_busfreq, 1);
 	do_fixup_by_prop_u32(blob, "device_type", "cpu", 4,
-		"clock-frequency", gd->core_clk, 1);
+		"clock-frequency", gd->arch.core_clk, 1);
 	do_fixup_by_prop_u32(blob, "device_type", "soc", 4,
 		"bus-frequency", bd->bi_busfreq, 1);
 	do_fixup_by_compat_u32(blob, "fsl,soc",
@@ -138,7 +124,8 @@ void ft_cpu_setup(void *blob, bd_t *bd)
 
 	fdt_fixup_memory(blob, (u64)bd->bi_memstart, (u64)bd->bi_memsize);
 
-#if defined(CONFIG_BOOTCOUNT_LIMIT)
+#if defined(CONFIG_BOOTCOUNT_LIMIT) && \
+	(defined(CONFIG_QE) && !defined(CONFIG_MPC831x))
 	fdt_fixup_muram (blob);
 #endif
 }

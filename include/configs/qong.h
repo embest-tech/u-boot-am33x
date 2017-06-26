@@ -3,20 +3,7 @@
  *
  * Configuration settings for the Dave/DENX QongEVB-LITE board.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -25,8 +12,7 @@
 #include <asm/arch/imx-regs.h>
 
 /* High Level Configuration Options */
-#define CONFIG_ARM1136			/* This is an arm1136 CPU core */
-#define CONFIG_MX31			/* in a mx31 */
+#define CONFIG_MX31			/* This is a mx31 */
 #define CONFIG_QONG
 
 #define CONFIG_DISPLAY_CPUINFO
@@ -52,15 +38,16 @@
 
 #define CONFIG_MXC_GPIO
 #define CONFIG_HW_WATCHDOG
+#define CONFIG_IMX_WATCHDOG
 
 #define CONFIG_MXC_SPI
 #define CONFIG_DEFAULT_SPI_BUS	1
 #define CONFIG_DEFAULT_SPI_MODE	(SPI_MODE_0 | SPI_CS_HIGH)
 #define CONFIG_RTC_MC13XXX
 
-#define CONFIG_PMIC
-#define CONFIG_PMIC_SPI
-#define CONFIG_PMIC_FSL
+#define CONFIG_POWER
+#define CONFIG_POWER_SPI
+#define CONFIG_POWER_FSL
 #define CONFIG_FSL_PMIC_BUS	1
 #define CONFIG_FSL_PMIC_CS	0
 #define CONFIG_FSL_PMIC_CLK	100000
@@ -124,17 +111,12 @@
 /***********************************************************
  * Command definition
  ***********************************************************/
-
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_NAND
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_PING
-#define CONFIG_CMD_SETEXPR
 #define CONFIG_CMD_SPI
 #define CONFIG_CMD_UNZIP
 
@@ -143,9 +125,6 @@
 #define CONFIG_BOOTDELAY	5
 
 #define CONFIG_LOADADDR		0x80800000	/* loadaddr env var */
-
-#define xstr(s)	str(s)
-#define str(s)	#s
 
 #define	CONFIG_EXTRA_ENV_SETTINGS					\
 	"netdev=eth0\0"							\
@@ -176,10 +155,10 @@
 		"bootm\0"						\
 	"bootcmd=run flash_self\0"					\
 	"load=tftp ${loadaddr} ${u-boot}\0"				\
-	"update=protect off " xstr(CONFIG_SYS_MONITOR_BASE)		\
-		" +${filesize};era " xstr(CONFIG_SYS_MONITOR_BASE)	\
+	"update=protect off " __stringify(CONFIG_SYS_MONITOR_BASE)	\
+		" +${filesize};era " __stringify(CONFIG_SYS_MONITOR_BASE)\
 		" +${filesize};cp.b ${fileaddr} "			\
-		xstr(CONFIG_SYS_MONITOR_BASE) " ${filesize}\0"		\
+		__stringify(CONFIG_SYS_MONITOR_BASE) " ${filesize}\0"	\
 	"upd=run load update\0"						\
 	"videomode=video=ctfb:x:640,y:480,depth:16,mode:0,pclk:40000,"	\
 		"le:120,ri:40,up:35,lo:10,hs:30,vs:3,sync:100663296,"	\
@@ -189,7 +168,6 @@
  * Miscellaneous configurable options
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
-#define CONFIG_SYS_PROMPT		"=> "
 #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
 /* Print Buffer Size */
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
@@ -203,8 +181,6 @@
 #define CONFIG_SYS_MEMTEST_END		(PHYS_SDRAM_1 + 0xff000000)
 
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
-
-#define CONFIG_SYS_HZ			1000
 
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_SYS_HUSH_PARSER			/* Use the HUSH parser */

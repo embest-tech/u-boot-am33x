@@ -5,23 +5,7 @@
  *   Pantelis Antoniou <pantelis.antoniou@gmail.com> and
  *   Matthew McClintock <msm@freescale.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -29,41 +13,73 @@
 #include <linux/ctype.h>
 #include <linux/types.h>
 #include <asm/global_data.h>
-#include <fdt.h>
 #include <libfdt.h>
 #include <fdt_support.h>
+#include <mapmem.h>
+#include <asm/io.h>
 
 #define MAX_LEVEL	32		/* how deeply nested we will go */
 #define SCRATCHPAD	1024		/* bytes of scratchpad memory */
+#ifndef CONFIG_CMD_FDT_MAX_DUMP
+#define CONFIG_CMD_FDT_MAX_DUMP 64
+#endif
 
 /*
  * Global data (for the gd->bd)
  */
 DECLARE_GLOBAL_DATA_PTR;
 
-static int fdt_valid(void);
+static int fdt_valid(struct fdt_header **blobp);
 static int fdt_parse_prop(char *const*newval, int count, char *data, int *len);
 static int fdt_print(const char *pathp, char *prop, int depth);
+static int is_printable_string(const void *data, int len);
 
 /*
  * The working_fdt points to our working flattened device tree.
  */
 struct fdt_header *working_fdt;
 
-void set_working_fdt_addr(void *addr)
+void set_working_fdt_addr(ulong addr)
 {
-	char buf[17];
+	void *buf;
 
-	working_fdt = addr;
+	buf = map_sysmem(addr, 0);
+	working_fdt = buf;
+	setenv_ulong("fdtaddr", addr);
+}
 
-	sprintf(buf, "%lx", (unsigned long)addr);
-	setenv("fdtaddr", buf);
+/*
+ * Get a value from the fdt and format it to be set in the environment
+ */
+static int fdt_value_setenv(const void *nodep, int len, const char *var)
+{
+	if (is_printable_string(nodep, len))
+		setenv(var, (void *)nodep);
+	else if (len == 4) {
+		char buf[11];
+
+		sprintf(buf, "0x%08X", *(uint32_t *)nodep);
+		setenv(var, buf);
+	} else if (len%4 == 0 && len <= 20) {
+		/* Needed to print things like sha1 hashes. */
+		char buf[41];
+		int i;
+
+		for (i = 0; i < len; i += sizeof(unsigned int))
+			sprintf(buf + (i * 2), "%08x",
+				*(unsigned int *)(nodep + i));
+		setenv(var, buf);
+	} else {
+		printf("error: unprintable value\n");
+		return 1;
+	}
+	return 0;
 }
 
 /*
  * Flattened Device Tree command, see the help for parameter definitions.
  */
-int do_fdt (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
+static int do_fdt(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	if (argc < 2)
 		return CMD_RET_USAGE;
@@ -73,40 +89,59 @@ int do_fdt (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 	 */
 	if (argv[1][0] == 'a') {
 		unsigned long addr;
+		int control = 0;
+		struct fdt_header *blob;
 		/*
 		 * Set the address [and length] of the fdt.
 		 */
-		if (argc == 2) {
-			if (!fdt_valid()) {
+		argc -= 2;
+		argv += 2;
+/* Temporary #ifdef - some archs don't have fdt_blob yet */
+#ifdef CONFIG_OF_CONTROL
+		if (argc && !strcmp(*argv, "-c")) {
+			control = 1;
+			argc--;
+			argv++;
+		}
+#endif
+		if (argc == 0) {
+			if (control)
+				blob = (struct fdt_header *)gd->fdt_blob;
+			else
+				blob = working_fdt;
+			if (!blob || !fdt_valid(&blob))
 				return 1;
-			}
-			printf("The address of the fdt is %p\n", working_fdt);
+			printf("The address of the fdt is %#08lx\n",
+			       control ? (ulong)map_to_sysmem(blob) :
+					getenv_hex("fdtaddr", 0));
 			return 0;
 		}
 
-		addr = simple_strtoul(argv[2], NULL, 16);
-		set_working_fdt_addr((void *)addr);
-
-		if (!fdt_valid()) {
+		addr = simple_strtoul(argv[0], NULL, 16);
+		blob = map_sysmem(addr, 0);
+		if (!fdt_valid(&blob))
 			return 1;
-		}
+		if (control)
+			gd->fdt_blob = blob;
+		else
+			set_working_fdt_addr(addr);
 
-		if (argc >= 4) {
+		if (argc >= 2) {
 			int  len;
 			int  err;
 			/*
 			 * Optional new length
 			 */
-			len = simple_strtoul(argv[3], NULL, 16);
-			if (len < fdt_totalsize(working_fdt)) {
+			len = simple_strtoul(argv[1], NULL, 16);
+			if (len < fdt_totalsize(blob)) {
 				printf ("New length %d < existing length %d, "
 					"ignoring.\n",
-					len, fdt_totalsize(working_fdt));
+					len, fdt_totalsize(blob));
 			} else {
 				/*
 				 * Open in place with a new length.
 				 */
-				err = fdt_open_into(working_fdt, working_fdt, len);
+				err = fdt_open_into(blob, blob, len);
 				if (err != 0) {
 					printf ("libfdt fdt_open_into(): %s\n",
 						fdt_strerror(err));
@@ -140,9 +175,8 @@ int do_fdt (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 		 * Set the address and length of the fdt.
 		 */
 		working_fdt = (struct fdt_header *)simple_strtoul(argv[2], NULL, 16);
-		if (!fdt_valid()) {
+		if (!fdt_valid(&working_fdt))
 			return 1;
-		}
 
 		newaddr = (struct fdt_header *)simple_strtoul(argv[3],NULL,16);
 
@@ -248,6 +282,114 @@ int do_fdt (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 		if (ret < 0) {
 			printf ("libfdt fdt_setprop(): %s\n", fdt_strerror(ret));
 			return 1;
+		}
+
+	/********************************************************************
+	 * Get the value of a property in the working_fdt.
+	 ********************************************************************/
+	} else if (argv[1][0] == 'g') {
+		char *subcmd;		/* sub-command */
+		char *pathp;		/* path */
+		char *prop;		/* property */
+		char *var;		/* variable to store result */
+		int  nodeoffset;	/* node offset from libfdt */
+		const void *nodep;	/* property node pointer */
+		int  len = 0;		/* new length of the property */
+
+		/*
+		 * Parameters: Node path, property, optional value.
+		 */
+		if (argc < 5)
+			return CMD_RET_USAGE;
+
+		subcmd = argv[2];
+
+		if (argc < 6 && subcmd[0] != 's')
+			return CMD_RET_USAGE;
+
+		var    = argv[3];
+		pathp  = argv[4];
+		prop   = argv[5];
+
+		nodeoffset = fdt_path_offset(working_fdt, pathp);
+		if (nodeoffset < 0) {
+			/*
+			 * Not found or something else bad happened.
+			 */
+			printf("libfdt fdt_path_offset() returned %s\n",
+				fdt_strerror(nodeoffset));
+			return 1;
+		}
+
+		if (subcmd[0] == 'n' || (subcmd[0] == 's' && argc == 5)) {
+			int reqIndex = -1;
+			int startDepth = fdt_node_depth(
+				working_fdt, nodeoffset);
+			int curDepth = startDepth;
+			int curIndex = -1;
+			int nextNodeOffset = fdt_next_node(
+				working_fdt, nodeoffset, &curDepth);
+
+			if (subcmd[0] == 'n')
+				reqIndex = simple_strtoul(argv[5], NULL, 16);
+
+			while (curDepth > startDepth) {
+				if (curDepth == startDepth + 1)
+					curIndex++;
+				if (subcmd[0] == 'n' && curIndex == reqIndex) {
+					const char *nodeName = fdt_get_name(
+					    working_fdt, nextNodeOffset, NULL);
+
+					setenv(var, (char *)nodeName);
+					return 0;
+				}
+				nextNodeOffset = fdt_next_node(
+					working_fdt, nextNodeOffset, &curDepth);
+				if (nextNodeOffset < 0)
+					break;
+			}
+			if (subcmd[0] == 's') {
+				/* get the num nodes at this level */
+				setenv_ulong(var, curIndex + 1);
+			} else {
+				/* node index not found */
+				printf("libfdt node not found\n");
+				return 1;
+			}
+		} else {
+			nodep = fdt_getprop(
+				working_fdt, nodeoffset, prop, &len);
+			if (len == 0) {
+				/* no property value */
+				setenv(var, "");
+				return 0;
+			} else if (len > 0) {
+				if (subcmd[0] == 'v') {
+					int ret;
+
+					ret = fdt_value_setenv(nodep, len, var);
+					if (ret != 0)
+						return ret;
+				} else if (subcmd[0] == 'a') {
+					/* Get address */
+					char buf[11];
+
+					sprintf(buf, "0x%p", nodep);
+					setenv(var, buf);
+				} else if (subcmd[0] == 's') {
+					/* Get size */
+					char buf[11];
+
+					sprintf(buf, "0x%08X", len);
+					setenv(var, buf);
+				} else
+					return CMD_RET_USAGE;
+				return 0;
+			} else {
+				printf("libfdt fdt_getprop(): %s\n",
+					fdt_strerror(len));
+				return 1;
+			}
 		}
 
 	/*
@@ -425,11 +567,30 @@ int do_fdt (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 	}
 #ifdef CONFIG_OF_BOARD_SETUP
 	/* Call the board-specific fixup routine */
-	else if (strncmp(argv[1], "boa", 3) == 0)
-		ft_board_setup(working_fdt, gd->bd);
+	else if (strncmp(argv[1], "boa", 3) == 0) {
+		int err = ft_board_setup(working_fdt, gd->bd);
+
+		if (err) {
+			printf("Failed to update board information in FDT: %s\n",
+			       fdt_strerror(err));
+			return CMD_RET_FAILURE;
+		}
+	}
+#endif
+#ifdef CONFIG_OF_SYSTEM_SETUP
+	/* Call the board-specific fixup routine */
+	else if (strncmp(argv[1], "sys", 3) == 0) {
+		int err = ft_system_setup(working_fdt, gd->bd);
+
+		if (err) {
+			printf("Failed to add system information to FDT: %s\n",
+			       fdt_strerror(err));
+			return CMD_RET_FAILURE;
+		}
+	}
 #endif
 	/* Create a chosen node */
-	else if (argv[1][0] == 'c') {
+	else if (strncmp(argv[1], "cho", 3) == 0) {
 		unsigned long initrd_start = 0, initrd_end = 0;
 
 		if ((argc != 2) && (argc != 4))
@@ -440,12 +601,47 @@ int do_fdt (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 			initrd_end = simple_strtoul(argv[3], NULL, 16);
 		}
 
-		fdt_chosen(working_fdt, 1);
-		fdt_initrd(working_fdt, initrd_start, initrd_end, 1);
+		fdt_chosen(working_fdt);
+		fdt_initrd(working_fdt, initrd_start, initrd_end);
+
+#if defined(CONFIG_FIT_SIGNATURE)
+	} else if (strncmp(argv[1], "che", 3) == 0) {
+		int cfg_noffset;
+		int ret;
+		unsigned long addr;
+		struct fdt_header *blob;
+
+		if (!working_fdt)
+			return CMD_RET_FAILURE;
+
+		if (argc > 2) {
+			addr = simple_strtoul(argv[2], NULL, 16);
+			blob = map_sysmem(addr, 0);
+		} else {
+			blob = (struct fdt_header *)gd->fdt_blob;
+		}
+		if (!fdt_valid(&blob))
+			return 1;
+
+		gd->fdt_blob = blob;
+		cfg_noffset = fit_conf_get_node(working_fdt, NULL);
+		if (!cfg_noffset) {
+			printf("Could not find configuration node: %s\n",
+			       fdt_strerror(cfg_noffset));
+			return CMD_RET_FAILURE;
+		}
+
+		ret = fit_config_verify(working_fdt, cfg_noffset);
+		if (ret == 0)
+			return CMD_RET_SUCCESS;
+		else
+			return CMD_RET_FAILURE;
+#endif
+
 	}
 	/* resize the fdt */
 	else if (strncmp(argv[1], "re", 2) == 0) {
-		fdt_resize(working_fdt);
+		fdt_shrink_to_minimum(working_fdt);
 	}
 	else {
 		/* Unrecognized command */
@@ -457,16 +653,23 @@ int do_fdt (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 
 /****************************************************************************/
 
-static int fdt_valid(void)
+/**
+ * fdt_valid() - Check if an FDT is valid. If not, change it to NULL
+ *
+ * @blobp: Pointer to FDT pointer
+ * @return 1 if OK, 0 if bad (in which case *blobp is set to NULL)
+ */
+static int fdt_valid(struct fdt_header **blobp)
 {
-	int  err;
+	const void *blob = *blobp;
+	int err;
 
-	if (working_fdt == NULL) {
+	if (blob == NULL) {
 		printf ("The address of the fdt is invalid (NULL).\n");
 		return 0;
 	}
 
-	err = fdt_check_header(working_fdt);
+	err = fdt_check_header(blob);
 	if (err == 0)
 		return 1;	/* valid */
 
@@ -476,23 +679,21 @@ static int fdt_valid(void)
 		 * Be more informative on bad version.
 		 */
 		if (err == -FDT_ERR_BADVERSION) {
-			if (fdt_version(working_fdt) <
+			if (fdt_version(blob) <
 			    FDT_FIRST_SUPPORTED_VERSION) {
 				printf (" - too old, fdt %d < %d",
-					fdt_version(working_fdt),
+					fdt_version(blob),
 					FDT_FIRST_SUPPORTED_VERSION);
-				working_fdt = NULL;
 			}
-			if (fdt_last_comp_version(working_fdt) >
+			if (fdt_last_comp_version(blob) >
 			    FDT_LAST_SUPPORTED_VERSION) {
 				printf (" - too new, fdt %d > %d",
-					fdt_version(working_fdt),
+					fdt_version(blob),
 					FDT_LAST_SUPPORTED_VERSION);
-				working_fdt = NULL;
 			}
-			return 0;
 		}
 		printf("\n");
+		*blobp = NULL;
 		return 0;
 	}
 	return 1;
@@ -539,7 +740,7 @@ static int fdt_parse_prop(char * const *newval, int count, char *data, int *len)
 
 			cp = newp;
 			tmp = simple_strtoul(cp, &newp, 0);
-			*(uint32_t *)data = __cpu_to_be32(tmp);
+			*(__be32 *)data = __cpu_to_be32(tmp);
 			data  += 4;
 			*len += 4;
 
@@ -611,12 +812,12 @@ static int is_printable_string(const void *data, int len)
 	if (len == 0)
 		return 0;
 
-	/* must terminate with zero */
-	if (s[len - 1] != '\0')
+	/* must terminate with zero or '\n' */
+	if (s[len - 1] != '\0' && s[len - 1] != '\n')
 		return 0;
 
 	/* printable or a null byte (concatenated strings) */
-	while (((*s == '\0') || isprint(*s)) && (len > 0)) {
+	while (((*s == '\0') || isprint(*s) || isspace(*s)) && (len > 0)) {
 		/*
 		 * If we see a null, there are three possibilities:
 		 * 1) If len == 1, it is the end of the string, printable
@@ -672,19 +873,28 @@ static void print_data(const void *data, int len)
 	}
 
 	if ((len %4) == 0) {
-		const u32 *p;
+		if (len > CONFIG_CMD_FDT_MAX_DUMP)
+			printf("* 0x%p [0x%08x]", data, len);
+		else {
+			const __be32 *p;
 
-		printf("<");
-		for (j = 0, p = data; j < len/4; j ++)
-			printf("0x%x%s", fdt32_to_cpu(p[j]), j < (len/4 - 1) ? " " : "");
-		printf(">");
+			printf("<");
+			for (j = 0, p = data; j < len/4; j++)
+				printf("0x%08x%s", fdt32_to_cpu(p[j]),
+					j < (len/4 - 1) ? " " : "");
+			printf(">");
+		}
 	} else { /* anything else... hexdump */
-		const u8 *s;
+		if (len > CONFIG_CMD_FDT_MAX_DUMP)
+			printf("* 0x%p [0x%08x]", data, len);
+		else {
+			const u8 *s;
 
-		printf("[");
-		for (j = 0, s = data; j < len; j++)
-			printf("%02x%s", s[j], j < len - 1 ? " " : "");
-		printf("]");
+			printf("[");
+			for (j = 0, s = data; j < len; j++)
+				printf("%02x%s", s[j], j < len - 1 ? " " : "");
+			printf("]");
+		}
 	}
 }
 
@@ -812,18 +1022,23 @@ static int fdt_print(const char *pathp, char *prop, int depth)
 }
 
 /********************************************************************/
-
-U_BOOT_CMD(
-	fdt,	255,	0,	do_fdt,
-	"flattened device tree utility commands",
-	    "addr   <addr> [<length>]        - Set the fdt location to <addr>\n"
+#ifdef CONFIG_SYS_LONGHELP
+static char fdt_help_text[] =
+	"addr [-c]  <addr> [<length>]   - Set the [control] fdt location to <addr>\n"
 #ifdef CONFIG_OF_BOARD_SETUP
 	"fdt boardsetup                      - Do board-specific set up\n"
+#endif
+#ifdef CONFIG_OF_SYSTEM_SETUP
+	"fdt systemsetup                     - Do system-specific set up\n"
 #endif
 	"fdt move   <fdt> <newaddr> <length> - Copy the fdt to <addr> and make it active\n"
 	"fdt resize                          - Resize fdt to size + padding to 4k addr\n"
 	"fdt print  <path> [<prop>]          - Recursive print starting at <path>\n"
 	"fdt list   <path> [<prop>]          - Print one level starting at <path>\n"
+	"fdt get value <var> <path> <prop>   - Get <property> and store in <var>\n"
+	"fdt get name <var> <path> <index>   - Get name of node <index> and store in <var>\n"
+	"fdt get addr <var> <path> <prop>    - Get start address of <property> and store in <var>\n"
+	"fdt get size <var> <path> [<prop>]  - Get size of [<property>] or num nodes and store in <var>\n"
 	"fdt set    <path> <prop> [<val>]    - Set <property> [to <val>]\n"
 	"fdt mknode <path> <node>            - Create a new node after <path>\n"
 	"fdt rm     <path> [<prop>]          - Delete the node or <property>\n"
@@ -835,6 +1050,16 @@ U_BOOT_CMD(
 	"fdt rsvmem delete <index>           - Delete a mem reserves\n"
 	"fdt chosen [<start> <end>]          - Add/update the /chosen branch in the tree\n"
 	"                                        <start>/<end> - initrd start/end addr\n"
+#if defined(CONFIG_FIT_SIGNATURE)
+	"fdt checksign [<addr>]              - check FIT signature\n"
+	"                                        <start> - addr of key blob\n"
+	"                                                  default gd->fdt_blob\n"
+#endif
 	"NOTE: Dereference aliases by omiting the leading '/', "
-		"e.g. fdt print ethernet0."
+		"e.g. fdt print ethernet0.";
+#endif
+
+U_BOOT_CMD(
+	fdt,	255,	0,	do_fdt,
+	"flattened device tree utility commands", fdt_help_text
 );

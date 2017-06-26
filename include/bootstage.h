@@ -4,32 +4,41 @@
  * to the user and passing it to the OS for logging / further analysis.
  *
  * Copyright (c) 2011 The Chromium OS Authors.
- * See file CREDITS for list of people who contributed to this
- * project.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _BOOTSTAGE_H
 #define _BOOTSTAGE_H
 
-/* The number of boot stage records available for the user */
+/* Define this for host tools */
 #ifndef CONFIG_BOOTSTAGE_USER_COUNT
 #define CONFIG_BOOTSTAGE_USER_COUNT	20
 #endif
+
+/* Flags for each bootstage record */
+enum bootstage_flags {
+	BOOTSTAGEF_ERROR	= 1 << 0,	/* Error record */
+	BOOTSTAGEF_ALLOC	= 1 << 1,	/* Allocate an id */
+};
+
+/* bootstate sub-IDs used for kernel and ramdisk ranges */
+enum {
+	BOOTSTAGE_SUB_FORMAT,
+	BOOTSTAGE_SUB_FORMAT_OK,
+	BOOTSTAGE_SUB_NO_UNIT_NAME,
+	BOOTSTAGE_SUB_UNIT_NAME,
+	BOOTSTAGE_SUB_SUBNODE,
+
+	BOOTSTAGE_SUB_CHECK,
+	BOOTSTAGE_SUB_HASH = 5,
+	BOOTSTAGE_SUB_CHECK_ARCH = 5,
+	BOOTSTAGE_SUB_CHECK_ALL,
+	BOOTSTAGE_SUB_GET_DATA,
+	BOOTSTAGE_SUB_CHECK_ALL_OK = 7,
+	BOOTSTAGE_SUB_GET_DATA_OK,
+	BOOTSTAGE_SUB_LOAD,
+};
 
 /*
  * A list of boot stages that we know about. Each of these indicates the
@@ -77,9 +86,9 @@ enum bootstage_id {
 	BOOTSTAGE_ID_POST_FAIL_R,	/* Post failure reported after reloc */
 
 	/*
-	 * This set is reported ony by x86, and the meaning is different. In
+	 * This set is reported only by x86, and the meaning is different. In
 	 * this case we are reporting completion of a particular stage.
-	 * This should probably change in he x86 code (which doesn't report
+	 * This should probably change in the x86 code (which doesn't report
 	 * errors in any case), but discussion this can perhaps wait until we
 	 * have a generic board implementation.
 	 */
@@ -131,43 +140,27 @@ enum bootstage_id {
 	BOOTSTAGE_ID_NET_DONE_ERR,
 	BOOTSTAGE_ID_NET_DONE,
 
+	BOOTSTAGE_ID_FIT_FDT_START = 90,
 	/*
 	 * Boot stages related to loading a FIT image. Some of these are a
 	 * bit wonky.
 	 */
-	BOOTSTAGE_ID_FIT_FORMAT = 100,
-	BOOTSTAGE_ID_FIT_NO_UNIT_NAME,
-	BOOTSTAGE_ID_FIT_UNIT_NAME,
-	BOOTSTAGE_ID_FIT_CONFIG,
-	BOOTSTAGE_ID_FIT_CHECK_SUBIMAGE,
-	BOOTSTAGE_ID_FIT_CHECK_HASH = 104,
+	BOOTSTAGE_ID_FIT_KERNEL_START = 100,
 
-	BOOTSTAGE_ID_FIT_CHECK_ARCH,
-	BOOTSTAGE_ID_FIT_CHECK_KERNEL,
-	BOOTSTAGE_ID_FIT_CHECKED,
-
-	BOOTSTAGE_ID_FIT_KERNEL_INFO_ERR = 107,
-	BOOTSTAGE_ID_FIT_KERNEL_INFO,
+	BOOTSTAGE_ID_FIT_CONFIG = 110,
 	BOOTSTAGE_ID_FIT_TYPE,
+	BOOTSTAGE_ID_FIT_KERNEL_INFO,
 
 	BOOTSTAGE_ID_FIT_COMPRESSION,
 	BOOTSTAGE_ID_FIT_OS,
 	BOOTSTAGE_ID_FIT_LOADADDR,
 	BOOTSTAGE_ID_OVERWRITTEN,
 
-	BOOTSTAGE_ID_FIT_RD_FORMAT = 120,
-	BOOTSTAGE_ID_FIT_RD_FORMAT_OK,
-	BOOTSTAGE_ID_FIT_RD_NO_UNIT_NAME,
-	BOOTSTAGE_ID_FIT_RD_UNIT_NAME,
-	BOOTSTAGE_ID_FIT_RD_SUBNODE,
+	/* Next 10 IDs used by BOOTSTAGE_SUB_... */
+	BOOTSTAGE_ID_FIT_RD_START = 120,	/* Ramdisk stages */
 
-	BOOTSTAGE_ID_FIT_RD_CHECK,
-	BOOTSTAGE_ID_FIT_RD_HASH = 125,
-	BOOTSTAGE_ID_FIT_RD_CHECK_ALL,
-	BOOTSTAGE_ID_FIT_RD_GET_DATA,
-	BOOTSTAGE_ID_FIT_RD_CHECK_ALL_OK = 127,
-	BOOTSTAGE_ID_FIT_RD_GET_DATA_OK,
-	BOOTSTAGE_ID_FIT_RD_LOAD,
+	/* Next 10 IDs used by BOOTSTAGE_SUB_... */
+	BOOTSTAGE_ID_FIT_SETUP_START = 130,	/* x86 setup stages */
 
 	BOOTSTAGE_ID_IDE_FIT_READ = 140,
 	BOOTSTAGE_ID_IDE_FIT_READ_OK,
@@ -175,12 +168,14 @@ enum bootstage_id {
 	BOOTSTAGE_ID_NAND_FIT_READ = 150,
 	BOOTSTAGE_ID_NAND_FIT_READ_OK,
 
+	BOOTSTAGE_ID_FIT_LOADABLE_START = 160,	/* for Loadable Images */
 	/*
 	 * These boot stages are new, higher level, and not directly related
 	 * to the old boot progress numbers. They are useful for recording
 	 * rough boot timing information.
 	 */
 	BOOTSTAGE_ID_AWAKE,
+	BOOTSTAGE_ID_START_SPL,
 	BOOTSTAGE_ID_START_UBOOT_F,
 	BOOTSTAGE_ID_START_UBOOT_R,
 	BOOTSTAGE_ID_USB_START,
@@ -192,10 +187,17 @@ enum bootstage_id {
 	BOOTSTAGE_ID_MAIN_LOOP,
 	BOOTSTAGE_KERNELREAD_START,
 	BOOTSTAGE_KERNELREAD_STOP,
+	BOOTSTAGE_ID_BOARD_INIT,
+	BOOTSTAGE_ID_BOARD_INIT_DONE,
 
 	BOOTSTAGE_ID_CPU_AWAKE,
 	BOOTSTAGE_ID_MAIN_CPU_AWAKE,
 	BOOTSTAGE_ID_MAIN_CPU_READY,
+
+	BOOTSTAGE_ID_ACCUM_LCD,
+	BOOTSTAGE_ID_ACCUM_SCSI,
+	BOOTSTAGE_ID_ACCUM_SPI,
+	BOOTSTAGE_ID_ACCUM_DECOMP,
 
 	/* a few spare for the user, from here */
 	BOOTSTAGE_ID_USER,
@@ -210,7 +212,7 @@ enum bootstage_id {
  */
 ulong timer_get_boot_us(void);
 
-#ifndef CONFIG_SPL_BUILD
+#if !defined(CONFIG_SPL_BUILD) && !defined(USE_HOSTCC)
 /*
  * Board code can implement show_boot_progress() if needed.
  *
@@ -222,8 +224,30 @@ void show_boot_progress(int val);
 #define show_boot_progress(val) do {} while (0)
 #endif
 
-#if defined(CONFIG_BOOTSTAGE) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_BOOTSTAGE) && !defined(CONFIG_SPL_BUILD) && \
+	!defined(USE_HOSTCC)
 /* This is the full bootstage implementation */
+
+/**
+ * Relocate existing bootstage records
+ *
+ * Call this after relocation has happened and after malloc has been initted.
+ * We need to copy any pointers in bootstage records that were added pre-
+ * relocation, since memory can be overritten later.
+ * @return Always returns 0, to indicate success
+ */
+int bootstage_relocate(void);
+
+/**
+ * Add a new bootstage record
+ *
+ * @param id	Bootstage ID to use (ignored if flags & BOOTSTAGEF_ALLOC)
+ * @param name	Name of record, or NULL for none
+ * @param flags	Flags (BOOTSTAGEF_...)
+ * @param mark	Time to record in this record, in microseconds
+ */
+ulong bootstage_add_record(enum bootstage_id id, const char *name,
+			   int flags, ulong mark);
 
 /*
  * Mark a time stamp for the current boot stage.
@@ -234,14 +258,93 @@ ulong bootstage_error(enum bootstage_id id);
 
 ulong bootstage_mark_name(enum bootstage_id id, const char *name);
 
+/**
+ * Mark a time stamp in the given function and line number
+ *
+ * See BOOTSTAGE_MARKER() for a convenient macro.
+ *
+ * @param file		Filename to record (NULL if none)
+ * @param func		Function name to record
+ * @param linenum	Line number to record
+ * @return recorded time stamp
+ */
+ulong bootstage_mark_code(const char *file, const char *func,
+			  int linenum);
+
+/**
+ * Mark the start of a bootstage activity. The end will be marked later with
+ * bootstage_accum() and at that point we accumulate the time taken. Calling
+ * this function turns the given id into a accumulator rather than and
+ * absolute mark in time. Accumulators record the total amount of time spent
+ * in an activty during boot.
+ *
+ * @param id	Bootstage id to record this timestamp against
+ * @param name	Textual name to display for this id in the report (maybe NULL)
+ * @return start timestamp in microseconds
+ */
+uint32_t bootstage_start(enum bootstage_id id, const char *name);
+
+/**
+ * Mark the end of a bootstage activity
+ *
+ * After previously marking the start of an activity with bootstage_start(),
+ * call this function to mark the end. You can call these functions in pairs
+ * as many times as you like.
+ *
+ * @param id	Bootstage id to record this timestamp against
+ * @return time spent in this iteration of the activity (i.e. the time now
+ *		less the start time recorded in the last bootstage_start() call
+ *		with this id.
+ */
+uint32_t bootstage_accum(enum bootstage_id id);
+
 /* Print a report about boot time */
 void bootstage_report(void);
 
+/**
+ * Add bootstage information to the device tree
+ *
+ * @return 0 if ok, -ve on error
+ */
+int bootstage_fdt_add_report(void);
+
+/*
+ * Stash bootstage data into memory
+ *
+ * @param base	Base address of memory buffer
+ * @param size	Size of memory buffer
+ * @return 0 if stashed ok, -1 if out of space
+ */
+int bootstage_stash(void *base, int size);
+
+/**
+ * Read bootstage data from memory
+ *
+ * Bootstage data is read from memory and placed in the bootstage table
+ * in the user records.
+ *
+ * @param base	Base address of memory buffer
+ * @param size	Size of memory buffer (-1 if unknown)
+ * @return 0 if unstashed ok, -1 if bootstage info not found, or out of space
+ */
+int bootstage_unstash(void *base, int size);
+
 #else
+static inline ulong bootstage_add_record(enum bootstage_id id,
+		const char *name, int flags, ulong mark)
+{
+	return 0;
+}
+
 /*
  * This is a dummy implementation which just calls show_boot_progress(),
  * and won't even do that unless CONFIG_SHOW_BOOT_PROGRESS is defined
  */
+
+static inline int bootstage_relocate(void)
+{
+	return 0;
+}
 
 static inline ulong bootstage_mark(enum bootstage_id id)
 {
@@ -257,10 +360,39 @@ static inline ulong bootstage_error(enum bootstage_id id)
 
 static inline ulong bootstage_mark_name(enum bootstage_id id, const char *name)
 {
+	show_boot_progress(id);
 	return 0;
 }
 
+static inline ulong bootstage_mark_code(const char *file, const char *func,
+					int linenum)
+{
+	return 0;
+}
 
+static inline uint32_t bootstage_start(enum bootstage_id id, const char *name)
+{
+	return 0;
+}
+
+static inline uint32_t bootstage_accum(enum bootstage_id id)
+{
+	return 0;
+}
+
+static inline int bootstage_stash(void *base, int size)
+{
+	return 0;	/* Pretend to succeed */
+}
+
+static inline int bootstage_unstash(void *base, int size)
+{
+	return 0;	/* Pretend to succeed */
+}
 #endif /* CONFIG_BOOTSTAGE */
+
+/* Helper macro for adding a bootstage to a line of code */
+#define BOOTSTAGE_MARKER()	\
+		bootstage_mark_code(__FILE__, __func__, __LINE__)
 
 #endif

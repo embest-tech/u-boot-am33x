@@ -2,23 +2,7 @@
  * (C) Copyright 2000-2005
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _FLASH_H_
@@ -44,6 +28,7 @@ typedef struct {
 	ulong	buffer_write_tout;	/* maximum buffer write timeout		*/
 	ushort	vendor;			/* the primary vendor id		*/
 	ushort	cmd_reset;		/* vendor specific reset command	*/
+	uchar   cmd_erase_sector;	/* vendor specific erase sect. command	*/
 	ushort	interface;		/* used for x8/x16 adjustments		*/
 	ushort	legacy_unlock;		/* support Intel legacy (un)locking	*/
 	ushort	manufacturer_id;	/* manufacturer id			*/
@@ -173,6 +158,7 @@ extern flash_info_t *flash_get_info(ulong base);
 #define EXCEL_MANUFACT	0x004A004A	/* Excel Semiconductor			*/
 #define AMIC_MANUFACT	0x00370037	/* AMIC    manuf. ID in D23..D16, D7..D0 */
 #define WINB_MANUFACT	0x00DA00DA	/* Winbond manuf. ID in D23..D16, D7..D0 */
+#define EON_ALT_MANU	0x001C001C	/* EON     manuf. ID in D23..D16, D7..D0 */
 
 /* Manufacturers inside bank 1 have ids like 0x01xx01xx */
 #define EON_MANUFACT	0x011C011C	/* EON     manuf. ID in D23..D16, D7..D0 */
@@ -348,7 +334,6 @@ extern flash_info_t *flash_get_info(ulong base);
 
 #define TOSH_ID_FVT160	0xC2		/* TC58FVT160 ID (16 M, top )		*/
 #define TOSH_ID_FVB160	0x43		/* TC58FVT160 ID (16 M, bottom )	*/
-#define PHILIPS_LPC2292 0x0401FF13  /* LPC2292 internal FLASH			*/
 #define NUMONYX_256MBIT	0x8922		/* Numonyx P33/30 256MBit 65nm	*/
 
 /*-----------------------------------------------------------------------
@@ -473,6 +458,9 @@ extern flash_info_t *flash_get_info(ulong base);
 #define FLASH_MT28S4M16LC 0x00E1	/* Micron MT28S4M16LC			*/
 #define FLASH_S29GL064M 0x00F0		/* Spansion S29GL064M-R6		*/
 #define FLASH_S29GL128N 0x00F1		/* Spansion S29GL128N			*/
+
+#define FLASH_STM32F4	0x00F2		/* STM32F4 Embedded Flash */
+#define FLASH_STM32F1	0x00F3		/* STM32F1 Embedded Flash */
 
 #define FLASH_UNKNOWN	0xFFFF		/* unknown flash type			*/
 

@@ -13,10 +13,7 @@
  *
  * CREDITS: tsec driver
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * [0]: http://www.xilinx.com/support/documentation
  *
@@ -51,7 +48,7 @@ int ll_temac_reset_fifo(struct eth_device *dev)
 int ll_temac_recv_fifo(struct eth_device *dev)
 {
 	int i, length = 0;
-	u32 *buf = (u32 *)NetRxPackets[0];
+	u32 *buf = (u32 *)net_rx_packets[0];
 	struct ll_temac *ll_temac = dev->priv;
 	struct fifo_ctrl *fifo_ctrl = (void *)ll_temac->ctrladdr;
 
@@ -96,7 +93,7 @@ int ll_temac_recv_fifo(struct eth_device *dev)
 		for (i = 0; i < length; i += 4)
 			*buf++ = in_be32(&fifo_ctrl->rdfd);
 
-		NetReceive(NetRxPackets[0], length);
+		net_process_received_packet(net_rx_packets[0], length);
 	}
 
 	return 0;

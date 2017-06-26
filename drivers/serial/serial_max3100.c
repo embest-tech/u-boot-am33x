@@ -4,27 +4,13 @@
  * Pantelis Antoniou <panto@intracom.gr>
  * Intracom S.A.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <watchdog.h>
+#include <serial.h>
+#include <linux/compiler.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -149,7 +135,7 @@ static int rxfifo_in;
 static int rxfifo_out;
 static unsigned char rxfifo_buf[16];
 
-static void max3100_putc(int c)
+static void max3100_serial_putc_raw(int c)
 {
 	unsigned int rx;
 
@@ -164,7 +150,7 @@ static void max3100_putc(int c)
 	}
 }
 
-static int max3100_getc(void)
+static int max3100_serial_getc(void)
 {
 	int c;
 	unsigned int rx;
@@ -190,7 +176,7 @@ static int max3100_getc(void)
 	return c;
 }
 
-static int max3100_tstc(void)
+static int max3100_serial_tstc(void)
 {
 	unsigned int rx;
 
@@ -213,7 +199,7 @@ static int max3100_tstc(void)
 	return 1;
 }
 
-int serial_init(void)
+static int max3100_serial_init(void)
 {
 	unsigned int wconf, rconf;
 	int i;
@@ -268,31 +254,41 @@ int serial_init(void)
 	return (0);
 }
 
-void serial_putc(const char c)
+static void max3100_serial_putc(const char c)
 {
 	if (c == '\n')
-		max3100_putc('\r');
+		max3100_serial_putc_raw('\r');
 
-	max3100_putc(c);
+	max3100_serial_putc_raw(c);
 }
 
-void serial_puts(const char *s)
+static void max3100_serial_puts(const char *s)
 {
 	while (*s)
-		serial_putc (*s++);
+		max3100_serial_putc_raw(*s++);
 }
 
-int serial_getc(void)
+static void max3100_serial_setbrg(void)
 {
-	return max3100_getc();
 }
 
-int serial_tstc(void)
+static struct serial_device max3100_serial_drv = {
+	.name	= "max3100_serial",
+	.start	= max3100_serial_init,
+	.stop	= NULL,
+	.setbrg	= max3100_serial_setbrg,
+	.putc	= max3100_serial_putc,
+	.puts	= max3100_serial_puts,
+	.getc	= max3100_serial_getc,
+	.tstc	= max3100_serial_tstc,
+};
+
+void max3100_serial_initialize(void)
 {
-	return max3100_tstc();
+	serial_register(&max3100_serial_drv);
 }
 
-/* XXX WTF? */
-void serial_setbrg(void)
+__weak struct serial_device *default_serial_console(void)
 {
+	return &max3100_serial_drv;
 }

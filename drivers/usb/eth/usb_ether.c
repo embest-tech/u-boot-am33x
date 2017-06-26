@@ -1,26 +1,13 @@
 /*
  * Copyright (c) 2011 The Chromium OS Authors.
- * See file CREDITS for list of people who contributed to this
- * project.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <dm.h>
 #include <usb.h>
+#include <dm/device-internal.h>
 
 #include "usb_ether.h"
 
@@ -43,6 +30,20 @@ static const struct usb_eth_prob_dev prob_dev[] = {
 		.before_probe = asix_eth_before_probe,
 		.probe = asix_eth_probe,
 		.get_info = asix_eth_get_info,
+	},
+#endif
+#ifdef CONFIG_USB_ETHER_ASIX88179
+	{
+		.before_probe = ax88179_eth_before_probe,
+		.probe = ax88179_eth_probe,
+		.get_info = ax88179_eth_get_info,
+	},
+#endif
+#ifdef CONFIG_USB_ETHER_MCS7830
+	{
+		.before_probe = mcs7830_eth_before_probe,
+		.probe = mcs7830_eth_probe,
+		.get_info = mcs7830_eth_get_info,
 	},
 #endif
 #ifdef CONFIG_USB_ETHER_SMSC95XX
@@ -119,11 +120,9 @@ static void probe_valid_drivers(struct usb_device *dev)
 int usb_host_eth_scan(int mode)
 {
 	int i, old_async;
-	struct usb_device *dev;
-
 
 	if (mode == 1)
-		printf("       scanning bus for ethernet devices... ");
+		printf("       scanning usb for ethernet devices... ");
 
 	old_async = usb_disable_asynch(1); /* asynch transfer not allowed */
 
@@ -139,23 +138,59 @@ int usb_host_eth_scan(int mode)
 	}
 
 	usb_max_eth_dev = 0;
+#ifdef CONFIG_DM_USB
+	/*
+	 * TODO: We should add USB_DEVICE() declarations to each USB ethernet
+	 * driver and then most of this file can be removed.
+	 */
+	struct udevice *bus;
+	struct uclass *uc;
+	int ret;
+
+	ret = uclass_get(UCLASS_USB, &uc);
+	if (ret)
+		return ret;
+	uclass_foreach_dev(bus, uc) {
+		for (i = 0; i < USB_MAX_DEVICE; i++) {
+			struct usb_device *dev;
+
+			dev = usb_get_dev_index(bus, i); /* get device */
+			debug("i=%d, %s\n", i, dev ? dev->dev->name : "(done)");
+			if (!dev)
+				break; /* no more devices available */
+
+			/*
+			 * find valid usb_ether driver for this device,
+			 * if any
+			 */
+			probe_valid_drivers(dev);
+
+			/* check limit */
+			if (usb_max_eth_dev == USB_MAX_ETH_DEV)
+				break;
+		} /* for */
+	}
+#else
 	for (i = 0; i < USB_MAX_DEVICE; i++) {
+		struct usb_device *dev;
+
 		dev = usb_get_dev_index(i); /* get device */
 		debug("i=%d\n", i);
-		if (dev == NULL)
+		if (!dev)
 			break; /* no more devices available */
 
 		/* find valid usb_ether driver for this device, if any */
 		probe_valid_drivers(dev);
 
 		/* check limit */
-		if (usb_max_eth_dev == USB_MAX_ETH_DEV) {
-			printf("max USB Ethernet Device reached: %d stopping\n",
-				usb_max_eth_dev);
+		if (usb_max_eth_dev == USB_MAX_ETH_DEV)
 			break;
-		}
 	} /* for */
-
+#endif
+	if (usb_max_eth_dev == USB_MAX_ETH_DEV) {
+		printf("max USB Ethernet Device reached: %d stopping\n",
+		       usb_max_eth_dev);
+	}
 	usb_disable_asynch(old_async); /* restore asynch value */
 	printf("%d Ethernet Device(s) found\n", usb_max_eth_dev);
 	if (usb_max_eth_dev > 0)

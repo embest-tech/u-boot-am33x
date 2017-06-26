@@ -4,25 +4,10 @@
  *
  * Aneesh V <aneesh@ti.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
+#include <dm.h>
 #include <spl.h>
 #include <asm/u-boot.h>
 #include <nand.h>
@@ -31,6 +16,7 @@
 #include <i2c.h>
 #include <image.h>
 #include <malloc.h>
+#include <dm/root.h>
 #include <linux/compiler.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -39,6 +25,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define CONFIG_SYS_UBOOT_START	CONFIG_SYS_TEXT_BASE
 #endif
 #ifndef CONFIG_SYS_MONITOR_LEN
+/* Unknown U-Boot size, let's assume it will not be more than 200 KB */
 #define CONFIG_SYS_MONITOR_LEN	(200 * 1024)
 #endif
 
@@ -47,13 +34,6 @@ struct spl_image_info spl_image;
 
 /* Define board data structure */
 static bd_t bdata __attribute__ ((section(".data")));
-
-inline void hang(void)
-{
-	puts("### ERROR ### Please RESET the board ###\n");
-	for (;;)
-		;
-}
 
 /*
  * Default function to determine if u-boot or the OS should
@@ -73,6 +53,25 @@ __weak int spl_start_uboot(void)
 	return 1;
 }
 #endif
+
+/*
+ * Weak default function for board specific cleanup/preparation before
+ * Linux boot. Some boards/platforms might not need it, so just provide
+ * an empty stub here.
+ */
+__weak void spl_board_prepare_for_linux(void)
+{
+	/* Nothing to do! */
+}
+
+void spl_set_header_raw_uboot(void)
+{
+	spl_image.size = CONFIG_SYS_MONITOR_LEN;
+	spl_image.entry_point = CONFIG_SYS_UBOOT_START;
+	spl_image.load_addr = CONFIG_SYS_TEXT_BASE;
+	spl_image.os = IH_OS_U_BOOT;
+	spl_image.name = "U-Boot";
+}
 
 void spl_parse_image_header(const struct image_header *header)
 {
@@ -98,35 +97,48 @@ void spl_parse_image_header(const struct image_header *header)
 		}
 		spl_image.os = image_get_os(header);
 		spl_image.name = image_get_name(header);
-		debug("spl: payload image: %s load addr: 0x%x size: %d\n",
-			spl_image.name, spl_image.load_addr, spl_image.size);
+		debug("spl: payload image: %.*s load addr: 0x%x size: %d\n",
+			(int)sizeof(spl_image.name), spl_image.name,
+			spl_image.load_addr, spl_image.size);
 	} else {
+#ifdef CONFIG_SPL_PANIC_ON_RAW_IMAGE
+		/*
+		 * CONFIG_SPL_PANIC_ON_RAW_IMAGE is defined when the
+		 * code which loads images in SPL cannot guarantee that
+		 * absolutely all read errors will be reported.
+		 * An example is the LPC32XX MLC NAND driver, which
+		 * will consider that a completely unreadable NAND block
+		 * is bad, and thus should be skipped silently.
+		 */
+		panic("** no mkimage signature but raw image not supported");
+#else
 		/* Signature not found - assume u-boot.bin */
 		debug("mkimage signature not found - ih_magic = %x\n",
 			header->ih_magic);
-		/* Let's assume U-Boot will not be more than 200 KB */
-		spl_image.size = CONFIG_SYS_MONITOR_LEN;
-		spl_image.entry_point = CONFIG_SYS_UBOOT_START;
-		spl_image.load_addr = CONFIG_SYS_TEXT_BASE;
-		spl_image.os = IH_OS_U_BOOT;
-		spl_image.name = "U-Boot";
+		spl_set_header_raw_uboot();
+#endif
 	}
 }
 
-static void __noreturn jump_to_image_no_args(void)
+__weak void __noreturn jump_to_image_no_args(struct spl_image_info *spl_image)
 {
-	typedef void __noreturn (*image_entry_noargs_t)(u32 *);
-	image_entry_noargs_t image_entry =
-			(image_entry_noargs_t) spl_image.entry_point;
+	typedef void __noreturn (*image_entry_noargs_t)(void);
 
-	debug("image entry point: 0x%X\n", spl_image.entry_point);
-	/* Pass the saved boot_params from rom code */
-#if defined(CONFIG_VIRTIO) || defined(CONFIG_ZEBU)
-	image_entry = (image_entry_noargs_t)0x80100000;
-#endif
-	u32 boot_params_ptr_addr = (u32)&boot_params_ptr;
-	image_entry((u32 *)boot_params_ptr_addr);
+	image_entry_noargs_t image_entry =
+		(image_entry_noargs_t)(unsigned long)spl_image->entry_point;
+
+	debug("image entry point: 0x%X\n", spl_image->entry_point);
+	image_entry();
 }
+
+void __noreturn jump_to_image_no_args_qspi(void)
+{
+	typedef void __noreturn (*image_entry_noargs_t)(void);
+	image_entry_noargs_t image_entry =
+		(image_entry_noargs_t)(unsigned long)0x30020000;
+	image_entry();
+}
+
 
 #ifdef CONFIG_SPL_RAM_DEVICE
 static void spl_ram_load_image(void)
@@ -148,14 +160,41 @@ static void spl_ram_load_image(void)
 void board_init_r(gd_t *dummy1, ulong dummy2)
 {
 	u32 boot_device;
+	int ret;
+
 	debug(">>spl:board_init_r()\n");
 
-#ifdef CONFIG_SYS_SPL_MALLOC_START
+#if defined(CONFIG_SYS_SPL_MALLOC_START)
 	mem_malloc_init(CONFIG_SYS_SPL_MALLOC_START,
 			CONFIG_SYS_SPL_MALLOC_SIZE);
+	gd->flags |= GD_FLG_FULL_MALLOC_INIT;
+#elif defined(CONFIG_SYS_MALLOC_F_LEN)
+	gd->malloc_limit = CONFIG_SYS_MALLOC_F_LEN;
+	gd->malloc_ptr = 0;
 #endif
+	if (IS_ENABLED(CONFIG_OF_CONTROL) &&
+			!IS_ENABLED(CONFIG_SPL_DISABLE_OF_CONTROL)) {
+		ret = fdtdec_setup();
+		if (ret) {
+			debug("fdtdec_setup() returned error %d\n", ret);
+			hang();
+		}
+	}
+	if (IS_ENABLED(CONFIG_SPL_DM)) {
+		ret = dm_init_and_scan(true);
+		if (ret) {
+			debug("dm_init_and_scan() returned error %d\n", ret);
+			hang();
+		}
+	}
 
+#ifndef CONFIG_PPC
+	/*
+	 * timer_init() does not exist on PPC systems. The timer is initialized
+	 * and enabled (decrementer) in interrupt_init() here.
+	 */
 	timer_init();
+#endif
 
 #ifdef CONFIG_SPL_BOARD_INIT
 	spl_board_init();
@@ -163,13 +202,6 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 
 	boot_device = spl_boot_device();
 	debug("boot device - %d\n", boot_device);
-
-#ifdef CONFIG_UART_THEN_USB_SPL
-	/* Hack: load SPL via UART, then use USB */
-	if (boot_device == BOOT_DEVICE_UART)
-		boot_device = BOOT_DEVICE_USB;
-#endif
-
 	switch (boot_device) {
 #ifdef CONFIG_SPL_RAM_DEVICE
 	case BOOT_DEVICE_RAM:
@@ -186,6 +218,11 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 #ifdef CONFIG_SPL_NAND_SUPPORT
 	case BOOT_DEVICE_NAND:
 		spl_nand_load_image();
+		break;
+#endif
+#ifdef CONFIG_SPL_ONENAND_SUPPORT
+	case BOOT_DEVICE_ONENAND:
+		spl_onenand_load_image();
 		break;
 #endif
 #ifdef CONFIG_SPL_NOR_SUPPORT
@@ -212,13 +249,34 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 #endif
 		break;
 #endif
-#ifdef CONFIG_SPL_USB_ETH_SUPPORT
-	case BOOT_DEVICE_USB:
+#ifdef CONFIG_SPL_USBETH_SUPPORT
+	case BOOT_DEVICE_USBETH:
 		spl_net_load_image("usb_ether");
 		break;
 #endif
+#ifdef CONFIG_SPL_USB_SUPPORT
+	case BOOT_DEVICE_USB:
+		spl_usb_load_image();
+		break;
+#endif
+#ifdef CONFIG_SPL_SATA_SUPPORT
+	case BOOT_DEVICE_SATA:
+		spl_sata_load_image();
+		break;
+#endif
+#ifdef CONFIG_SPL_BOARD_LOAD_IMAGE
+	case BOOT_DEVICE_BOARD:
+		spl_board_load_image();
+		break;
+#endif
 	default:
-		debug("SPL: Un-supported Boot Device\n");
+#if defined(CONFIG_QSPI_BOOT_8800)
+		jump_to_image_no_args_qspi();
+#endif
+
+#if defined(CONFIG_SPL_SERIAL_SUPPORT) && defined(CONFIG_SPL_LIBCOMMON_SUPPORT)
+		puts("SPL: Unsupported Boot Device!\n");
+#endif
 		hang();
 	}
 
@@ -235,7 +293,12 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	default:
 		debug("Unsupported OS image.. Jumping nevertheless..\n");
 	}
-	jump_to_image_no_args();
+#if defined(CONFIG_SYS_MALLOC_F_LEN) && !defined(CONFIG_SYS_SPL_MALLOC_SIZE)
+	debug("SPL malloc() used %#lx bytes (%ld KB)\n", gd->malloc_ptr,
+	      gd->malloc_ptr / 1024);
+#endif
+
+	jump_to_image_no_args(&spl_image);
 }
 
 /*
@@ -245,7 +308,6 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 void preloader_console_init(void)
 {
 	gd->bd = &bdata;
-	gd->flags |= GD_FLG_RELOC;
 	gd->baudrate = CONFIG_BAUDRATE;
 
 	serial_init();		/* serial communications setup */
@@ -256,5 +318,40 @@ void preloader_console_init(void)
 			U_BOOT_TIME ")\n");
 #ifdef CONFIG_SPL_DISPLAY_PRINT
 	spl_display_print();
+#endif
+}
+
+/**
+ * spl_relocate_stack_gd() - Relocate stack ready for board_init_r() execution
+ *
+ * Sometimes board_init_f() runs with a stack in SRAM but we want to use SDRAM
+ * for the main board_init_r() execution. This is typically because we need
+ * more stack space for things like the MMC sub-system.
+ *
+ * This function calculates the stack position, copies the global_data into
+ * place and returns the new stack position. The caller is responsible for
+ * setting up the sp register.
+ *
+ * @return new stack location, or 0 to use the same stack
+ */
+ulong spl_relocate_stack_gd(void)
+{
+#ifdef CONFIG_SPL_STACK_R
+	gd_t *new_gd;
+	ulong ptr;
+
+	/* Get stack position: use 8-byte alignment for ABI compliance */
+	ptr = CONFIG_SPL_STACK_R_ADDR - sizeof(gd_t);
+	ptr &= ~7;
+	new_gd = (gd_t *)ptr;
+	memcpy(new_gd, (void *)gd, sizeof(gd_t));
+	gd = new_gd;
+
+	/* Clear the BSS. */
+	memset(__bss_start, 0, __bss_end - __bss_start);
+
+	return ptr;
+#else
+	return 0;
 #endif
 }

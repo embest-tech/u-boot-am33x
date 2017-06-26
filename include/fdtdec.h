@@ -1,22 +1,6 @@
 /*
  * Copyright (c) 2011 The Chromium OS Authors.
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __fdtdec_h
@@ -31,6 +15,7 @@
  */
 
 #include <libfdt.h>
+#include <pci.h>
 
 /*
  * A typedef for a physical address. Note that fdt data is always big
@@ -38,12 +23,16 @@
  */
 #ifdef CONFIG_PHYS_64BIT
 typedef u64 fdt_addr_t;
+typedef u64 fdt_size_t;
 #define FDT_ADDR_T_NONE (-1ULL)
 #define fdt_addr_to_cpu(reg) be64_to_cpu(reg)
+#define fdt_size_to_cpu(reg) be64_to_cpu(reg)
 #else
 typedef u32 fdt_addr_t;
+typedef u32 fdt_size_t;
 #define FDT_ADDR_T_NONE (-1U)
 #define fdt_addr_to_cpu(reg) be32_to_cpu(reg)
+#define fdt_size_to_cpu(reg) be32_to_cpu(reg)
 #endif
 
 /* Information obtained about memory from the FDT */
@@ -52,6 +41,86 @@ struct fdt_memory {
 	fdt_addr_t end;
 };
 
+#ifdef CONFIG_SPL_BUILD
+#define SPL_BUILD	1
+#else
+#define SPL_BUILD	0
+#endif
+
+#ifdef CONFIG_OF_CONTROL
+# if defined(CONFIG_SPL_BUILD) && defined(SPL_DISABLE_OF_CONTROL)
+#  define OF_CONTROL 0
+# else
+#  define OF_CONTROL 1
+# endif
+#else
+# define OF_CONTROL 0
+#endif
+
+/*
+ * Information about a resource. start is the first address of the resource
+ * and end is the last address (inclusive). The length of the resource will
+ * be equal to: end - start + 1.
+ */
+struct fdt_resource {
+	fdt_addr_t start;
+	fdt_addr_t end;
+};
+
+enum fdt_pci_space {
+	FDT_PCI_SPACE_CONFIG = 0,
+	FDT_PCI_SPACE_IO = 0x01000000,
+	FDT_PCI_SPACE_MEM32 = 0x02000000,
+	FDT_PCI_SPACE_MEM64 = 0x03000000,
+	FDT_PCI_SPACE_MEM32_PREF = 0x42000000,
+	FDT_PCI_SPACE_MEM64_PREF = 0x43000000,
+};
+
+#define FDT_PCI_ADDR_CELLS	3
+#define FDT_PCI_SIZE_CELLS	2
+#define FDT_PCI_REG_SIZE	\
+	((FDT_PCI_ADDR_CELLS + FDT_PCI_SIZE_CELLS) * sizeof(u32))
+
+/*
+ * The Open Firmware spec defines PCI physical address as follows:
+ *
+ *          bits# 31 .... 24 23 .... 16 15 .... 08 07 .... 00
+ *
+ * phys.hi  cell:  npt000ss   bbbbbbbb   dddddfff   rrrrrrrr
+ * phys.mid cell:  hhhhhhhh   hhhhhhhh   hhhhhhhh   hhhhhhhh
+ * phys.lo  cell:  llllllll   llllllll   llllllll   llllllll
+ *
+ * where:
+ *
+ * n:        is 0 if the address is relocatable, 1 otherwise
+ * p:        is 1 if addressable region is prefetchable, 0 otherwise
+ * t:        is 1 if the address is aliased (for non-relocatable I/O) below 1MB
+ *           (for Memory), or below 64KB (for relocatable I/O)
+ * ss:       is the space code, denoting the address space
+ * bbbbbbbb: is the 8-bit Bus Number
+ * ddddd:    is the 5-bit Device Number
+ * fff:      is the 3-bit Function Number
+ * rrrrrrrr: is the 8-bit Register Number
+ * hhhhhhhh: is a 32-bit unsigned number
+ * llllllll: is a 32-bit unsigned number
+ */
+struct fdt_pci_addr {
+	u32	phys_hi;
+	u32	phys_mid;
+	u32	phys_lo;
+};
+
+/**
+ * Compute the size of a resource.
+ *
+ * @param res	the resource to operate on
+ * @return the size of the resource
+ */
+static inline fdt_size_t fdt_resource_size(const struct fdt_resource *res)
+{
+	return res->end - res->start + 1;
+}
+
 /**
  * Compat types that we know about and for which we might have drivers.
  * Each is named COMPAT_<dir>_<filename> where <dir> is the directory
@@ -59,33 +128,117 @@ struct fdt_memory {
  */
 enum fdt_compat_id {
 	COMPAT_UNKNOWN,
-	COMPAT_NVIDIA_TEGRA20_USB,	/* Tegra20 USB port */
-	COMPAT_NVIDIA_TEGRA20_I2C,	/* Tegra20 i2c */
-	COMPAT_NVIDIA_TEGRA20_DVC,	/* Tegra20 dvc (really just i2c) */
 	COMPAT_NVIDIA_TEGRA20_EMC,	/* Tegra20 memory controller */
 	COMPAT_NVIDIA_TEGRA20_EMC_TABLE, /* Tegra20 memory timing table */
 	COMPAT_NVIDIA_TEGRA20_KBC,	/* Tegra20 Keyboard */
 	COMPAT_NVIDIA_TEGRA20_NAND,	/* Tegra2 NAND controller */
+	COMPAT_NVIDIA_TEGRA20_PWM,	/* Tegra 2 PWM controller */
+	COMPAT_NVIDIA_TEGRA124_DC,	/* Tegra 124 Display controller */
+	COMPAT_NVIDIA_TEGRA124_SOR,	/* Tegra 124 Serial Output Resource */
+	COMPAT_NVIDIA_TEGRA124_PMC,	/* Tegra 124 power mgmt controller */
+	COMPAT_NVIDIA_TEGRA20_DC,	/* Tegra 2 Display controller */
+	COMPAT_NVIDIA_TEGRA124_SDMMC,	/* Tegra124 SDMMC controller */
+	COMPAT_NVIDIA_TEGRA30_SDMMC,	/* Tegra30 SDMMC controller */
+	COMPAT_NVIDIA_TEGRA20_SDMMC,	/* Tegra20 SDMMC controller */
+	COMPAT_NVIDIA_TEGRA124_PCIE,	/* Tegra 124 PCIe controller */
+	COMPAT_NVIDIA_TEGRA30_PCIE,	/* Tegra 30 PCIe controller */
+	COMPAT_NVIDIA_TEGRA20_PCIE,	/* Tegra 20 PCIe controller */
+	COMPAT_NVIDIA_TEGRA124_XUSB_PADCTL,
+					/* Tegra124 XUSB pad controller */
+	COMPAT_SMSC_LAN9215,		/* SMSC 10/100 Ethernet LAN9215 */
+	COMPAT_SAMSUNG_EXYNOS5_SROMC,	/* Exynos5 SROMC */
+	COMPAT_SAMSUNG_S3C2440_I2C,	/* Exynos I2C Controller */
+	COMPAT_SAMSUNG_EXYNOS5_SOUND,	/* Exynos Sound */
+	COMPAT_WOLFSON_WM8994_CODEC,	/* Wolfson WM8994 Sound Codec */
+	COMPAT_GOOGLE_CROS_EC_KEYB,	/* Google CROS_EC Keyboard */
+	COMPAT_SAMSUNG_EXYNOS_USB_PHY,	/* Exynos phy controller for usb2.0 */
+	COMPAT_SAMSUNG_EXYNOS5_USB3_PHY,/* Exynos phy controller for usb3.0 */
+	COMPAT_SAMSUNG_EXYNOS_TMU,	/* Exynos TMU */
+	COMPAT_SAMSUNG_EXYNOS_FIMD,	/* Exynos Display controller */
+	COMPAT_SAMSUNG_EXYNOS_MIPI_DSI,	/* Exynos mipi dsi */
+	COMPAT_SAMSUNG_EXYNOS5_DP,	/* Exynos Display port controller */
+	COMPAT_SAMSUNG_EXYNOS_DWMMC,	/* Exynos DWMMC controller */
+	COMPAT_SAMSUNG_EXYNOS_MMC,	/* Exynos MMC controller */
+	COMPAT_SAMSUNG_EXYNOS_SERIAL,	/* Exynos UART */
+	COMPAT_MAXIM_MAX77686_PMIC,	/* MAX77686 PMIC */
+	COMPAT_GENERIC_SPI_FLASH,	/* Generic SPI Flash chip */
+	COMPAT_MAXIM_98095_CODEC,	/* MAX98095 Codec */
+	COMPAT_INFINEON_SLB9635_TPM,	/* Infineon SLB9635 TPM */
+	COMPAT_INFINEON_SLB9645_TPM,	/* Infineon SLB9645 TPM */
+	COMPAT_SAMSUNG_EXYNOS5_I2C,	/* Exynos5 High Speed I2C Controller */
+	COMPAT_SANDBOX_LCD_SDL,		/* Sandbox LCD emulation with SDL */
+	COMPAT_TI_TPS65090,		/* Texas Instrument TPS65090 */
+	COMPAT_NXP_PTN3460,		/* NXP PTN3460 DP/LVDS bridge */
+	COMPAT_SAMSUNG_EXYNOS_SYSMMU,	/* Exynos sysmmu */
+	COMPAT_PARADE_PS8625,		/* Parade PS8622 EDP->LVDS bridge */
+	COMPAT_INTEL_MICROCODE,		/* Intel microcode update */
+	COMPAT_MEMORY_SPD,		/* Memory SPD information */
+	COMPAT_INTEL_PANTHERPOINT_AHCI,	/* Intel Pantherpoint AHCI */
+	COMPAT_INTEL_MODEL_206AX,	/* Intel Model 206AX CPU */
+	COMPAT_INTEL_GMA,		/* Intel Graphics Media Accelerator */
+	COMPAT_AMS_AS3722,		/* AMS AS3722 PMIC */
+	COMPAT_INTEL_ICH_SPI,		/* Intel ICH7/9 SPI controller */
+	COMPAT_INTEL_QRK_MRC,		/* Intel Quark MRC */
+	COMPAT_INTEL_X86_PINCTRL,	/* Intel ICH7/9 pin control */
+	COMPAT_SOCIONEXT_XHCI,		/* Socionext UniPhier xHCI */
+	COMPAT_INTEL_PCH,		/* Intel PCH */
+	COMPAT_INTEL_IRQ_ROUTER,	/* Intel Interrupt Router */
 
 	COMPAT_COUNT,
 };
 
-/* GPIOs are numbered from 0 */
-enum {
-	FDT_GPIO_NONE = -1U,	/* an invalid GPIO used to end our list */
-
-	FDT_GPIO_ACTIVE_LOW = 1 << 0,	/* input is active low (else high) */
+#define MAX_PHANDLE_ARGS 16
+struct fdtdec_phandle_args {
+	int node;
+	int args_count;
+	uint32_t args[MAX_PHANDLE_ARGS];
 };
 
-/* This is the state of a GPIO pin as defined by the fdt */
-struct fdt_gpio_state {
-	const char *name;	/* name of the fdt property defining this */
-	uint gpio;		/* GPIO number, or FDT_GPIO_NONE if none */
-	u8 flags;		/* FDT_GPIO_... flags */
-};
-
-/* This tells us whether a fdt_gpio_state record is valid or not */
-#define fdt_gpio_isvalid(x) ((x)->gpio != FDT_GPIO_NONE)
+/**
+ * fdtdec_parse_phandle_with_args() - Find a node pointed by phandle in a list
+ *
+ * This function is useful to parse lists of phandles and their arguments.
+ *
+ * Example:
+ *
+ * phandle1: node1 {
+ *	#list-cells = <2>;
+ * }
+ *
+ * phandle2: node2 {
+ *	#list-cells = <1>;
+ * }
+ *
+ * node3 {
+ *	list = <&phandle1 1 2 &phandle2 3>;
+ * }
+ *
+ * To get a device_node of the `node2' node you may call this:
+ * fdtdec_parse_phandle_with_args(blob, node3, "list", "#list-cells", 0, 1,
+ *				  &args);
+ *
+ * (This function is a modified version of __of_parse_phandle_with_args() from
+ * Linux 3.18)
+ *
+ * @blob:	Pointer to device tree
+ * @src_node:	Offset of device tree node containing a list
+ * @list_name:	property name that contains a list
+ * @cells_name:	property name that specifies the phandles' arguments count,
+ *		or NULL to use @cells_count
+ * @cells_count: Cell count to use if @cells_name is NULL
+ * @index:	index of a phandle to parse out
+ * @out_args:	optional pointer to output arguments structure (will be filled)
+ * @return 0 on success (with @out_args filled out if not NULL), -ENOENT if
+ *	@list_name does not exist, a phandle was not found, @cells_name
+ *	could not be found, the arguments were truncated or there were too
+ *	many arguments.
+ *
+ */
+int fdtdec_parse_phandle_with_args(const void *blob, int src_node,
+				   const char *list_name,
+				   const char *cells_name,
+				   int cell_count, int index,
+				   struct fdtdec_phandle_args *out_args);
 
 /**
  * Find the next numbered alias for a peripheral. This is used to enumerate
@@ -106,6 +259,19 @@ struct fdt_gpio_state {
  */
 int fdtdec_next_alias(const void *blob, const char *name,
 		enum fdt_compat_id id, int *upto);
+
+/**
+ * Find the compatible ID for a given node.
+ *
+ * Generally each node has at least one compatible string attached to it.
+ * This function looks through our list of known compatible strings and
+ * returns the corresponding ID which matches the compatible string.
+ *
+ * @param blob		FDT blob to use
+ * @param node		Node containing compatible string to find
+ * @return compatible ID, or COMPAT_UNKNOWN if we cannot find a match
+ */
+enum fdt_compat_id fdtdec_lookup(const void *blob, int node);
 
 /**
  * Find the next compatible node for a peripheral.
@@ -153,6 +319,78 @@ fdt_addr_t fdtdec_get_addr(const void *blob, int node,
 		const char *prop_name);
 
 /**
+ * Look up an address property in a node and return it as an address.
+ * The property must hold one address with a length. This is only tested
+ * on 32-bit machines.
+ *
+ * @param blob	FDT blob
+ * @param node	node to examine
+ * @param prop_name	name of property to find
+ * @return address, if found, or FDT_ADDR_T_NONE if not
+ */
+fdt_addr_t fdtdec_get_addr_size(const void *blob, int node,
+		const char *prop_name, fdt_size_t *sizep);
+
+/**
+ * Look at an address property in a node and return the pci address which
+ * corresponds to the given type in the form of fdt_pci_addr.
+ * The property must hold one fdt_pci_addr with a lengh.
+ *
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param type		pci address type (FDT_PCI_SPACE_xxx)
+ * @param prop_name	name of property to find
+ * @param addr		returns pci address in the form of fdt_pci_addr
+ * @return 0 if ok, -ENOENT if the property did not exist, -EINVAL if the
+ *		format of the property was invalid, -ENXIO if the requested
+ *		address type was not found
+ */
+int fdtdec_get_pci_addr(const void *blob, int node, enum fdt_pci_space type,
+		const char *prop_name, struct fdt_pci_addr *addr);
+
+/**
+ * Look at the compatible property of a device node that represents a PCI
+ * device and extract pci vendor id and device id from it.
+ *
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param vendor	vendor id of the pci device
+ * @param device	device id of the pci device
+ * @return 0 if ok, negative on error
+ */
+int fdtdec_get_pci_vendev(const void *blob, int node,
+		u16 *vendor, u16 *device);
+
+/**
+ * Look at the pci address of a device node that represents a PCI device
+ * and parse the bus, device and function number from it. For some cases
+ * like the bus number encoded in reg property is not correct after pci
+ * enumeration, this function looks through the node's compatible strings
+ * to get these numbers extracted instead.
+ *
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param addr		pci address in the form of fdt_pci_addr
+ * @param bdf		returns bus, device, function triplet
+ * @return 0 if ok, negative on error
+ */
+int fdtdec_get_pci_bdf(const void *blob, int node,
+		struct fdt_pci_addr *addr, pci_dev_t *bdf);
+
+/**
+ * Look at the pci address of a device node that represents a PCI device
+ * and return base address of the pci device's registers.
+ *
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param addr		pci address in the form of fdt_pci_addr
+ * @param bar		returns base address of the pci device's registers
+ * @return 0 if ok, negative on error
+ */
+int fdtdec_get_pci_bar32(const void *blob, int node,
+		struct fdt_pci_addr *addr, u32 *bar);
+
+/**
  * Look up a 32-bit integer property in a node and return it. The property
  * must have at least 4 bytes of data. The value of the first cell is
  * returned.
@@ -165,6 +403,32 @@ fdt_addr_t fdtdec_get_addr(const void *blob, int node,
  */
 s32 fdtdec_get_int(const void *blob, int node, const char *prop_name,
 		s32 default_val);
+
+/**
+ * Get a variable-sized number from a property
+ *
+ * This reads a number from one or more cells.
+ *
+ * @param ptr	Pointer to property
+ * @param cells	Number of cells containing the number
+ * @return the value in the cells
+ */
+u64 fdtdec_get_number(const fdt32_t *ptr, unsigned int cells);
+
+/**
+ * Look up a 64-bit integer property in a node and return it. The property
+ * must have at least 8 bytes of data (2 cells). The first two cells are
+ * concatenated to form a 8 bytes value, where the first cell is top half and
+ * the second cell is bottom half.
+ *
+ * @param blob	FDT blob
+ * @param node	node to examine
+ * @param prop_name	name of property to find
+ * @param default_val	default value to return if the property is not found
+ * @return integer value, if found, or default_val if not
+ */
+uint64_t fdtdec_get_uint64(const void *blob, int node, const char *prop_name,
+		uint64_t default_val);
 
 /**
  * Checks whether a node is enabled.
@@ -260,6 +524,36 @@ int fdtdec_find_aliases_for_id(const void *blob, const char *name,
 int fdtdec_add_aliases_for_id(const void *blob, const char *name,
 			enum fdt_compat_id id, int *node_list, int maxcount);
 
+/**
+ * Get the alias sequence number of a node
+ *
+ * This works out whether a node is pointed to by an alias, and if so, the
+ * sequence number of that alias. Aliases are of the form <base><num> where
+ * <num> is the sequence number. For example spi2 would be sequence number
+ * 2.
+ *
+ * @param blob		Device tree blob (if NULL, then error is returned)
+ * @param base		Base name for alias (before the underscore)
+ * @param node		Node to look up
+ * @param seqp		This is set to the sequence number if one is found,
+ *			but otherwise the value is left alone
+ * @return 0 if a sequence was found, -ve if not
+ */
+int fdtdec_get_alias_seq(const void *blob, const char *base, int node,
+			 int *seqp);
+
+/**
+ * Get the offset of the given chosen node
+ *
+ * This looks up a property in /chosen containing the path to another node,
+ * then finds the offset of that node.
+ *
+ * @param blob		Device tree blob (if NULL, then error is returned)
+ * @param name		Property name, e.g. "stdout-path"
+ * @return Node offset referred to by that chosen node, or -ve FDT_ERR_...
+ */
+int fdtdec_get_chosen_node(const void *blob, const char *name);
+
 /*
  * Get the name for a compatible ID
  *
@@ -295,6 +589,22 @@ int fdtdec_get_int_array(const void *blob, int node, const char *prop_name,
 		u32 *array, int count);
 
 /**
+ * Look up a property in a node and return its contents in an integer
+ * array of given length. The property must exist but may have less data that
+ * expected (4*count bytes). It may have more, but this will be ignored.
+ *
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param prop_name	name of property to find
+ * @param array		array to fill with data
+ * @param count		number of array elements
+ * @return number of array elements if ok, or -FDT_ERR_NOTFOUND if the
+ *		property is not found
+ */
+int fdtdec_get_int_array_count(const void *blob, int node,
+			       const char *prop_name, u32 *array, int count);
+
+/**
  * Look up a property in a node and return a pointer to its contents as a
  * unsigned int array of given length. The property must have at least enough
  * data for the array ('count' cells). It may have more, but this will be
@@ -327,32 +637,37 @@ const u32 *fdtdec_locate_array(const void *blob, int node,
 int fdtdec_get_bool(const void *blob, int node, const char *prop_name);
 
 /**
- * Decode a single GPIOs from an FDT.
- *
- * If the property is not found, then the GPIO structure will still be
- * initialised, with gpio set to FDT_GPIO_NONE. This makes it easy to
- * provide optional GPIOs.
+ * Look in the FDT for a config item with the given name and return its value
+ * as a 32-bit integer. The property must have at least 4 bytes of data. The
+ * value of the first cell is returned.
  *
  * @param blob		FDT blob to use
- * @param node		Node to look at
  * @param prop_name	Node property name
- * @param gpio		gpio elements to fill from FDT
- * @return 0 if ok, -FDT_ERR_NOTFOUND if the property is missing.
+ * @param default_val	default value to return if the property is not found
+ * @return integer value, if found, or default_val if not
  */
-int fdtdec_decode_gpio(const void *blob, int node, const char *prop_name,
-		struct fdt_gpio_state *gpio);
+int fdtdec_get_config_int(const void *blob, const char *prop_name,
+		int default_val);
 
 /**
- * Set up a GPIO pin according to the provided gpio information. At present this
- * just requests the GPIO.
+ * Look in the FDT for a config item with the given name
+ * and return whether it exists.
  *
- * If the gpio is FDT_GPIO_NONE, no action is taken. This makes it easy to
- * deal with optional GPIOs.
- *
- * @param gpio		GPIO info to use for set up
- * @return 0 if all ok or gpio was FDT_GPIO_NONE; -1 on error
+ * @param blob		FDT blob
+ * @param prop_name	property name to look up
+ * @return 1, if it exists, or 0 if not
  */
-int fdtdec_setup_gpio(struct fdt_gpio_state *gpio);
+int fdtdec_get_config_bool(const void *blob, const char *prop_name);
+
+/**
+ * Look in the FDT for a config item with the given name and return its value
+ * as a string.
+ *
+ * @param blob          FDT blob
+ * @param prop_name     property name to look up
+ * @returns property string, NULL on error.
+ */
+char *fdtdec_get_config_string(const void *blob, const char *prop_name);
 
 /*
  * Look up a property in a node and return its contents in a byte
@@ -385,4 +700,196 @@ int fdtdec_get_byte_array(const void *blob, int node, const char *prop_name,
  */
 const u8 *fdtdec_locate_byte_array(const void *blob, int node,
 			     const char *prop_name, int count);
+
+/**
+ * Look up a property in a node which contains a memory region address and
+ * size. Then return a pointer to this address.
+ *
+ * The property must hold one address with a length. This is only tested on
+ * 32-bit machines.
+ *
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param prop_name	name of property to find
+ * @param basep		Returns base address of region
+ * @param size		Returns size of region
+ * @return 0 if ok, -1 on error (property not found)
+ */
+int fdtdec_decode_region(const void *blob, int node, const char *prop_name,
+			 fdt_addr_t *basep, fdt_size_t *sizep);
+
+enum fmap_compress_t {
+	FMAP_COMPRESS_NONE,
+	FMAP_COMPRESS_LZO,
+};
+
+enum fmap_hash_t {
+	FMAP_HASH_NONE,
+	FMAP_HASH_SHA1,
+	FMAP_HASH_SHA256,
+};
+
+/* A flash map entry, containing an offset and length */
+struct fmap_entry {
+	uint32_t offset;
+	uint32_t length;
+	uint32_t used;			/* Number of bytes used in region */
+	enum fmap_compress_t compress_algo;	/* Compression type */
+	enum fmap_hash_t hash_algo;		/* Hash algorithm */
+	const uint8_t *hash;			/* Hash value */
+	int hash_size;				/* Hash size */
+};
+
+/**
+ * Read a flash entry from the fdt
+ *
+ * @param blob		FDT blob
+ * @param node		Offset of node to read
+ * @param name		Name of node being read
+ * @param entry		Place to put offset and size of this node
+ * @return 0 if ok, -ve on error
+ */
+int fdtdec_read_fmap_entry(const void *blob, int node, const char *name,
+			   struct fmap_entry *entry);
+
+/**
+ * Obtain an indexed resource from a device property.
+ *
+ * @param fdt		FDT blob
+ * @param node		node to examine
+ * @param property	name of the property to parse
+ * @param index		index of the resource to retrieve
+ * @param res		returns the resource
+ * @return 0 if ok, negative on error
+ */
+int fdt_get_resource(const void *fdt, int node, const char *property,
+		     unsigned int index, struct fdt_resource *res);
+
+/**
+ * Obtain a named resource from a device property.
+ *
+ * Look up the index of the name in a list of strings and return the resource
+ * at that index.
+ *
+ * @param fdt		FDT blob
+ * @param node		node to examine
+ * @param property	name of the property to parse
+ * @param prop_names	name of the property containing the list of names
+ * @param name		the name of the entry to look up
+ * @param res		returns the resource
+ */
+int fdt_get_named_resource(const void *fdt, int node, const char *property,
+			   const char *prop_names, const char *name,
+			   struct fdt_resource *res);
+
+/**
+ * Decode a named region within a memory bank of a given type.
+ *
+ * This function handles selection of a memory region. The region is
+ * specified as an offset/size within a particular type of memory.
+ *
+ * The properties used are:
+ *
+ *	<mem_type>-memory<suffix> for the name of the memory bank
+ *	<mem_type>-offset<suffix> for the offset in that bank
+ *
+ * The property value must have an offset and a size. The function checks
+ * that the region is entirely within the memory bank.5
+ *
+ * @param blob		FDT blob
+ * @param node		Node containing the properties (-1 for /config)
+ * @param mem_type	Type of memory to use, which is a name, such as
+ *			"u-boot" or "kernel".
+ * @param suffix	String to append to the memory/offset
+ *			property names
+ * @param basep		Returns base of region
+ * @param sizep		Returns size of region
+ * @return 0 if OK, -ive on error
+ */
+int fdtdec_decode_memory_region(const void *blob, int node,
+				const char *mem_type, const char *suffix,
+				fdt_addr_t *basep, fdt_size_t *sizep);
+
+/* Display timings from linux include/video/display_timing.h */
+enum display_flags {
+	DISPLAY_FLAGS_HSYNC_LOW		= 1 << 0,
+	DISPLAY_FLAGS_HSYNC_HIGH	= 1 << 1,
+	DISPLAY_FLAGS_VSYNC_LOW		= 1 << 2,
+	DISPLAY_FLAGS_VSYNC_HIGH	= 1 << 3,
+
+	/* data enable flag */
+	DISPLAY_FLAGS_DE_LOW		= 1 << 4,
+	DISPLAY_FLAGS_DE_HIGH		= 1 << 5,
+	/* drive data on pos. edge */
+	DISPLAY_FLAGS_PIXDATA_POSEDGE	= 1 << 6,
+	/* drive data on neg. edge */
+	DISPLAY_FLAGS_PIXDATA_NEGEDGE	= 1 << 7,
+	DISPLAY_FLAGS_INTERLACED	= 1 << 8,
+	DISPLAY_FLAGS_DOUBLESCAN	= 1 << 9,
+	DISPLAY_FLAGS_DOUBLECLK		= 1 << 10,
+};
+
+/*
+ * A single signal can be specified via a range of minimal and maximal values
+ * with a typical value, that lies somewhere inbetween.
+ */
+struct timing_entry {
+	u32 min;
+	u32 typ;
+	u32 max;
+};
+
+/*
+ * Single "mode" entry. This describes one set of signal timings a display can
+ * have in one setting. This struct can later be converted to struct videomode
+ * (see include/video/videomode.h). As each timing_entry can be defined as a
+ * range, one struct display_timing may become multiple struct videomodes.
+ *
+ * Example: hsync active high, vsync active low
+ *
+ *				    Active Video
+ * Video  ______________________XXXXXXXXXXXXXXXXXXXXXX_____________________
+ *	  |<- sync ->|<- back ->|<----- active ----->|<- front ->|<- sync..
+ *	  |	     |	 porch  |		     |	 porch	 |
+ *
+ * HSync _|¯¯¯¯¯¯¯¯¯¯|___________________________________________|¯¯¯¯¯¯¯¯¯
+ *
+ * VSync ¯|__________|¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯|_________
+ */
+struct display_timing {
+	struct timing_entry pixelclock;
+
+	struct timing_entry hactive;		/* hor. active video */
+	struct timing_entry hfront_porch;	/* hor. front porch */
+	struct timing_entry hback_porch;	/* hor. back porch */
+	struct timing_entry hsync_len;		/* hor. sync len */
+
+	struct timing_entry vactive;		/* ver. active video */
+	struct timing_entry vfront_porch;	/* ver. front porch */
+	struct timing_entry vback_porch;	/* ver. back porch */
+	struct timing_entry vsync_len;		/* ver. sync len */
+
+	enum display_flags flags;		/* display flags */
+};
+
+/**
+ * fdtdec_decode_display_timing() - decode display timings
+ *
+ * Decode display timings from the supplied 'display-timings' node.
+ * See doc/device-tree-bindings/video/display-timing.txt for binding
+ * information.
+ *
+ * @param blob		FDT blob
+ * @param node		'display-timing' node containing the timing subnodes
+ * @param index		Index number to read (0=first timing subnode)
+ * @param config	Place to put timings
+ * @return 0 if OK, -FDT_ERR_NOTFOUND if not found
+ */
+int fdtdec_decode_display_timing(const void *blob, int node, int index,
+				 struct display_timing *config);
+/**
+ * Set up the device tree ready for use
+ */
+int fdtdec_setup(void);
+
 #endif

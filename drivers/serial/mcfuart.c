@@ -2,24 +2,7 @@
  * (C) Copyright 2004-2007 Freescale Semiconductor, Inc.
  * TsiChung Liew, Tsi-Chung.Liew@freescale.com.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -28,6 +11,8 @@
  */
 
 #include <common.h>
+#include <serial.h>
+#include <linux/compiler.h>
 
 #include <asm/immap.h>
 #include <asm/uart.h>
@@ -36,7 +21,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 extern void uart_port_conf(int port);
 
-int serial_init(void)
+static int mcf_serial_init(void)
 {
 	volatile uart_t *uart;
 	u32 counter;
@@ -74,7 +59,7 @@ int serial_init(void)
 	return (0);
 }
 
-void serial_putc(const char c)
+static void mcf_serial_putc(const char c)
 {
 	volatile uart_t *uart = (volatile uart_t *)(CONFIG_SYS_UART_BASE);
 
@@ -87,14 +72,7 @@ void serial_putc(const char c)
 	uart->utb = c;
 }
 
-void serial_puts(const char *s)
-{
-	while (*s) {
-		serial_putc(*s++);
-	}
-}
-
-int serial_getc(void)
+static int mcf_serial_getc(void)
 {
 	volatile uart_t *uart = (volatile uart_t *)(CONFIG_SYS_UART_BASE);
 
@@ -103,14 +81,14 @@ int serial_getc(void)
 	return uart->urb;
 }
 
-int serial_tstc(void)
+static int mcf_serial_tstc(void)
 {
 	volatile uart_t *uart = (volatile uart_t *)(CONFIG_SYS_UART_BASE);
 
 	return (uart->usr & UART_USR_RXRDY);
 }
 
-void serial_setbrg(void)
+static void mcf_serial_setbrg(void)
 {
 	volatile uart_t *uart = (volatile uart_t *)(CONFIG_SYS_UART_BASE);
 	u32 counter;
@@ -128,4 +106,25 @@ void serial_setbrg(void)
 	uart->ucr = UART_UCR_RESET_TX;
 
 	uart->ucr = UART_UCR_RX_ENABLED | UART_UCR_TX_ENABLED;
+}
+
+static struct serial_device mcf_serial_drv = {
+	.name	= "mcf_serial",
+	.start	= mcf_serial_init,
+	.stop	= NULL,
+	.setbrg	= mcf_serial_setbrg,
+	.putc	= mcf_serial_putc,
+	.puts	= default_serial_puts,
+	.getc	= mcf_serial_getc,
+	.tstc	= mcf_serial_tstc,
+};
+
+void mcf_serial_initialize(void)
+{
+	serial_register(&mcf_serial_drv);
+}
+
+__weak struct serial_device *default_serial_console(void)
+{
+	return &mcf_serial_drv;
 }

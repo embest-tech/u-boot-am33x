@@ -2,23 +2,7 @@
  *
  * (c) 2009 Emcraft Systems, Ilya Yanok <yanok@emcraft.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -28,20 +12,14 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/io.h>
 #include <nand.h>
-#include <pmic.h>
+#include <power/pmic.h>
 #include <fsl_pmic.h>
 #include <asm/gpio.h>
 #include "qong_fpga.h"
 #include <watchdog.h>
+#include <errno.h>
 
 DECLARE_GLOBAL_DATA_PTR;
-
-#ifdef CONFIG_HW_WATCHDOG
-void hw_watchdog_reset(void)
-{
-	mxc_hw_watchdog_reset();
-}
-#endif
 
 int dram_init(void)
 {
@@ -172,17 +150,22 @@ int board_late_init(void)
 {
 	u32 val;
 	struct pmic *p;
+	int ret;
 
-	pmic_init();
-	p = get_pmic();
+	ret = pmic_init(I2C_PMIC);
+	if (ret)
+		return ret;
 
+	p = pmic_get("FSL_PMIC");
+	if (!p)
+		return -ENODEV;
 	/* Enable RTC battery */
 	pmic_reg_read(p, REG_POWER_CTL0, &val);
 	pmic_reg_write(p, REG_POWER_CTL0, val | COINCHEN);
 	pmic_reg_write(p, REG_INT_STATUS1, RTCRSTI);
 
 #ifdef CONFIG_HW_WATCHDOG
-	mxc_hw_watchdog_enable();
+	hw_watchdog_init();
 #endif
 
 	return 0;

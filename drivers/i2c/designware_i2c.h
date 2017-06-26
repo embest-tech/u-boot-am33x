@@ -2,23 +2,7 @@
  * (C) Copyright 2009
  * Vipin Kumar, ST Micoelectronics, vipin.kumar@st.com.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __DW_I2C_H_
@@ -60,14 +44,16 @@ struct i2c_regs {
 	u32 ic_tx_abrt_source;
 };
 
+#if !defined(IC_CLK)
 #define IC_CLK			166
+#endif
 #define NANO_TO_MICRO		1000
 
 /* High and low times in different speed modes (in ns) */
 #define MIN_SS_SCL_HIGHTIME	4000
-#define MIN_SS_SCL_LOWTIME	5000
-#define MIN_FS_SCL_HIGHTIME	800
-#define MIN_FS_SCL_LOWTIME	1700
+#define MIN_SS_SCL_LOWTIME	4700
+#define MIN_FS_SCL_HIGHTIME	600
+#define MIN_FS_SCL_LOWTIME	1300
 #define MIN_HS_SCL_HIGHTIME	60
 #define MIN_HS_SCL_LOWTIME	160
 
@@ -95,6 +81,7 @@ struct i2c_regs {
 
 /* i2c data buffer and command register definitions */
 #define IC_CMD			0x0100
+#define IC_STOP			0x0200
 
 /* i2c interrupt status register definitions */
 #define IC_GEN_CALL		0x0800

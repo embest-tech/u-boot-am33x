@@ -14,21 +14,7 @@
  * Adam Bezanson, Network Audio Technologies, Inc.
  * <bezanson@netaudiotech.com>
  *
- * See file CREDITS for list of people who contributed to this project.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
- * for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 675 Mass Ave, Cambridge, MA 02139, USA.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <command.h>
@@ -67,7 +53,7 @@ static void dump_dev(struct eth_device *dev)
 	printf("  rx_sq.end	     %p\n", priv->rx_sq.end);
 
 	for (i = 0; i < NUMRXDESC; i++)
-		printf("  rx_buffer[%2.d]      %p\n", i, NetRxPackets[i]);
+		printf("  rx_buffer[%2.d]      %p\n", i, net_rx_packets[i]);
 
 	printf("  tx_dq.base	     %p\n", priv->tx_dq.base);
 	printf("  tx_dq.current	     %p\n", priv->tx_dq.current);
@@ -251,7 +237,7 @@ static int ep93xx_eth_open(struct eth_device *dev, bd_t *bd)
 	 */
 	for (i = 0; i < NUMRXDESC; i++) {
 		/* set buffer address */
-		(priv->rx_dq.base + i)->word1 = (uint32_t)NetRxPackets[i];
+		(priv->rx_dq.base + i)->word1 = (uint32_t)net_rx_packets[i];
 
 		/* set buffer length, clear buffer index and NSOF */
 		(priv->rx_dq.base + i)->word2 = PKTSIZE_ALIGN;
@@ -324,15 +310,16 @@ static int ep93xx_eth_rcv_packet(struct eth_device *dev)
 			/*
 			 * We have a good frame. Extract the frame's length
 			 * from the current rx_status_queue entry, and copy
-			 * the frame's data into NetRxPackets[] of the
+			 * the frame's data into net_rx_packets[] of the
 			 * protocol stack. We track the total number of
 			 * bytes in the frame (nbytes_frame) which will be
 			 * used when we pass the data off to the protocol
-			 * layer via NetReceive().
+			 * layer via net_process_received_packet().
 			 */
 			len = RX_STATUS_FRAME_LEN(priv->rx_sq.current);
 
-			NetReceive((uchar *)priv->rx_dq.current->word1,	len);
+			net_process_received_packet(
+				(uchar *)priv->rx_dq.current->word1, len);
 
 			debug("reporting %d bytes...\n", len);
 		} else {

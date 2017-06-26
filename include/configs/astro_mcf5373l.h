@@ -3,23 +3,7 @@
  *
  * (C) Copyright 2003 Josef Baumgartner <josef.baumgartner@telex.de>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -32,6 +16,8 @@
 
 #ifndef _CONFIG_ASTRO_MCF5373L_H
 #define _CONFIG_ASTRO_MCF5373L_H
+
+#include <linux/stringify.h>
 
 /*
  * set the card type to actually compile for; either of
@@ -53,21 +39,9 @@
 #error No card type defined!
 #endif
 
-/*
- * Define processor
- * possible values for Urmel board: only Coldfire M5373 processor supported
- * (please do not change)
- */
-
-/* it seems not clear yet which processor defines we should use */
-#define CONFIG_MCF537x			/* define processor family */
-#define CONFIG_MCF532x			/* define processor family */
-#define CONFIG_M5373			/* define processor type */
 #define CONFIG_ASTRO5373L		/* define board type */
 
 /* Command line configuration */
-#include <config_cmd_default.h>
-
 /*
  * CONFIG_RAM defines if u-boot is loaded via BDM (or started from
  * a different bootloader that has already performed RAM setup) or
@@ -88,20 +62,12 @@
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_ELF
-#define CONFIG_CMD_FLASH
 #define CONFIG_CMD_I2C
-#define CONFIG_CMD_MEMORY
-#define CONFIG_CMD_MISC
-#define CONFIG_CMD_XIMG
-#undef CONFIG_CMD_NET
-#undef CONFIG_CMD_NFS
 #if ENABLE_JFFS
 #define CONFIG_CMD_JFFS2
 #endif
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_LOADS
-#define CONFIG_CMD_LOADB
-#define CONFIG_CMD_FPGA
+#define CONFIG_CMD_FPGA_LOADMK
 #define CONFIG_CMDLINE_EDITING
 
 #define CONFIG_SYS_HUSH_PARSER
@@ -114,21 +80,18 @@
 #undef CONFIG_MCFPIT
 
 /* I2C */
-#define CONFIG_FSL_I2C
-#define CONFIG_HARD_I2C			/* I2C with hw support */
-#undef CONFIG_SOFT_I2C			/* I2C bit-banged */
-#define CONFIG_SYS_I2C_SPEED		80000
-#define CONFIG_SYS_I2C_SLAVE		0x7F
-#define CONFIG_SYS_I2C_OFFSET		0x58000
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_FSL
+#define CONFIG_SYS_FSL_I2C_SPEED	80000
+#define CONFIG_SYS_FSL_I2C_SLAVE	0x7F
+#define CONFIG_SYS_FSL_I2C_OFFSET	0x58000
 #define CONFIG_SYS_IMMR			CONFIG_SYS_MBAR
 
 /*
  * Defines processor clock - important for correct timings concerning serial
  * interface etc.
- * CONFIG_SYS_HZ gives unit: 1000 -> 1 Hz ^= 1000 ms
  */
 
-#define CONFIG_SYS_HZ			1000
 #define CONFIG_SYS_CLK			80000000
 #define CONFIG_SYS_CPU_CLK		(CONFIG_SYS_CLK * 3)
 #define CONFIG_SYS_SDRAM_SIZE		32		/* SDRAM size in MB */
@@ -209,12 +172,9 @@
  * u-boot: 'set' command
  */
 
-#define _QUOTEME(x)	#x
-#define QUOTEME(x)	_QUOTEME(x)
-
 #define CONFIG_EXTRA_ENV_SETTINGS			\
 	"loaderversion=11\0"				\
-	"card_id="QUOTEME(ASTRO_ID)"\0"			\
+	"card_id="__stringify(ASTRO_ID)"\0"			\
 	"alterafile=0\0"				\
 	"xilinxfile=0\0"				\
 	"xilinxload=imxtract 0x540000 $xilinxfile 0x41000000&&"\
@@ -371,6 +331,10 @@
 #define CONFIG_SYS_FLASH_PROTECTION	1
 #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE	1
 #define CONFIG_SYS_FLASH_CFI_NONBLOCK	1
+
+#define LDS_BOARD_TEXT \
+	. = DEFINED(env_offset) ? env_offset : .; \
+	common/env_embedded.o       (.text*)
 
 #if ENABLE_JFFS
 /* JFFS Partition offset set */

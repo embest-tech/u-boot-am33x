@@ -13,23 +13,7 @@
  * (C) Copyright 2000
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -51,7 +35,6 @@ extern unsigned long search_exception_table(unsigned long);
  * amount of memory on the system if we're unable to keep all
  * the memory mapped in.
  */
-extern ulong get_effective_memsize(void);
 #define END_OF_MEM (gd->bd->bi_memstart + get_effective_memsize())
 
 static __inline__ void set_tsr(unsigned long val)
@@ -82,8 +65,7 @@ extern void do_bedbug_breakpoint(struct pt_regs *);
  * Trap & Exception support
  */
 
-void
-print_backtrace(unsigned long *sp)
+static void print_backtrace(unsigned long *sp)
 {
 	int cnt = 0;
 	unsigned long i;
@@ -103,7 +85,7 @@ print_backtrace(unsigned long *sp)
 	printf("\n");
 }
 
-void show_regs(struct pt_regs * regs)
+void show_regs(struct pt_regs *regs)
 {
 	int i;
 
@@ -131,24 +113,21 @@ void show_regs(struct pt_regs * regs)
 }
 
 
-void
-_exception(int signr, struct pt_regs *regs)
+static void _exception(int signr, struct pt_regs *regs)
 {
 	show_regs(regs);
 	print_backtrace((unsigned long *)regs->gpr[1]);
 	panic("Exception in kernel pc %lx signal %d",regs->nip,signr);
 }
 
-void
-CritcalInputException(struct pt_regs *regs)
+void CritcalInputException(struct pt_regs *regs)
 {
 	panic("Critical Input Exception");
 }
 
 int machinecheck_count = 0;
 int machinecheck_error = 0;
-void
-MachineCheckException(struct pt_regs *regs)
+void MachineCheckException(struct pt_regs *regs)
 {
 	unsigned long fixup;
 	unsigned int mcsr, mcsrr0, mcsrr1, mcar;
@@ -220,8 +199,7 @@ MachineCheckException(struct pt_regs *regs)
 	}
 }
 
-void
-AlignmentException(struct pt_regs *regs)
+void AlignmentException(struct pt_regs *regs)
 {
 #if defined(CONFIG_CMD_KGDB)
 	if (debugger_exception_handler && (*debugger_exception_handler)(regs))
@@ -233,8 +211,7 @@ AlignmentException(struct pt_regs *regs)
 	panic("Alignment Exception");
 }
 
-void
-ProgramCheckException(struct pt_regs *regs)
+void ProgramCheckException(struct pt_regs *regs)
 {
 	long esr_val;
 
@@ -257,8 +234,7 @@ ProgramCheckException(struct pt_regs *regs)
 	panic("Program Check Exception");
 }
 
-void
-PITException(struct pt_regs *regs)
+void PITException(struct pt_regs *regs)
 {
 	/*
 	 * Reset PIT interrupt
@@ -271,9 +247,7 @@ PITException(struct pt_regs *regs)
 	timer_interrupt(NULL);
 }
 
-
-void
-UnknownException(struct pt_regs *regs)
+void UnknownException(struct pt_regs *regs)
 {
 #if defined(CONFIG_CMD_KGDB)
 	if (debugger_exception_handler && (*debugger_exception_handler)(regs))
@@ -285,8 +259,7 @@ UnknownException(struct pt_regs *regs)
 	_exception(0, regs);
 }
 
-void
-ExtIntException(struct pt_regs *regs)
+void ExtIntException(struct pt_regs *regs)
 {
 	volatile ccsr_pic_t *pic = (void *)(CONFIG_SYS_MPC8xxx_PIC_ADDR);
 
@@ -305,8 +278,7 @@ ExtIntException(struct pt_regs *regs)
 	print_backtrace((unsigned long *)regs->gpr[1]);
 }
 
-void
-DebugException(struct pt_regs *regs)
+void DebugException(struct pt_regs *regs)
 {
 	printf("Debugger trap at @ %lx\n", regs->nip );
 	show_regs(regs);
@@ -318,8 +290,7 @@ DebugException(struct pt_regs *regs)
 /* Probe an address by reading.	 If not present, return -1, otherwise
  * return 0.
  */
-int
-addr_probe(uint *addr)
+int addr_probe(uint *addr)
 {
 	return 0;
 }

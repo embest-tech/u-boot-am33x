@@ -2,20 +2,7 @@
  * Copyright 2010 (C)
  * Kristoffer Ericson <kristoffer.ericson@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -56,15 +43,7 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-#define CONFIG_CMD_FLASH
 #define CONFIG_CMD_JFFS2
-#undef CONFIG_CMD_NET
-#undef CONFIG_CMD_NFS
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_MISC
-#undef CONFIG_CMD_SETGETDCR
-#undef CONFIG_CMD_XIMG
 
 #define CONFIG_BOOTDELAY	5
 #define CONFIG_BOOTARGS	"root=/dev/hda1 console=ttySA0,19200n8 console=tty1"
@@ -83,7 +62,6 @@
 #define CONFIG_SYS_BARGSIZE		256	/* Boot Argument Buffer Size */
 #define CONFIG_SYS_MEMTEST_START	0xc0040000	/* memtest works on */
 #define CONFIG_SYS_MEMTEST_END		0xc2000000	/* 4..128 MB */
-#define CONFIG_SYS_HZ			1000
 #define CONFIG_SYS_CPUSPEED		0x0a /* core clock 206MHz */
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 19200, 38400, 57600, 115200 }
 

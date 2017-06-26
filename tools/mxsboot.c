@@ -4,23 +4,7 @@
  * Copyright (C) 2011 Marek Vasut <marek.vasut@gmail.com>
  * on behalf of DENX Software Engineering GmbH
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <fcntl.h>
@@ -29,6 +13,10 @@
 #include <unistd.h>
 
 #include "compiler.h"
+
+/* Taken from <linux/kernel.h> */
+#define __round_mask(x, y) ((__typeof__(x))((y)-1))
+#define round_down(x, y) ((x) & ~__round_mask(x, y))
 
 /*
  * Default BCB layout.
@@ -44,14 +32,14 @@
  *
  * TWEAK this if you have different kind of NAND chip.
  */
-uint32_t nand_writesize = 2048;
-uint32_t nand_oobsize = 64;
-uint32_t nand_erasesize = 128 * 1024;
+static uint32_t nand_writesize = 2048;
+static uint32_t nand_oobsize = 64;
+static uint32_t nand_erasesize = 128 * 1024;
 
 /*
  * Sector on which the SigmaTel boot partition (0x53) starts.
  */
-uint32_t sd_sector = 2048;
+static uint32_t sd_sector = 2048;
 
 /*
  * Each of the U-Boot bootstreams is at maximum 1MB big.
@@ -64,6 +52,7 @@ uint32_t sd_sector = 2048;
 #define	MXS_NAND_DMA_DESCRIPTOR_COUNT		4
 #define	MXS_NAND_CHUNK_DATA_CHUNK_SIZE		512
 #define	MXS_NAND_METADATA_SIZE			10
+#define	MXS_NAND_BITS_PER_ECC_LEVEL		13
 #define	MXS_NAND_COMMAND_BUFFER_SIZE		32
 
 struct mx28_nand_fcb {
@@ -141,26 +130,34 @@ struct mx28_sd_config_block {
 	struct mx28_sd_drive_info	drv_info[1];
 };
 
+static inline uint32_t mx28_nand_ecc_chunk_cnt(uint32_t page_data_size)
+{
+	return page_data_size / MXS_NAND_CHUNK_DATA_CHUNK_SIZE;
+}
+
 static inline uint32_t mx28_nand_ecc_size_in_bits(uint32_t ecc_strength)
 {
-	return ecc_strength * 13;
+	return ecc_strength * MXS_NAND_BITS_PER_ECC_LEVEL;
 }
 
 static inline uint32_t mx28_nand_get_ecc_strength(uint32_t page_data_size,
 						uint32_t page_oob_size)
 {
-	if (page_data_size == 2048)
-		return 8;
+	int ecc_strength;
 
-	if (page_data_size == 4096) {
-		if (page_oob_size == 128)
-			return 8;
+	/*
+	 * Determine the ECC layout with the formula:
+	 *	ECC bits per chunk = (total page spare data bits) /
+	 *		(bits per ECC level) / (chunks per page)
+	 * where:
+	 *	total page spare data bits =
+	 *		(page oob size - meta data size) * (bits per byte)
+	 */
+	ecc_strength = ((page_oob_size - MXS_NAND_METADATA_SIZE) * 8)
+			/ (MXS_NAND_BITS_PER_ECC_LEVEL *
+				mx28_nand_ecc_chunk_cnt(page_data_size));
 
-		if (page_oob_size == 218)
-			return 16;
-	}
-
-	return 0;
+	return round_down(ecc_strength, 2);
 }
 
 static inline uint32_t mx28_nand_get_mark_offset(uint32_t page_data_size,
@@ -285,6 +282,9 @@ static struct mx28_nand_fcb *mx28_nand_get_fcb(uint32_t size)
 		} else if (nand_oobsize == 218) {
 			fcb->ecc_block_n_ecc_type =	8;
 			fcb->ecc_block_0_ecc_type =	8;
+		} else if (nand_oobsize == 224) {
+			fcb->ecc_block_n_ecc_type =	8;
+			fcb->ecc_block_0_ecc_type =	8;
 		}
 	}
 
@@ -395,7 +395,7 @@ static uint8_t *mx28_nand_fcb_block(struct mx28_nand_fcb *fcb)
 	return block;
 }
 
-static int mx28_nand_write_fcb(struct mx28_nand_fcb *fcb, char *buf)
+static int mx28_nand_write_fcb(struct mx28_nand_fcb *fcb, uint8_t *buf)
 {
 	uint32_t offset;
 	uint8_t *fcbblock;
@@ -409,13 +409,15 @@ static int mx28_nand_write_fcb(struct mx28_nand_fcb *fcb, char *buf)
 	for (i = 0; i < STRIDE_PAGES * STRIDE_COUNT; i += STRIDE_PAGES) {
 		offset = i * nand_writesize;
 		memcpy(buf + offset, fcbblock, nand_writesize + nand_oobsize);
+		/* Mark the NAND page is OK. */
+		buf[offset + nand_writesize] = 0xff;
 	}
 
 	free(fcbblock);
 	return ret;
 }
 
-static int mx28_nand_write_dbbt(struct mx28_nand_dbbt *dbbt, char *buf)
+static int mx28_nand_write_dbbt(struct mx28_nand_dbbt *dbbt, uint8_t *buf)
 {
 	uint32_t offset;
 	int i = STRIDE_PAGES * STRIDE_COUNT;
@@ -429,7 +431,7 @@ static int mx28_nand_write_dbbt(struct mx28_nand_dbbt *dbbt, char *buf)
 }
 
 static int mx28_nand_write_firmware(struct mx28_nand_fcb *fcb, int infd,
-					char *buf)
+				    uint8_t *buf)
 {
 	int ret;
 	off_t size;
@@ -450,7 +452,7 @@ static int mx28_nand_write_firmware(struct mx28_nand_fcb *fcb, int infd,
 	return 0;
 }
 
-void usage(void)
+static void usage(void)
 {
 	printf(
 		"Usage: mxsboot [ops] <type> <infile> <outfile>\n"
@@ -478,7 +480,7 @@ static int mx28_create_nand_image(int infd, int outfd)
 	struct mx28_nand_fcb *fcb;
 	struct mx28_nand_dbbt *dbbt;
 	int ret = -1;
-	char *buf;
+	uint8_t *buf;
 	int size;
 	ssize_t wr_size;
 
@@ -551,7 +553,7 @@ static int mx28_create_sd_image(int infd, int outfd)
 
 	fsize = lseek(infd, 0, SEEK_END);
 	lseek(infd, 0, SEEK_SET);
-	size = fsize + 512;
+	size = fsize + 4 * 512;
 
 	buf = malloc(size);
 	if (!buf) {
@@ -559,7 +561,7 @@ static int mx28_create_sd_image(int infd, int outfd)
 		goto err0;
 	}
 
-	ret = read(infd, (uint8_t *)buf + 512, fsize);
+	ret = read(infd, (uint8_t *)buf + 4 * 512, fsize);
 	if (ret != fsize) {
 		ret = -1;
 		goto err1;
@@ -574,8 +576,8 @@ static int mx28_create_sd_image(int infd, int outfd)
 	cb->drv_info[0].chip_num = 0x0;
 	cb->drv_info[0].drive_type = 0x0;
 	cb->drv_info[0].tag = 0x1;
-	cb->drv_info[0].first_sector_number = sd_sector + 1;
-	cb->drv_info[0].sector_count = (size - 1) / 512;
+	cb->drv_info[0].first_sector_number = sd_sector + 4;
+	cb->drv_info[0].sector_count = (size - 4) / 512;
 
 	wr_size = write(outfd, buf, size);
 	if (wr_size != size) {
@@ -591,7 +593,7 @@ err0:
 	return ret;
 }
 
-int parse_ops(int argc, char **argv)
+static int parse_ops(int argc, char **argv)
 {
 	int i;
 	int tmp;

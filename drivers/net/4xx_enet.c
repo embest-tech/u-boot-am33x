@@ -1,25 +1,6 @@
-/*-----------------------------------------------------------------------------+
- *   This source code is dual-licensed.  You may use it under the terms of the
- *   GNU General Public License version 2, or under the license below.
- *
- *	 This source code has been made available to you by IBM on an AS-IS
- *	 basis.	 Anyone receiving this source is licensed under IBM
- *	 copyrights to use it in any way he or she deems fit, including
- *	 copying it, modifying it, compiling it, and redistributing it either
- *	 with or without modifications.	 No license under IBM patents or
- *	 patent applications is to be implied by the copyright license.
- *
- *	 Any user of this software should understand that IBM cannot provide
- *	 technical support for this software and will not be responsible for
- *	 any consequences resulting from the use of this software.
- *
- *	 Any person who transfers this source code or any derivative work
- *	 must include the IBM copyright notice, this paragraph, and the
- *	 preceding two paragraphs in the transferred software.
- *
- *	 COPYRIGHT   I B M   CORPORATION 1995
- *	 LICENSED MATERIAL  -  PROGRAM PROPERTY OF I B M
- *-----------------------------------------------------------------------------*/
+/*
+ * SPDX-License-Identifier:	GPL-2.0	IBM-pibs
+ */
 /*-----------------------------------------------------------------------------+
  *
  *  File Name:	enetemac.c
@@ -1369,7 +1350,7 @@ get_speed:
 	for (i = 0; i < NUM_RX_BUFF; i++) {
 		hw_p->rx[i].ctrl = 0;
 		hw_p->rx[i].data_len = 0;
-		hw_p->rx[i].data_ptr = (char *)NetRxPackets[i];
+		hw_p->rx[i].data_ptr = (char *)net_rx_packets[i];
 		if ((NUM_RX_BUFF - 1) == i)
 			hw_p->rx[i].ctrl |= MAL_RX_CTRL_WRAP;
 		hw_p->rx[i].ctrl |= MAL_RX_CTRL_EMPTY | MAL_RX_CTRL_INTR;
@@ -1738,8 +1719,6 @@ static void mal_err (struct eth_device *dev, unsigned long isr,
 		     unsigned long uic, unsigned long maldef,
 		     unsigned long mal_errr)
 {
-	EMAC_4XX_HW_PST hw_p = dev->priv;
-
 	mtdcr (MAL0_ESR, isr);	/* clear interrupt */
 
 	/* clear DE interrupt */
@@ -1747,10 +1726,11 @@ static void mal_err (struct eth_device *dev, unsigned long isr,
 	mtdcr (MAL0_RXDEIR, 0x80000000);
 
 #ifdef INFO_4XX_ENET
-	printf ("\nMAL error occured.... ISR = %lx UIC = = %lx	MAL_DEF = %lx  MAL_ERR= %lx \n", isr, uic, maldef, mal_errr);
+	printf("\nMAL error occured.... ISR = %lx UIC = = %lx	MAL_DEF = %lx  MAL_ERR= %lx\n",
+	       isr, uic, maldef, mal_errr);
 #endif
 
-	eth_init (hw_p->bis);	/* start again... */
+	eth_init();	/* start again... */
 }
 
 /*-----------------------------------------------------------------------------+
@@ -1878,13 +1858,17 @@ static int ppc_4xx_eth_rx (struct eth_device *dev)
 
 		length = hw_p->rx[user_index].data_len & 0x0fff;
 
-		/* Pass the packet up to the protocol layers. */
-		/*	 NetReceive(NetRxPackets[rxIdx], length - 4); */
-		/*	 NetReceive(NetRxPackets[i], length); */
+		/*
+		 * Pass the packet up to the protocol layers.
+		 * net_process_received_packet(net_rx_packets[rxIdx],
+		 *			       length - 4);
+		 * net_process_received_packet(net_rx_packets[i], length);
+		 */
 		invalidate_dcache_range((u32)hw_p->rx[user_index].data_ptr,
 					(u32)hw_p->rx[user_index].data_ptr +
 					length - 4);
-		NetReceive (NetRxPackets[user_index], length - 4);
+		net_process_received_packet(net_rx_packets[user_index],
+					    length - 4);
 		/* Free Recv Buffer */
 		hw_p->rx[user_index].ctrl |= MAL_RX_CTRL_EMPTY;
 		/* Free rx buffer descriptor queue */

@@ -1,21 +1,7 @@
 /*
  * Copyright (C) 2003 ETC s.r.o.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- *
+ * SPDX-License-Identifier:	GPL-2.0+
  * Written by Peter Figuli <peposh@etc.sk>, 2003.
  *
  * 2003/13/06 Initial MP10 Support copied from wepep250
@@ -24,8 +10,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define CONFIG_ARM920T		1     /* this is an ARM920T CPU	    */
-#define CONFIG_IMX		1     /* in a Motorola MC9328MXL Chip */
+#define CONFIG_IMX		1     /* This is a Motorola MC9328MXL Chip */
 #define CONFIG_SCB9328		1     /* on a scb9328tronix board */
 
 #define CONFIG_IMX_SERIAL
@@ -45,15 +30,8 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
-
-#undef CONFIG_CMD_CONSOLE
-#undef CONFIG_CMD_LOADS
-#undef CONFIG_CMD_SOURCE
 
 /*
  * Boot options. Setting delay to -1 stops autostart count down.
@@ -65,7 +43,6 @@
 #define CONFIG_BOOTARGS	   "console=ttySMX0,115200n8 root=/dev/mtdblock3 rootfstype=jffs2 mtdparts=scb9328_flash:128k(U-boot)ro,128k(U-boot_env),1m(kernel),4m(root),4m(fs) eval_board=evk9328"
 #define CONFIG_BOOTCOMMAND "bootm 10040000"
 #define CONFIG_SHOW_BOOT_PROGRESS
-#define CONFIG_ETHADDR		80:81:82:83:84:85
 #define CONFIG_NETMASK		255.255.255.0
 #define CONFIG_IPADDR		10.10.10.9
 #define CONFIG_SERVERIP		10.10.10.10
@@ -83,7 +60,6 @@
 #define CONFIG_SYS_MEMTEST_START	0x08100000	      /* memtest test area   */
 #define CONFIG_SYS_MEMTEST_END		0x08F00000
 
-#define CONFIG_SYS_HZ			3686400	     /* incrementer freq: 3.6864 MHz */
 #define CONFIG_SYS_CPUSPEED		0x141	     /* core clock - register value  */
 
 #define CONFIG_BAUDRATE 115200
@@ -157,8 +133,8 @@
    now.*/
 #undef	CONFIG_SYS_FLASH_CFI
 
-#define CONFIG_SYS_FLASH_ERASE_TOUT	(2*CONFIG_SYS_HZ)    /* timeout for Erase operation */
-#define CONFIG_SYS_FLASH_WRITE_TOUT	(2*CONFIG_SYS_HZ)    /* timeout for Write operation */
+#define CONFIG_SYS_FLASH_ERASE_TOUT	240000    /* timeout for Erase operation */
+#define CONFIG_SYS_FLASH_WRITE_TOUT	240000    /* timeout for Write operation */
 
 #define CONFIG_SYS_FLASH_BASE		SCB9328_FLASH_BASE
 

@@ -157,7 +157,7 @@ static void ax88180_mac_reset (struct eth_device *dev)
 	OUTW (dev, MISC_RESET_MAC, MISC);
 	tmpval = INW (dev, MISC);
 
-	for (i = 0; i < (sizeof (program_seq) / sizeof (program_seq[0])); i++)
+	for (i = 0; i < ARRAY_SIZE(program_seq); i++)
 		OUTW (dev, program_seq[i].value, program_seq[i].offset);
 }
 
@@ -192,9 +192,9 @@ static void ax88180_rx_handler (struct eth_device *dev)
 	unsigned short rxcurt_ptr, rxbound_ptr, next_ptr;
 	int i;
 #if defined (CONFIG_DRIVER_AX88180_16BIT)
-	unsigned short *rxdata = (unsigned short *)NetRxPackets[0];
+	unsigned short *rxdata = (unsigned short *)net_rx_packets[0];
 #else
-	unsigned long *rxdata = (unsigned long *)NetRxPackets[0];
+	unsigned long *rxdata = (unsigned long *)net_rx_packets[0];
 #endif
 	unsigned short count;
 
@@ -237,7 +237,7 @@ static void ax88180_rx_handler (struct eth_device *dev)
 		OUTW (dev, RX_STOP_READ, RXINDICATOR);
 
 		/* Pass the packet up to the protocol layers. */
-		NetReceive (NetRxPackets[0], data_size);
+		net_process_received_packet(net_rx_packets[0], data_size);
 
 		OUTW (dev, rxbound_ptr, RXBOUND);
 

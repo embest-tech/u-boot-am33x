@@ -5,20 +5,7 @@
  *
  * Configuration settings for the MX51-3Stack Freescale board.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -30,8 +17,6 @@
 
 #include <asm/arch/imx-regs.h>
 
-#define CONFIG_SYS_MX5_HCLK	24000000
-#define CONFIG_SYS_MX5_CLK32		32768
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
 
@@ -65,18 +50,17 @@
 #define CONFIG_FSL_SF
 #define CONFIG_CMD_SF
 
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_STMICRO
 
 /*
  * Use gpio 4 pin 25 as chip select for SPI flash
  * This corresponds to gpio 121
  */
-#define CONFIG_SF_DEFAULT_CS	(1 | (121 << 8))
+#define CONFIG_SF_DEFAULT_CS	 1
 #define CONFIG_SF_DEFAULT_MODE   SPI_MODE_0
 #define CONFIG_SF_DEFAULT_SPEED  25000000
 
-#define CONFIG_ENV_SPI_CS	(1 | (121 << 8))
+#define CONFIG_ENV_SPI_CS	CONFIG_SF_DEFAULT_CS
 #define CONFIG_ENV_SPI_BUS      0
 #define CONFIG_ENV_SPI_MAX_HZ	25000000
 #define CONFIG_ENV_SPI_MODE	SPI_MODE_0
@@ -89,9 +73,9 @@
 #define CONFIG_ENV_IS_IN_SPI_FLASH
 
 /* PMIC Controller */
-#define CONFIG_PMIC
-#define CONFIG_PMIC_SPI
-#define CONFIG_PMIC_FSL
+#define CONFIG_POWER
+#define CONFIG_POWER_SPI
+#define CONFIG_POWER_FSL
 #define CONFIG_FSL_PMIC_BUS	0
 #define CONFIG_FSL_PMIC_CS	0
 #define CONFIG_FSL_PMIC_CLK	2500000
@@ -129,7 +113,6 @@
 
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 
 /* allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
@@ -140,10 +123,7 @@
  * Command definition
  ***********************************************************/
 
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_SPI
-#undef CONFIG_CMD_IMLS
 
 #define CONFIG_BOOTDELAY        3
 
@@ -172,7 +152,6 @@
 
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
 
-#define CONFIG_SYS_HZ			1000
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_SYS_HUSH_PARSER
 
@@ -198,6 +177,7 @@
 /* 166 MHz DDR RAM */
 #define CONFIG_SYS_DDR_CLKSEL		0
 #define CONFIG_SYS_CLKTL_CBCDR		0x19239100
+#define CONFIG_SYS_MAIN_PWR_ON
 
 #define CONFIG_SYS_NO_FLASH
 

@@ -5,54 +5,11 @@
  * Based on U-Boot and RedBoot sources for several different i.mx
  * platforms.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <asm/macro.h>
-
-.macro init_aips
-	write32	0x43f00000, 0x77777777
-	write32	0x43f00004, 0x77777777
-	write32	0x43f00000, 0x77777777
-	write32	0x53f00004, 0x77777777
-.endm
-
-.macro init_max
-	write32	0x43f04000, 0x43210
-	write32	0x43f04100, 0x43210
-	write32	0x43f04200, 0x43210
-	write32	0x43f04300, 0x43210
-	write32	0x43f04400, 0x43210
-
-	write32	0x43f04010, 0x10
-	write32	0x43f04110, 0x10
-	write32	0x43f04210, 0x10
-	write32	0x43f04310, 0x10
-	write32	0x43f04410, 0x10
-
-	write32	0x43f04800, 0x0
-	write32	0x43f04900, 0x0
-	write32	0x43f04a00, 0x0
-	write32	0x43f04b00, 0x0
-	write32	0x43f04c00, 0x0
-.endm
-
-.macro init_m3if
-	write32 0xb8003000, 0x1
-.endm
+#include <asm/arch/macro.h>
 
 .macro init_clocks
 	/*
@@ -64,6 +21,8 @@
 	 * 0x00600000 makes CLKO parent clk the USB clk
 	 */
 	write32	0x53f80064, 0x45600000
+
+	/* CCTL: ARM = 399 MHz, AHB = 133 MHz */
 	write32	0x53f80008, 0x20034000
 
 	/*

@@ -5,23 +5,7 @@
  * (C) Copyright 2004 Atmark Techno, Inc.
  * Yasushi SHOJI <yashi@atmark-techno.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <config.h>
@@ -34,10 +18,14 @@
 #define SR_RX_FIFO_VALID_DATA	0x01 /* data in receive FIFO */
 #define SR_RX_FIFO_FULL		0x02 /* receive FIFO full */
 
+#define ULITE_CONTROL_RST_TX	0x01
+#define ULITE_CONTROL_RST_RX	0x02
+
 struct uartlite {
 	unsigned int rx_fifo;
 	unsigned int tx_fifo;
 	unsigned int status;
+	unsigned int control;
 };
 
 static struct uartlite *userial_ports[4] = {
@@ -55,7 +43,7 @@ static struct uartlite *userial_ports[4] = {
 #endif
 };
 
-void uartlite_serial_putc(const char c, const int port)
+static void uartlite_serial_putc(const char c, const int port)
 {
 	struct uartlite *regs = userial_ports[port];
 
@@ -67,13 +55,13 @@ void uartlite_serial_putc(const char c, const int port)
 	out_be32(&regs->tx_fifo, c & 0xff);
 }
 
-void uartlite_serial_puts(const char *s, const int port)
+static void uartlite_serial_puts(const char *s, const int port)
 {
 	while (*s)
 		uartlite_serial_putc(*s++, port);
 }
 
-int uartlite_serial_getc(const int port)
+static int uartlite_serial_getc(const int port)
 {
 	struct uartlite *regs = userial_ports[port];
 
@@ -82,7 +70,7 @@ int uartlite_serial_getc(const int port)
 	return in_be32(&regs->rx_fifo) & 0xff;
 }
 
-int uartlite_serial_tstc(const int port)
+static int uartlite_serial_tstc(const int port)
 {
 	struct uartlite *regs = userial_ports[port];
 
@@ -91,68 +79,44 @@ int uartlite_serial_tstc(const int port)
 
 static int uartlite_serial_init(const int port)
 {
-	if (userial_ports[port])
+	struct uartlite *regs = userial_ports[port];
+
+	if (regs) {
+		out_be32(&regs->control, 0);
+		out_be32(&regs->control,
+			 ULITE_CONTROL_RST_RX | ULITE_CONTROL_RST_TX);
+		in_be32(&regs->control);
 		return 0;
+	}
+
 	return -1;
 }
 
-#if !defined(CONFIG_SERIAL_MULTI)
-int serial_init(void)
-{
-	return uartlite_serial_init(0);
-}
-
-void serial_setbrg(void)
-{
-	/* FIXME: what's this for? */
-}
-
-void serial_putc(const char c)
-{
-	uartlite_serial_putc(c, 0);
-}
-
-void serial_puts(const char *s)
-{
-	uartlite_serial_puts(s, 0);
-}
-
-int serial_getc(void)
-{
-	return uartlite_serial_getc(0);
-}
-
-int serial_tstc(void)
-{
-	return uartlite_serial_tstc(0);
-}
-#endif
-
-#if defined(CONFIG_SERIAL_MULTI)
 /* Multi serial device functions */
 #define DECLARE_ESERIAL_FUNCTIONS(port) \
-	int userial##port##_init(void) \
+	static int userial##port##_init(void) \
 				{ return uartlite_serial_init(port); } \
-	void userial##port##_setbrg(void) {} \
-	int userial##port##_getc(void) \
+	static void userial##port##_setbrg(void) {} \
+	static int userial##port##_getc(void) \
 				{ return uartlite_serial_getc(port); } \
-	int userial##port##_tstc(void) \
+	static int userial##port##_tstc(void) \
 				{ return uartlite_serial_tstc(port); } \
-	void userial##port##_putc(const char c) \
+	static void userial##port##_putc(const char c) \
 				{ uartlite_serial_putc(c, port); } \
-	void userial##port##_puts(const char *s) \
+	static void userial##port##_puts(const char *s) \
 				{ uartlite_serial_puts(s, port); }
 
 /* Serial device descriptor */
-#define INIT_ESERIAL_STRUCTURE(port, name) {\
-	name,\
-	userial##port##_init,\
-	NULL,\
-	userial##port##_setbrg,\
-	userial##port##_getc,\
-	userial##port##_tstc,\
-	userial##port##_putc,\
-	userial##port##_puts, }
+#define INIT_ESERIAL_STRUCTURE(port, __name) {	\
+	.name	= __name,			\
+	.start	= userial##port##_init,		\
+	.stop	= NULL,				\
+	.setbrg	= userial##port##_setbrg,	\
+	.getc	= userial##port##_getc,		\
+	.tstc	= userial##port##_tstc,		\
+	.putc	= userial##port##_putc,		\
+	.puts	= userial##port##_puts,		\
+}
 
 DECLARE_ESERIAL_FUNCTIONS(0);
 struct serial_device uartlite_serial0_device =
@@ -180,4 +144,19 @@ __weak struct serial_device *default_serial_console(void)
 
 	return NULL;
 }
-#endif /* CONFIG_SERIAL_MULTI */
+
+void uartlite_serial_initialize(void)
+{
+#ifdef XILINX_UARTLITE_BASEADDR
+	serial_register(&uartlite_serial0_device);
+#endif /* XILINX_UARTLITE_BASEADDR */
+#ifdef XILINX_UARTLITE_BASEADDR1
+	serial_register(&uartlite_serial1_device);
+#endif /* XILINX_UARTLITE_BASEADDR1 */
+#ifdef XILINX_UARTLITE_BASEADDR2
+	serial_register(&uartlite_serial2_device);
+#endif /* XILINX_UARTLITE_BASEADDR2 */
+#ifdef XILINX_UARTLITE_BASEADDR3
+	serial_register(&uartlite_serial3_device);
+#endif /* XILINX_UARTLITE_BASEADDR3 */
+}

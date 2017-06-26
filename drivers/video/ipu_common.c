@@ -8,23 +8,7 @@
  *
  * (C) Copyright 2005-2010 Freescale Semiconductor, Inc.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* #define DEBUG */
@@ -94,6 +78,7 @@ struct ipu_ch_param {
 	temp1; \
 })
 
+#define IPU_SW_RST_TOUT_USEC	(10000)
 
 void clk_enable(struct clk *clk)
 {
@@ -163,13 +148,13 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 
 static int clk_ipu_enable(struct clk *clk)
 {
-#if defined(CONFIG_MX51) || defined(CONFIG_MX53)
 	u32 reg;
 
 	reg = __raw_readl(clk->enable_reg);
 	reg |= MXC_CCM_CCGR_CG_MASK << clk->enable_shift;
 	__raw_writel(reg, clk->enable_reg);
 
+#if defined(CONFIG_MX51) || defined(CONFIG_MX53)
 	/* Handshake with IPU when certain clock rates are changed. */
 	reg = __raw_readl(&mxc_ccm->ccdr);
 	reg &= ~MXC_CCM_CCDR_IPU_HS_MASK;
@@ -185,13 +170,13 @@ static int clk_ipu_enable(struct clk *clk)
 
 static void clk_ipu_disable(struct clk *clk)
 {
-#if defined(CONFIG_MX51) || defined(CONFIG_MX53)
 	u32 reg;
 
 	reg = __raw_readl(clk->enable_reg);
 	reg &= ~(MXC_CCM_CCGR_CG_MASK << clk->enable_shift);
 	__raw_writel(reg, clk->enable_reg);
 
+#if defined(CONFIG_MX51) || defined(CONFIG_MX53)
 	/*
 	 * No handshake with IPU whe dividers are changed
 	 * as its not enabled.
@@ -211,17 +196,27 @@ static void clk_ipu_disable(struct clk *clk)
 static struct clk ipu_clk = {
 	.name = "ipu_clk",
 	.rate = CONFIG_IPUV3_CLK,
+#if defined(CONFIG_MX51) || defined(CONFIG_MX53)
 	.enable_reg = (u32 *)(CCM_BASE_ADDR +
 		offsetof(struct mxc_ccm_reg, CCGR5)),
-	.enable_shift = MXC_CCM_CCGR5_CG5_OFFSET,
+	.enable_shift = MXC_CCM_CCGR5_IPU_OFFSET,
+#else
+	.enable_reg = (u32 *)(CCM_BASE_ADDR +
+		offsetof(struct mxc_ccm_reg, CCGR3)),
+	.enable_shift = MXC_CCM_CCGR3_IPU1_IPU_DI0_OFFSET,
+#endif
 	.enable = clk_ipu_enable,
 	.disable = clk_ipu_disable,
 	.usecount = 0,
 };
 
+#if !defined CONFIG_SYS_LDB_CLOCK
+#define CONFIG_SYS_LDB_CLOCK 65000000
+#endif
+
 static struct clk ldb_clk = {
 	.name = "ldb_clk",
-	.rate = 65000000,
+	.rate = CONFIG_SYS_LDB_CLOCK,
 	.usecount = 0,
 };
 
@@ -388,15 +383,24 @@ static struct clk pixel_clk[] = {
 /*
  * This function resets IPU
  */
-void ipu_reset(void)
+static void ipu_reset(void)
 {
 	u32 *reg;
 	u32 value;
+	int timeout = IPU_SW_RST_TOUT_USEC;
 
 	reg = (u32 *)SRC_BASE_ADDR;
 	value = __raw_readl(reg);
 	value = value | SW_IPU_RST;
 	__raw_writel(value, reg);
+
+	while (__raw_readl(reg) & SW_IPU_RST) {
+		udelay(1);
+		if (!(timeout--)) {
+			printf("ipu software reset timeout\n");
+			break;
+		}
+	};
 }
 
 /*
@@ -1193,4 +1197,12 @@ ipu_color_space_t format_to_colorspace(uint32_t fmt)
 		break;
 	}
 	return RGB;
+}
+
+/* should be removed when clk framework is availiable */
+int ipu_set_ldb_clock(int rate)
+{
+	ldb_clk.rate = rate;
+
+	return 0;
 }

@@ -31,9 +31,6 @@
 #endif
 
 static const char hcd_name[] = "r8a66597_hcd";
-static unsigned short clock = CONFIG_R8A66597_XTAL;
-static unsigned short vif = CONFIG_R8A66597_LDRV;
-static unsigned short endian = CONFIG_R8A66597_ENDIAN;
 static struct r8a66597 gr8a66597;
 
 static void get_hub_data(struct usb_device *dev, u16 *hub_devnum, u16 *hubport)
@@ -96,7 +93,7 @@ static int r8a66597_clock_enable(struct r8a66597 *r8a66597)
 		}
 	} while ((tmp & USBE) != USBE);
 	r8a66597_bclr(r8a66597, USBE, SYSCFG0);
-	r8a66597_mdfy(r8a66597, clock, XTAL, SYSCFG0);
+	r8a66597_mdfy(r8a66597, CONFIG_R8A66597_XTAL, XTAL, SYSCFG0);
 
 	i = 0;
 	r8a66597_bset(r8a66597, XCKE, SYSCFG0);
@@ -162,17 +159,17 @@ static int enable_controller(struct r8a66597 *r8a66597)
 	if (ret < 0)
 		return ret;
 
-	r8a66597_bset(r8a66597, vif & LDRV, PINCFG);
+	r8a66597_bset(r8a66597, CONFIG_R8A66597_LDRV & LDRV, PINCFG);
 	r8a66597_bset(r8a66597, USBE, SYSCFG0);
 
 	r8a66597_bset(r8a66597, INTL, SOFCFG);
 	r8a66597_write(r8a66597, 0, INTENB0);
-	r8a66597_write(r8a66597, 0, INTENB1);
-	r8a66597_write(r8a66597, 0, INTENB2);
+	for (port = 0; port < R8A66597_MAX_ROOT_HUB; port++)
+		r8a66597_write(r8a66597, 0, get_intenb_reg(port));
 
-	r8a66597_bset(r8a66597, endian & BIGEND, CFIFOSEL);
-	r8a66597_bset(r8a66597, endian & BIGEND, D0FIFOSEL);
-	r8a66597_bset(r8a66597, endian & BIGEND, D1FIFOSEL);
+	r8a66597_bset(r8a66597, CONFIG_R8A66597_ENDIAN & BIGEND, CFIFOSEL);
+	r8a66597_bset(r8a66597, CONFIG_R8A66597_ENDIAN & BIGEND, D0FIFOSEL);
+	r8a66597_bset(r8a66597, CONFIG_R8A66597_ENDIAN & BIGEND, D1FIFOSEL);
 	r8a66597_bset(r8a66597, TRNENSEL, SOFCFG);
 
 	for (port = 0; port < R8A66597_MAX_ROOT_HUB; port++)
@@ -553,116 +550,11 @@ static int check_usb_device_connecting(struct r8a66597 *r8a66597)
 	return -1;	/* fail */
 }
 
-/* based on usb_ohci.c */
-#define min_t(type, x, y) \
-		({ type __x = (x); type __y = (y); __x < __y ? __x : __y; })
 /*-------------------------------------------------------------------------*
  * Virtual Root Hub
  *-------------------------------------------------------------------------*/
 
-/* Device descriptor */
-static __u8 root_hub_dev_des[] =
-{
-	0x12,	    /*	__u8  bLength; */
-	0x01,	    /*	__u8  bDescriptorType; Device */
-	0x10,	    /*	__u16 bcdUSB; v1.1 */
-	0x01,
-	0x09,	    /*	__u8  bDeviceClass; HUB_CLASSCODE */
-	0x00,	    /*	__u8  bDeviceSubClass; */
-	0x00,	    /*	__u8  bDeviceProtocol; */
-	0x08,	    /*	__u8  bMaxPacketSize0; 8 Bytes */
-	0x00,	    /*	__u16 idVendor; */
-	0x00,
-	0x00,	    /*	__u16 idProduct; */
-	0x00,
-	0x00,	    /*	__u16 bcdDevice; */
-	0x00,
-	0x00,	    /*	__u8  iManufacturer; */
-	0x01,	    /*	__u8  iProduct; */
-	0x00,	    /*	__u8  iSerialNumber; */
-	0x01	    /*	__u8  bNumConfigurations; */
-};
-
-/* Configuration descriptor */
-static __u8 root_hub_config_des[] =
-{
-	0x09,	    /*	__u8  bLength; */
-	0x02,	    /*	__u8  bDescriptorType; Configuration */
-	0x19,	    /*	__u16 wTotalLength; */
-	0x00,
-	0x01,	    /*	__u8  bNumInterfaces; */
-	0x01,	    /*	__u8  bConfigurationValue; */
-	0x00,	    /*	__u8  iConfiguration; */
-	0x40,	    /*	__u8  bmAttributes; */
-
-	0x00,	    /*	__u8  MaxPower; */
-
-	/* interface */
-	0x09,	    /*	__u8  if_bLength; */
-	0x04,	    /*	__u8  if_bDescriptorType; Interface */
-	0x00,	    /*	__u8  if_bInterfaceNumber; */
-	0x00,	    /*	__u8  if_bAlternateSetting; */
-	0x01,	    /*	__u8  if_bNumEndpoints; */
-	0x09,	    /*	__u8  if_bInterfaceClass; HUB_CLASSCODE */
-	0x00,	    /*	__u8  if_bInterfaceSubClass; */
-	0x00,	    /*	__u8  if_bInterfaceProtocol; */
-	0x00,	    /*	__u8  if_iInterface; */
-
-	/* endpoint */
-	0x07,	    /*	__u8  ep_bLength; */
-	0x05,	    /*	__u8  ep_bDescriptorType; Endpoint */
-	0x81,	    /*	__u8  ep_bEndpointAddress; IN Endpoint 1 */
-	0x03,	    /*	__u8  ep_bmAttributes; Interrupt */
-	0x02,	    /*	__u16 ep_wMaxPacketSize; ((MAX_ROOT_PORTS + 1) / 8 */
-	0x00,
-	0xff	    /*	__u8  ep_bInterval; 255 ms */
-};
-
-static unsigned char root_hub_str_index0[] =
-{
-	0x04,			/*  __u8  bLength; */
-	0x03,			/*  __u8  bDescriptorType; String-descriptor */
-	0x09,			/*  __u8  lang ID */
-	0x04,			/*  __u8  lang ID */
-};
-
-static unsigned char root_hub_str_index1[] =
-{
-	34,			/*  __u8  bLength; */
-	0x03,			/*  __u8  bDescriptorType; String-descriptor */
-	'R',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'8',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'A',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'6',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'6',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'5',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'9',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'7',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	' ',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'R',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'o',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'o',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	't',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'H',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'u',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-	'b',			/*  __u8  Unicode */
-	0,				/*  __u8  Unicode */
-};
+#include <usbroothubdes.h>
 
 static int r8a66597_submit_rh_msg(struct usb_device *dev, unsigned long pipe,
 			void *buffer, int transfer_len, struct devrequest *cmd)
@@ -673,7 +565,6 @@ static int r8a66597_submit_rh_msg(struct usb_device *dev, unsigned long pipe,
 	int stat = 0;
 	__u16 bmRType_bReq;
 	__u16 wValue;
-	__u16 wIndex;
 	__u16 wLength;
 	unsigned char data[32];
 
@@ -686,7 +577,6 @@ static int r8a66597_submit_rh_msg(struct usb_device *dev, unsigned long pipe,
 
 	bmRType_bReq  = cmd->requesttype | (cmd->request << 8);
 	wValue	      = cpu_to_le16 (cmd->value);
-	wIndex	      = cpu_to_le16 (cmd->index);
 	wLength	      = cpu_to_le16 (cmd->length);
 
 	switch (bmRType_bReq) {
@@ -908,13 +798,13 @@ int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 	return 0;
 }
 
-int usb_lowlevel_init(void)
+int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 {
 	struct r8a66597 *r8a66597 = &gr8a66597;
 
 	R8A66597_DPRINT("%s\n", __func__);
 
-	memset(r8a66597, 0, sizeof(r8a66597));
+	memset(r8a66597, 0, sizeof(*r8a66597));
 	r8a66597->reg = CONFIG_R8A66597_BASE_ADDR;
 
 	disable_controller(r8a66597);
@@ -931,7 +821,7 @@ int usb_lowlevel_init(void)
 	return 0;
 }
 
-int usb_lowlevel_stop(void)
+int usb_lowlevel_stop(int index)
 {
 	disable_controller(&gr8a66597);
 

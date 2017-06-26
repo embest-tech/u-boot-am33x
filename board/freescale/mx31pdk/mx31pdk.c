@@ -4,23 +4,7 @@
  *
  * (c) 2007 Pengutronix, Sascha Hauer <s.hauer@pengutronix.de>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 
@@ -30,15 +14,31 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
 #include <watchdog.h>
-#include <pmic.h>
+#include <power/pmic.h>
 #include <fsl_pmic.h>
+#include <errno.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifdef CONFIG_HW_WATCHDOG
-void hw_watchdog_reset(void)
+#ifdef CONFIG_SPL_BUILD
+void board_init_f(ulong bootflag)
 {
-	mxc_hw_watchdog_reset();
+	/*
+	 * copy ourselves from where we are running to where we were
+	 * linked at. Use ulong pointers as all addresses involved
+	 * are 4-byte-aligned.
+	 */
+	ulong *start_ptr, *end_ptr, *link_ptr, *run_ptr, *dst;
+	asm volatile ("ldr %0, =_start" : "=r"(start_ptr));
+	asm volatile ("ldr %0, =_end" : "=r"(end_ptr));
+	asm volatile ("ldr %0, =board_init_f" : "=r"(link_ptr));
+	asm volatile ("adr %0, board_init_f" : "=r"(run_ptr));
+	for (dst = start_ptr; dst < end_ptr; dst++)
+		*dst = *(dst+(run_ptr-link_ptr));
+	/*
+	 * branch to nand_boot's link-time address.
+	 */
+	asm volatile("ldr pc, =nand_boot");
 }
 #endif
 
@@ -83,16 +83,21 @@ int board_late_init(void)
 {
 	u32 val;
 	struct pmic *p;
+	int ret;
 
-	pmic_init();
-	p = get_pmic();
+	ret = pmic_init(CONFIG_FSL_PMIC_BUS);
+	if (ret)
+		return ret;
 
+	p = pmic_get("FSL_PMIC");
+	if (!p)
+		return -ENODEV;
 	/* Enable RTC battery */
 	pmic_reg_read(p, REG_POWER_CTL0, &val);
 	pmic_reg_write(p, REG_POWER_CTL0, val | COINCHEN);
 	pmic_reg_write(p, REG_INT_STATUS1, RTCRSTI);
 #ifdef CONFIG_HW_WATCHDOG
-	mxc_hw_watchdog_enable();
+	hw_watchdog_init();
 #endif
 	return 0;
 }

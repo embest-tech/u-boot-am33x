@@ -1,20 +1,7 @@
 /*
  * (C) Copyright 2008 Stefan Roese <sr@denx.de>, DENX Software Engineering
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -38,10 +25,10 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define CONFIG_MIPS32				/* MIPS 4Kc CPU core	*/
+#define CONFIG_DISPLAY_BOARDINFO
+
 #define CPU_CLOCK_RATE			324000000 /* Clock for the MIPS core */
 #define CONFIG_SYS_MIPS_TIMER_FREQ	(CPU_CLOCK_RATE / 2)
-#define CONFIG_SYS_HZ			1000
 
 #define CONFIG_SKIP_LOWLEVEL_INIT	/* SDRAM is initialized by the bootstrap code */
 
@@ -96,8 +83,6 @@
 /*
  * Commands
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_ELF
 #define CONFIG_CMD_EEPROM
@@ -110,9 +95,6 @@
 	!defined(CONFIG_VCT_SMALL_IMAGE)
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_SNTP
-#else
-#undef CONFIG_CMD_NET
-#undef CONFIG_CMD_NFS
 #endif
 
 /*
@@ -136,17 +118,11 @@
  */
 #define CONFIG_USB_EHCI			/* Enable EHCI USB support	*/
 #define CONFIG_USB_EHCI_VCT		/* on VCT platform		*/
-#define CONFIG_EHCI_DCACHE		/* with dcache handling support	*/
 #define CONFIG_EHCI_MMIO_BIG_ENDIAN
 #define CONFIG_EHCI_DESC_BIG_ENDIAN
 #define CONFIG_EHCI_IS_TDI
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET /* re-init HCD after CMD_RESET */
 #endif /* CONFIG_CMD_USB */
-
-#if !defined(CONFIG_VCT_NOR)
-#undef CONFIG_CMD_FLASH
-#undef CONFIG_CMD_IMLS
-#endif
 
 #if defined(CONFIG_VCT_NAND)
 #define CONFIG_CMD_NAND
@@ -246,11 +222,10 @@
 /*
  * I2C/EEPROM
  */
-#undef	CONFIG_HARD_I2C			/* I2C with hardware support	*/
-#define	CONFIG_SOFT_I2C			/* I2C bit-banged		*/
-
-#define CONFIG_SYS_I2C_SPEED		83000	/* 83 kHz is supposed to work	*/
-#define CONFIG_SYS_I2C_SLAVE		0x7f
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_SOFT		/* I2C bit-banged */
+#define CONFIG_SYS_I2C_SOFT_SPEED	83000	/* 83 kHz is supposed to work */
+#define CONFIG_SYS_I2C_SOFT_SLAVE	0x7f
 
 /*
  * Software (bit-bang) I2C driver configuration
@@ -309,11 +284,8 @@ int vct_gpio_get(int pin);
  */
 #if defined(CONFIG_VCT_SMALL_IMAGE)
 #undef CONFIG_CMD_ASKENV
-#undef CONFIG_CMD_BDI
 #undef CONFIG_CMD_BEDBUG
 #undef CONFIG_CMD_CACHE
-#undef CONFIG_CMD_CONSOLE
-#undef CONFIG_CMD_CRC32
 #undef CONFIG_CMD_DHCP
 #undef CONFIG_CMD_EEPROM
 #undef CONFIG_CMD_EEPROM
@@ -322,23 +294,17 @@ int vct_gpio_get(int pin);
 #undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_IRQ
-#undef CONFIG_CMD_ITEST
-#undef CONFIG_CMD_LOADB
-#undef CONFIG_CMD_LOADS
 #undef CONFIG_CMD_LOADY
 #undef CONFIG_CMD_MII
-#undef CONFIG_CMD_MISC
-#undef CONFIG_CMD_NET
 #undef CONFIG_CMD_PING
 #undef CONFIG_CMD_REGINFO
 #undef CONFIG_CMD_SNTP
-#undef CONFIG_CMD_SOURCE
 #undef CONFIG_CMD_STRINGS
 #undef CONFIG_CMD_TERMINAL
 #undef CONFIG_CMD_USB
 
 #undef CONFIG_SMC911X
-#undef CONFIG_SOFT_I2C
+#undef CONFIG_SYS_I2C_SOFT
 #undef CONFIG_SOURCE
 #undef CONFIG_SYS_LONGHELP
 #undef CONFIG_TIMESTAMP

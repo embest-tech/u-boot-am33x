@@ -2,23 +2,7 @@
  * (C) Copyright 2001
  * Gerald Van Baren, Custom IDEAS, vanbaren@cideas.com
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -94,9 +78,9 @@ static const MII_field_desc_t reg_3_desc_tbl[] = {
 
 static const MII_field_desc_t reg_4_desc_tbl[] = {
 	{ 15, 15, 0x01, "next page able"               },
-	{ 14, 14, 0x01, "reserved"                     },
+	{ 14, 14, 0x01, "(reserved)"                   },
 	{ 13, 13, 0x01, "remote fault"                 },
-	{ 12, 12, 0x01, "reserved"                     },
+	{ 12, 12, 0x01, "(reserved)"                   },
 	{ 11, 11, 0x01, "asymmetric pause"             },
 	{ 10, 10, 0x01, "pause enable"                 },
 	{  9,  9, 0x01, "100BASE-T4 able"              },
@@ -176,10 +160,10 @@ static void dump_reg(
 
 		mask_in_place = pdesc->mask << pdesc->lo;
 
-		printf("  (%04hx:%04hx) %u.",
-			mask_in_place,
-			regval & mask_in_place,
-			prd->regno);
+		printf("  (%04hx:%04x) %u.",
+		       mask_in_place,
+		       regval & mask_in_place,
+		       prd->regno);
 
 		if (special_field(prd->regno, pdesc, regval)) {
 		}
@@ -265,6 +249,7 @@ static uint last_addr_lo;
 static uint last_addr_hi;
 static uint last_reg_lo;
 static uint last_reg_hi;
+static uint last_mask;
 
 static void extract_range(
 	char * input,
@@ -288,7 +273,7 @@ static int do_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char		op[2];
 	unsigned char	addrlo, addrhi, reglo, reghi;
 	unsigned char	addr, reg;
-	unsigned short	data;
+	unsigned short	data, mask;
 	int		rcode = 0;
 	const char	*devname;
 
@@ -310,6 +295,7 @@ static int do_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	reglo  = last_reg_lo;
 	reghi  = last_reg_hi;
 	data   = last_data;
+	mask   = last_mask;
 
 	if ((flag & CMD_FLAG_REPEAT) == 0) {
 		op[0] = argv[1][0];
@@ -323,7 +309,9 @@ static int do_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		if (argc >= 4)
 			extract_range(argv[3], &reglo, &reghi);
 		if (argc >= 5)
-			data = simple_strtoul (argv[4], NULL, 16);
+			data = simple_strtoul(argv[4], NULL, 16);
+		if (argc >= 6)
+			mask = simple_strtoul(argv[5], NULL, 16);
 	}
 
 	/* use current device */
@@ -391,6 +379,28 @@ static int do_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				}
 			}
 		}
+	} else if (op[0] == 'm') {
+		for (addr = addrlo; addr <= addrhi; addr++) {
+			for (reg = reglo; reg <= reghi; reg++) {
+				unsigned short val = 0;
+				if (miiphy_read(devname, addr,
+						reg, &val)) {
+					printf("Error reading from the PHY");
+					printf(" addr=%02x", addr);
+					printf(" reg=%02x\n", reg);
+					rcode = 1;
+				} else {
+					val = (val & ~mask) | (data & mask);
+					if (miiphy_write(devname, addr,
+							 reg, val)) {
+						printf("Error writing to the PHY");
+						printf(" addr=%02x", addr);
+						printf(" reg=%02x\n", reg);
+						rcode = 1;
+					}
+				}
+			}
+		}
 	} else if (strncmp(op, "du", 2) == 0) {
 		ushort regs[6];
 		int ok = 1;
@@ -433,6 +443,7 @@ static int do_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	last_reg_lo  = reglo;
 	last_reg_hi  = reghi;
 	last_data    = data;
+	last_mask    = mask;
 
 	return rcode;
 }
@@ -440,13 +451,15 @@ static int do_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 /***************************************************/
 
 U_BOOT_CMD(
-	mii,	5,	1,	do_mii,
+	mii, 6, 1, do_mii,
 	"MII utility commands",
-	"device                     - list available devices\n"
-	"mii device <devname>           - set current device\n"
-	"mii info   <addr>              - display MII PHY info\n"
-	"mii read   <addr> <reg>        - read  MII PHY <addr> register <reg>\n"
-	"mii write  <addr> <reg> <data> - write MII PHY <addr> register <reg>\n"
-	"mii dump   <addr> <reg>        - pretty-print <addr> <reg> (0-5 only)\n"
+	"device                            - list available devices\n"
+	"mii device <devname>                  - set current device\n"
+	"mii info   <addr>                     - display MII PHY info\n"
+	"mii read   <addr> <reg>               - read  MII PHY <addr> register <reg>\n"
+	"mii write  <addr> <reg> <data>        - write MII PHY <addr> register <reg>\n"
+	"mii modify <addr> <reg> <data> <mask> - modify MII PHY <addr> register <reg>\n"
+	"                                        updating bits identified in <mask>\n"
+	"mii dump   <addr> <reg>               - pretty-print <addr> <reg> (0-5 only)\n"
 	"Addr and/or reg may be ranges, e.g. 2-7."
 );

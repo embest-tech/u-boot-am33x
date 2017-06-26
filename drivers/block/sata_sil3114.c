@@ -2,20 +2,7 @@
  * Copyright (C) Excito Elektronik i Skåne AB, All rights reserved.
  * Author: Tor Krill <tor@excito.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * This is a driver for Silicon Image sil3114 sata chip modelled on
  * the ata_piix driver
@@ -28,6 +15,7 @@
 #include <asm/byteorder.h>
 #include <asm/io.h>
 #include <ide.h>
+#include <sata.h>
 #include <libata.h>
 #include "sata_sil3114.h"
 
@@ -48,7 +36,6 @@ static u8 sata_chk_status (struct sata_ioports *ioaddr, u8 usealtstatus);
 static void msleep (int count);
 
 static u32 iobase[6] = { 0, 0, 0, 0, 0, 0};	/* PCI BAR registers for device */
-extern block_dev_desc_t sata_dev_desc[CONFIG_SYS_SATA_MAX_DEVICE];
 
 static struct sata_port port[CONFIG_SYS_SATA_MAX_DEVICE];
 
@@ -713,6 +700,11 @@ int init_sata (int dev)
 
 	res = 0;
 	return res;
+}
+
+int reset_sata(int dev)
+{
+	return 0;
 }
 
 /* Check if device is connected to port */

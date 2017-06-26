@@ -3,19 +3,7 @@
  *
  * Based on ti/evm/evm.h
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _AM3517EVM_H_
@@ -96,7 +84,7 @@ const omap3_sysinfo sysinfo = {
 	MUX_VAL(CP(GPMC_A7),		(IEN | PTU | EN  | M4)) \
 	MUX_VAL(CP(GPMC_A8),		(IEN | PTU | EN  | M4)) \
 	MUX_VAL(CP(GPMC_A9),		(IEN | PTU | EN  | M4)) \
-	MUX_VAL(CP(GPMC_A10),		(IDIS | PTU | DIS | M4)) \
+	MUX_VAL(CP(GPMC_A10),		(IEN | PTU | EN | M4)) \
 					/* GPIO_43 LCD buffer enable */ \
 	MUX_VAL(CP(GPMC_D0),		(IEN  | PTU | EN  | M0)) \
 	MUX_VAL(CP(GPMC_D1),		(IEN  | PTU | EN  | M0)) \
@@ -143,28 +131,28 @@ const omap3_sysinfo sysinfo = {
 	MUX_VAL(CP(DSS_HSYNC),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_VSYNC),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_ACBIAS),		(IDIS | PTD | DIS | M0)) \
-	MUX_VAL(CP(DSS_DATA0),		(IEN | PTU | EN  | M4))\
-	MUX_VAL(CP(DSS_DATA1),		(IEN | PTU | EN  | M4)) \
-	MUX_VAL(CP(DSS_DATA2),		(IEN | PTU | EN  | M4)) \
+	MUX_VAL(CP(DSS_DATA0),		(IDIS | PTD | DIS | M0)) \
+	MUX_VAL(CP(DSS_DATA1),		(IDIS | PTD | DIS | M0)) \
+	MUX_VAL(CP(DSS_DATA2),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA3),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA4),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA5),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA6),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA7),		(IDIS | PTD | DIS | M0)) \
-	MUX_VAL(CP(DSS_DATA8),		(IEN | PTU | EN  | M4)) \
-	MUX_VAL(CP(DSS_DATA9),		(IEN | PTU | EN  | M4)) \
+	MUX_VAL(CP(DSS_DATA8),		(IDIS | PTD | DIS | M0)) \
+	MUX_VAL(CP(DSS_DATA9),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA10),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA11),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA12),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA13),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA14),		(IDIS | PTD | DIS | M0)) \
-	MUX_VAL(CP(DSS_DATA15),		(IDIS | PTD | DIS | M0))\
-	MUX_VAL(CP(DSS_DATA16),		(IEN | PTU | EN  | M4)) \
-	MUX_VAL(CP(DSS_DATA17),		(IEN | PTU | EN  | M4)) \
-	MUX_VAL(CP(DSS_DATA18),		(IEN | PTU | EN  | M4)) \
+	MUX_VAL(CP(DSS_DATA15),		(IDIS | PTD | DIS | M0)) \
+	MUX_VAL(CP(DSS_DATA16),		(IDIS | PTD | DIS | M0)) \
+	MUX_VAL(CP(DSS_DATA17),		(IDIS | PTD | DIS | M0)) \
+	MUX_VAL(CP(DSS_DATA18),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA19),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA20),		(IDIS | PTD | DIS | M0)) \
-	MUX_VAL(CP(DSS_DATA21),		(IDIS | PTD | DIS | M0))  \
+	MUX_VAL(CP(DSS_DATA21),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA22),		(IDIS | PTD | DIS | M0)) \
 	MUX_VAL(CP(DSS_DATA23),		(IDIS | PTD | DIS | M0)) \
 	/* CAMERA */\
@@ -264,6 +252,8 @@ const omap3_sysinfo sysinfo = {
 	MUX_VAL(CP(I2C3_SDA),		(IEN  | PTU | EN  | M0)) \
 	MUX_VAL(CP(I2C4_SCL),		(IEN  | PTU | EN  | M0)) \
 	MUX_VAL(CP(I2C4_SDA),		(IEN  | PTU | EN  | M0)) \
+	MUX_VAL(CP(HDQ_SIO),		(IEN  | PTU | EN  | M4)) \
+					/* GPIO_170 Touchscreen ISR */\
 	/* McSPI */\
 	MUX_VAL(CP(MCSPI1_CLK),		(IEN  | PTD | DIS | M0)) \
 	MUX_VAL(CP(MCSPI1_SIMO),	(IEN  | PTD | DIS | M0)) \
@@ -313,11 +303,11 @@ const omap3_sysinfo sysinfo = {
 	MUX_VAL(CP(RMII_TXEN),		(PTD | M0)) \
 	MUX_VAL(CP(RMII_50MHZ_CLK),	(IEN  | PTD | EN  | M0)) \
 	/* HECC */\
-	MUX_VAL(CP(HECC1_TXD),		(IEN  | PTD | EN  | M4)) \
-	MUX_VAL(CP(HECC1_RXD),		(IEN  | PTD | EN  | M4)) \
+	MUX_VAL(CP(HECC1_TXD),		(IEN  | PTD | EN  | M0)) \
+	MUX_VAL(CP(HECC1_RXD),		(IEN  | PTD | EN  | M0)) \
 	/* HSUSB */\
 	MUX_VAL(CP(HSUSB0_CLK),		(IEN  | PTD | DIS | M0)) \
-	MUX_VAL(CP(HSUSB0_STP),		(IDIS | PTU | EN  | M0)) \
+	MUX_VAL(CP(HSUSB0_STP),		(IEN  | PTU | DIS  | M0)) \
 	MUX_VAL(CP(HSUSB0_DIR),		(IEN  | PTD | DIS | M0)) \
 	MUX_VAL(CP(HSUSB0_NXT),		(IEN  | PTD | DIS | M0)) \
 	MUX_VAL(CP(HSUSB0_DATA0),	(IEN  | PTD | DIS | M0)) \
@@ -335,8 +325,6 @@ const omap3_sysinfo sysinfo = {
 	MUX_VAL(CP(SYS_32K),		(IEN  | PTD | EN  | M4)) \
 	MUX_VAL(CP(SYS_CLKREQ),		(IEN  | PTD | DIS | M0)) \
 	MUX_VAL(CP(SYS_NIRQ),		(IEN  | PTD | EN  | M4)) \
-	MUX_VAL(CP(SYS_NRESWARM),	(IEN | PTU | DIS | M4)) \
-					/* SYS_nRESWARM */\
 	MUX_VAL(CP(SYS_BOOT0),		(IEN  | PTD | DIS | M4)) \
 	MUX_VAL(CP(SYS_BOOT1),		(IEN  | PTD | DIS | M4)) \
 	MUX_VAL(CP(SYS_BOOT2),		(IEN  | PTD | DIS | M4)) \
@@ -351,7 +339,7 @@ const omap3_sysinfo sysinfo = {
 	MUX_VAL(CP(SYS_CLKOUT1),	(IEN  | PTD | DIS | M4))\
 	MUX_VAL(CP(SYS_CLKOUT2),	(IDIS | PTU | DIS | M4))\
 	/* JTAG */\
-	MUX_VAL(CP(JTAG_nTRST),		(IEN | PTU | EN  | M4)) \
+	MUX_VAL(CP(JTAG_NTRST),		(IEN | PTU | EN  | M4)) \
 	MUX_VAL(CP(JTAG_TCK),		(IEN | PTU | EN  | M4)) \
 	MUX_VAL(CP(JTAG_TMS),		(IEN | PTU | EN  | M4)) \
 	MUX_VAL(CP(JTAG_TDI),		(IEN | PTU | EN  | M4)) \

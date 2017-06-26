@@ -6,9 +6,8 @@
  *	Copyright 2000 Roland Borde
  *	Copyright 2000 Paolo Scaffardi
  *	Copyright 2000-2002 Wolfgang Denk, wd@denx.de
+ *	SPDX-License-Identifier:	GPL-2.0
  */
-
-#if defined(CONFIG_CMD_PING)
 
 #ifndef __PING_H__
 #define __PING_H__
@@ -31,4 +30,3 @@ void ping_start(void);
 void ping_receive(struct ethernet_hdr *et, struct ip_udp_hdr *ip, int len);
 
 #endif /* __PING_H__ */
-#endif

@@ -2,31 +2,18 @@
  * (C) Copyright 2001
  * Denis Peter, MPL AG Switzerland
  *
+ * Adapted for U-Boot driver model
+ * (C) Copyright 2015 Google, Inc
+ *
  * Most of this source has been derived from the Linux USB
  * project.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <command.h>
+#include <dm.h>
 #include <asm/byteorder.h>
 #include <asm/unaligned.h>
 #include <part.h>
@@ -40,7 +27,7 @@ static int usb_ether_curr_dev = -1; /* current ethernet device */
 #endif
 
 /* some display routines (info command) */
-char *usb_get_class_desc(unsigned char dclass)
+static char *usb_get_class_desc(unsigned char dclass)
 {
 	switch (dclass) {
 	case USB_CLASS_PER_INTERFACE:
@@ -66,8 +53,8 @@ char *usb_get_class_desc(unsigned char dclass)
 	}
 }
 
-void usb_display_class_sub(unsigned char dclass, unsigned char subclass,
-			   unsigned char proto)
+static void usb_display_class_sub(unsigned char dclass, unsigned char subclass,
+				  unsigned char proto)
 {
 	switch (dclass) {
 	case USB_CLASS_PER_INTERFACE:
@@ -148,7 +135,7 @@ void usb_display_class_sub(unsigned char dclass, unsigned char subclass,
 	}
 }
 
-void usb_display_string(struct usb_device *dev, int index)
+static void usb_display_string(struct usb_device *dev, int index)
 {
 	ALLOC_CACHE_ALIGN_BUFFER(char, buffer, 256);
 
@@ -158,7 +145,7 @@ void usb_display_string(struct usb_device *dev, int index)
 	}
 }
 
-void usb_display_desc(struct usb_device *dev)
+static void usb_display_desc(struct usb_device *dev)
 {
 	if (dev->descriptor.bDescriptorType == USB_DT_DEVICE) {
 		printf("%d: %s,  USB Revision %x.%x\n", dev->devnum,
@@ -192,8 +179,8 @@ void usb_display_desc(struct usb_device *dev)
 
 }
 
-void usb_display_conf_desc(struct usb_config_descriptor *config,
-			   struct usb_device *dev)
+static void usb_display_conf_desc(struct usb_config_descriptor *config,
+				  struct usb_device *dev)
 {
 	printf("   Configuration: %d\n", config->bConfigurationValue);
 	printf("   - Interfaces: %d %s%s%dmA\n", config->bNumInterfaces,
@@ -207,8 +194,8 @@ void usb_display_conf_desc(struct usb_config_descriptor *config,
 	}
 }
 
-void usb_display_if_desc(struct usb_interface_descriptor *ifdesc,
-			 struct usb_device *dev)
+static void usb_display_if_desc(struct usb_interface_descriptor *ifdesc,
+				struct usb_device *dev)
 {
 	printf("     Interface: %d\n", ifdesc->bInterfaceNumber);
 	printf("     - Alternate Setting %d, Endpoints: %d\n",
@@ -224,7 +211,7 @@ void usb_display_if_desc(struct usb_interface_descriptor *ifdesc,
 	}
 }
 
-void usb_display_ep_desc(struct usb_endpoint_descriptor *epdesc)
+static void usb_display_ep_desc(struct usb_endpoint_descriptor *epdesc)
 {
 	printf("     - Endpoint %d %s ", epdesc->bEndpointAddress & 0xf,
 		(epdesc->bEndpointAddress & 0x80) ? "In" : "Out");
@@ -249,7 +236,7 @@ void usb_display_ep_desc(struct usb_endpoint_descriptor *epdesc)
 }
 
 /* main routine to diasplay the configs, interfaces and endpoints */
-void usb_display_config(struct usb_device *dev)
+static void usb_display_config(struct usb_device *dev)
 {
 	struct usb_config *config;
 	struct usb_interface *ifdesc;
@@ -269,33 +256,111 @@ void usb_display_config(struct usb_device *dev)
 	printf("\n");
 }
 
+/*
+ * With driver model this isn't right since we can have multiple controllers
+ * and the device numbering starts at 1 on each bus.
+ * TODO(sjg@chromium.org): Add a way to specify the controller/bus.
+ */
+static struct usb_device *usb_find_device(int devnum)
+{
+#ifdef CONFIG_DM_USB
+	struct usb_device *udev;
+	struct udevice *hub;
+	struct uclass *uc;
+	int ret;
+
+	/* Device addresses start at 1 */
+	devnum++;
+	ret = uclass_get(UCLASS_USB_HUB, &uc);
+	if (ret)
+		return NULL;
+
+	uclass_foreach_dev(hub, uc) {
+		struct udevice *dev;
+
+		if (!device_active(hub))
+			continue;
+		udev = dev_get_parentdata(hub);
+		if (udev->devnum == devnum)
+			return udev;
+
+		for (device_find_first_child(hub, &dev);
+		     dev;
+		     device_find_next_child(&dev)) {
+			if (!device_active(hub))
+				continue;
+
+			udev = dev_get_parentdata(dev);
+			if (udev->devnum == devnum)
+				return udev;
+		}
+	}
+#else
+	struct usb_device *udev;
+	int d;
+
+	for (d = 0; d < USB_MAX_DEVICE; d++) {
+		udev = usb_get_dev_index(d);
+		if (udev == NULL)
+			return NULL;
+		if (udev->devnum == devnum)
+			return udev;
+	}
+#endif
+
+	return NULL;
+}
+
 static inline char *portspeed(int speed)
 {
-	if (speed == USB_SPEED_HIGH)
-		return "480 Mb/s";
-	else if (speed == USB_SPEED_LOW)
-		return "1.5 Mb/s";
-	else
-		return "12 Mb/s";
+	char *speed_str;
+
+	switch (speed) {
+	case USB_SPEED_SUPER:
+		speed_str = "5 Gb/s";
+		break;
+	case USB_SPEED_HIGH:
+		speed_str = "480 Mb/s";
+		break;
+	case USB_SPEED_LOW:
+		speed_str = "1.5 Mb/s";
+		break;
+	default:
+		speed_str = "12 Mb/s";
+		break;
+	}
+
+	return speed_str;
 }
 
 /* shows the device tree recursively */
-void usb_show_tree_graph(struct usb_device *dev, char *pre)
+static void usb_show_tree_graph(struct usb_device *dev, char *pre)
 {
-	int i, index;
+	int index;
 	int has_child, last_child;
 
 	index = strlen(pre);
 	printf(" %s", pre);
+#ifdef CONFIG_DM_USB
+	has_child = device_has_active_children(dev->dev);
+#else
 	/* check if the device has connected children */
+	int i;
+
 	has_child = 0;
 	for (i = 0; i < dev->maxchild; i++) {
 		if (dev->children[i] != NULL)
 			has_child = 1;
 	}
+#endif
 	/* check if we are the last one */
-	last_child = 1;
-	if (dev->parent != NULL) {
+#ifdef CONFIG_DM_USB
+	last_child = device_is_last_sibling(dev->dev);
+#else
+	last_child = (dev->parent != NULL);
+#endif
+	if (last_child) {
+#ifndef CONFIG_DM_USB
 		for (i = 0; i < dev->parent->maxchild; i++) {
 			/* search for children */
 			if (dev->parent->children[i] == dev) {
@@ -311,9 +376,10 @@ void usb_show_tree_graph(struct usb_device *dev, char *pre)
 				} /* while */
 			} /* device found */
 		} /* for all children of the parent */
+#endif
 		printf("\b+-");
 		/* correct last child */
-		if (last_child)
+		if (last_child && index)
 			pre[index-1] = ' ';
 	} /* if not root hub */
 	else
@@ -329,6 +395,26 @@ void usb_show_tree_graph(struct usb_device *dev, char *pre)
 	if (strlen(dev->mf) || strlen(dev->prod) || strlen(dev->serial))
 		printf(" %s  %s %s %s\n", pre, dev->mf, dev->prod, dev->serial);
 	printf(" %s\n", pre);
+#ifdef CONFIG_DM_USB
+	struct udevice *child;
+
+	for (device_find_first_child(dev->dev, &child);
+	     child;
+	     device_find_next_child(&child)) {
+		struct usb_device *udev;
+
+		if (!device_active(child))
+			continue;
+
+		udev = dev_get_parentdata(child);
+
+		/* Ignore emulators, we only want real devices */
+		if (device_get_uclass_id(child) != UCLASS_USB_EMUL) {
+			usb_show_tree_graph(udev, pre);
+			pre[index] = 0;
+		}
+	}
+#else
 	if (dev->maxchild > 0) {
 		for (i = 0; i < dev->maxchild; i++) {
 			if (dev->children[i] != NULL) {
@@ -337,15 +423,76 @@ void usb_show_tree_graph(struct usb_device *dev, char *pre)
 			}
 		}
 	}
+#endif
 }
 
 /* main routine for the tree command */
-void usb_show_tree(struct usb_device *dev)
+static void usb_show_tree(struct usb_device *dev)
 {
 	char preamble[32];
 
-	memset(preamble, 0, 32);
+	memset(preamble, '\0', sizeof(preamble));
 	usb_show_tree_graph(dev, &preamble[0]);
+}
+
+static int usb_test(struct usb_device *dev, int port, char* arg)
+{
+	int mode;
+
+	if (port > dev->maxchild) {
+		printf("Device is no hub or does not have %d ports.\n", port);
+		return 1;
+	}
+
+	switch (arg[0]) {
+	case 'J':
+	case 'j':
+		printf("Setting Test_J mode");
+		mode = USB_TEST_MODE_J;
+		break;
+	case 'K':
+	case 'k':
+		printf("Setting Test_K mode");
+		mode = USB_TEST_MODE_K;
+		break;
+	case 'S':
+	case 's':
+		printf("Setting Test_SE0_NAK mode");
+		mode = USB_TEST_MODE_SE0_NAK;
+		break;
+	case 'P':
+	case 'p':
+		printf("Setting Test_Packet mode");
+		mode = USB_TEST_MODE_PACKET;
+		break;
+	case 'F':
+	case 'f':
+		printf("Setting Test_Force_Enable mode");
+		mode = USB_TEST_MODE_FORCE_ENABLE;
+		break;
+	default:
+		printf("Unrecognized test mode: %s\nAvailable modes: "
+		       "J, K, S[E0_NAK], P[acket], F[orce_Enable]\n", arg);
+		return 1;
+	}
+
+	if (port)
+		printf(" on downstream facing port %d...\n", port);
+	else
+		printf(" on upstream facing port...\n");
+
+	if (usb_control_msg(dev, usb_sndctrlpipe(dev, 0), USB_REQ_SET_FEATURE,
+			    port ? USB_RT_PORT : USB_RECIP_DEVICE,
+			    port ? USB_PORT_FEAT_TEST : USB_FEAT_TEST,
+			    (mode << 8) | port,
+			    NULL, 0, USB_CNTL_TIMEOUT) == -1) {
+		printf("Error during SET_FEATURE.\n");
+		return 1;
+	} else {
+		printf("Test mode successfully set. Use 'usb start' "
+		       "to return to normal operation.\n");
+		return 0;
+	}
 }
 
 
@@ -353,21 +500,90 @@ void usb_show_tree(struct usb_device *dev)
  * usb boot command intepreter. Derived from diskboot
  */
 #ifdef CONFIG_USB_STORAGE
-int do_usbboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_usbboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	return common_diskboot(cmdtp, "usb", argc, argv);
 }
 #endif /* CONFIG_USB_STORAGE */
 
+static int do_usb_stop_keyboard(int force)
+{
+#ifdef CONFIG_USB_KEYBOARD
+	if (usb_kbd_deregister(force) != 0) {
+		printf("USB not stopped: usbkbd still using USB\n");
+		return 1;
+	}
+#endif
+	return 0;
+}
+
+static void do_usb_start(void)
+{
+	bootstage_mark_name(BOOTSTAGE_ID_USB_START, "usb_start");
+
+	if (usb_init() < 0)
+		return;
+
+	/* Driver model will probe the devices as they are found */
+#ifndef CONFIG_DM_USB
+#ifdef CONFIG_USB_STORAGE
+	/* try to recognize storage devices immediately */
+	usb_stor_curr_dev = usb_stor_scan(1);
+#endif
+#endif
+#ifdef CONFIG_USB_HOST_ETHER
+	/* try to recognize ethernet devices immediately */
+	usb_ether_curr_dev = usb_host_eth_scan(1);
+#endif
+#ifdef CONFIG_USB_KEYBOARD
+	drv_usb_kbd_init();
+#endif
+}
+
+#ifdef CONFIG_DM_USB
+static void show_info(struct udevice *dev)
+{
+	struct udevice *child;
+	struct usb_device *udev;
+
+	udev = dev_get_parentdata(dev);
+	usb_display_desc(udev);
+	usb_display_config(udev);
+	for (device_find_first_child(dev, &child);
+	     child;
+	     device_find_next_child(&child)) {
+		if (device_active(child))
+			show_info(child);
+	}
+}
+
+static int usb_device_info(void)
+{
+	struct udevice *bus;
+
+	for (uclass_first_device(UCLASS_USB, &bus);
+	     bus;
+	     uclass_next_device(&bus)) {
+		struct udevice *hub;
+
+		device_find_first_child(bus, &hub);
+		if (device_get_uclass_id(hub) == UCLASS_USB_HUB &&
+		    device_active(hub)) {
+			show_info(hub);
+		}
+	}
+
+	return 0;
+}
+#endif
 
 /******************************************************************************
  * usb command intepreter
  */
-int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-
+	struct usb_device *udev = NULL;
 	int i;
-	struct usb_device *dev = NULL;
 	extern char usb_started;
 #ifdef CONFIG_USB_STORAGE
 	block_dev_desc_t *stor_dev;
@@ -376,38 +592,27 @@ int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (argc < 2)
 		return CMD_RET_USAGE;
 
-	if ((strncmp(argv[1], "reset", 5) == 0) ||
-		 (strncmp(argv[1], "start", 5) == 0)) {
-		bootstage_mark_name(BOOTSTAGE_ID_USB_START, "usb_start");
+	if (strncmp(argv[1], "start", 5) == 0) {
+		if (usb_started)
+			return 0; /* Already started */
+		printf("starting USB...\n");
+		do_usb_start();
+		return 0;
+	}
+
+	if (strncmp(argv[1], "reset", 5) == 0) {
+		printf("resetting USB...\n");
+		if (do_usb_stop_keyboard(1) != 0)
+			return 1;
 		usb_stop();
-		printf("(Re)start USB...\n");
-		i = usb_init();
-		if (i >= 0) {
-#ifdef CONFIG_USB_STORAGE
-			/* try to recognize storage devices immediately */
-			usb_stor_curr_dev = usb_stor_scan(1);
-#endif
-#ifdef CONFIG_USB_HOST_ETHER
-			/* try to recognize ethernet devices immediately */
-			usb_ether_curr_dev = usb_host_eth_scan(1);
-#endif
-		}
+		do_usb_start();
 		return 0;
 	}
 	if (strncmp(argv[1], "stop", 4) == 0) {
-#ifdef CONFIG_USB_KEYBOARD
-		if (argc == 2) {
-			if (usb_kbd_deregister() != 0) {
-				printf("USB not stopped: usbkbd still"
-					" using USB\n");
-				return 1;
-			}
-		} else {
-			/* forced stop, switch console in to serial */
+		if (argc != 2)
 			console_assign(stdin, "serial");
-			usb_kbd_deregister();
-		}
-#endif
+		if (do_usb_stop_keyboard(0) != 0)
+			return 1;
 		printf("stopping USB..\n");
 		usb_stop();
 		return 0;
@@ -417,42 +622,79 @@ int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return 1;
 	}
 	if (strncmp(argv[1], "tree", 4) == 0) {
-		printf("\nDevice Tree:\n");
-		usb_show_tree(usb_get_dev_index(0));
+		puts("USB device tree:\n");
+#ifdef CONFIG_DM_USB
+		struct udevice *bus;
+
+		for (uclass_first_device(UCLASS_USB, &bus);
+		     bus;
+		     uclass_next_device(&bus)) {
+			struct usb_device *udev;
+			struct udevice *hub;
+
+			device_find_first_child(bus, &hub);
+			if (device_get_uclass_id(hub) == UCLASS_USB_HUB &&
+			    device_active(hub)) {
+				udev = dev_get_parentdata(hub);
+				usb_show_tree(udev);
+			}
+		}
+#else
+		for (i = 0; i < USB_MAX_DEVICE; i++) {
+			udev = usb_get_dev_index(i);
+			if (udev == NULL)
+				break;
+			if (udev->parent == NULL)
+				usb_show_tree(udev);
+		}
+#endif
 		return 0;
 	}
 	if (strncmp(argv[1], "inf", 3) == 0) {
-		int d;
 		if (argc == 2) {
+#ifdef CONFIG_DM_USB
+			usb_device_info();
+#else
+			int d;
 			for (d = 0; d < USB_MAX_DEVICE; d++) {
-				dev = usb_get_dev_index(d);
-				if (dev == NULL)
+				udev = usb_get_dev_index(d);
+				if (udev == NULL)
 					break;
-				usb_display_desc(dev);
-				usb_display_config(dev);
+				usb_display_desc(udev);
+				usb_display_config(udev);
 			}
+#endif
 			return 0;
 		} else {
-			int d;
-
-			i = simple_strtoul(argv[2], NULL, 16);
+			/*
+			 * With driver model this isn't right since we can
+			 * have multiple controllers and the device numbering
+			 * starts at 1 on each bus.
+			 */
+			i = simple_strtoul(argv[2], NULL, 10);
 			printf("config for device %d\n", i);
-			for (d = 0; d < USB_MAX_DEVICE; d++) {
-				dev = usb_get_dev_index(d);
-				if (dev == NULL)
-					break;
-				if (dev->devnum == i)
-					break;
-			}
-			if (dev == NULL) {
+			udev = usb_find_device(i);
+			if (udev == NULL) {
 				printf("*** No device available ***\n");
 				return 0;
 			} else {
-				usb_display_desc(dev);
-				usb_display_config(dev);
+				usb_display_desc(udev);
+				usb_display_config(udev);
 			}
 		}
 		return 0;
+	}
+	if (strncmp(argv[1], "test", 4) == 0) {
+		if (argc < 5)
+			return CMD_RET_USAGE;
+		i = simple_strtoul(argv[2], NULL, 10);
+		udev = usb_find_device(i);
+		if (udev == NULL) {
+			printf("Device %d does not exist.\n", i);
+			return 1;
+		}
+		i = simple_strtoul(argv[3], NULL, 10);
+		return usb_test(udev, i, argv[4]);
 	}
 #ifdef CONFIG_USB_STORAGE
 	if (strncmp(argv[1], "stor", 4) == 0)
@@ -563,7 +805,6 @@ int do_usb(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	return CMD_RET_USAGE;
 }
 
-#ifdef CONFIG_USB_STORAGE
 U_BOOT_CMD(
 	usb,	5,	1,	do_usb,
 	"USB sub-system",
@@ -572,30 +813,26 @@ U_BOOT_CMD(
 	"usb stop [f] - stop USB [f]=force stop\n"
 	"usb tree - show USB device tree\n"
 	"usb info [dev] - show available USB devices\n"
+	"usb test [dev] [port] [mode] - set USB 2.0 test mode\n"
+	"    (specify port 0 to indicate the device's upstream port)\n"
+	"    Available modes: J, K, S[E0_NAK], P[acket], F[orce_Enable]\n"
+#ifdef CONFIG_USB_STORAGE
 	"usb storage - show details of USB storage devices\n"
 	"usb dev [dev] - show or set current USB storage device\n"
 	"usb part [dev] - print partition table of one or all USB storage"
-	" devices\n"
+	"    devices\n"
 	"usb read addr blk# cnt - read `cnt' blocks starting at block `blk#'\n"
 	"    to memory address `addr'\n"
 	"usb write addr blk# cnt - write `cnt' blocks starting at block `blk#'\n"
 	"    from memory address `addr'"
+#endif /* CONFIG_USB_STORAGE */
 );
 
 
+#ifdef CONFIG_USB_STORAGE
 U_BOOT_CMD(
 	usbboot,	3,	1,	do_usbboot,
 	"boot from USB device",
 	"loadAddr dev:part"
 );
-
-#else
-U_BOOT_CMD(
-	usb,	5,	1,	do_usb,
-	"USB sub-system",
-	"start - start (scan) USB controller\n"
-	"usb reset - reset (rescan) USB controller\n"
-	"usb tree - show USB device tree\n"
-	"usb info [dev] - show available USB devices"
-);
-#endif
+#endif /* CONFIG_USB_STORAGE */

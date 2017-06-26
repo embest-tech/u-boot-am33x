@@ -3,37 +3,23 @@
  *
  * Srikanth Srinivasan (srikanth.srinivasan@freescale.com)
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
  * MPC8641HPCN board configuration file
  *
  * Make sure you change the MAC address and other network params first,
- * search for CONFIG_ETHADDR, CONFIG_SERVERIP, etc in this file.
+ * search for CONFIG_SERVERIP, etc. in this file.
  */
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#define CONFIG_SYS_GENERIC_BOARD
+#define CONFIG_DISPLAY_BOARDINFO
+
 /* High Level Configuration Options */
-#define CONFIG_MPC86xx		1	/* MPC86xx */
 #define CONFIG_MPC8641		1	/* MPC8641 specific */
 #define CONFIG_MPC8641HPCN	1	/* MPC8641HPCN board specific */
 #define CONFIG_MP		1	/* support multiple processors */
@@ -124,7 +110,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 /*
  * DDR Setup
  */
-#define CONFIG_FSL_DDR2
+#define CONFIG_SYS_FSL_DDR2
 #undef CONFIG_FSL_DDR_INTERACTIVE
 #define CONFIG_SPD_EEPROM		/* Use SPD EEPROM for DDR setup */
 #define CONFIG_DDR_SPD
@@ -269,7 +255,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #define CONFIG_SYS_GBL_DATA_OFFSET	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_INIT_SP_OFFSET	CONFIG_SYS_GBL_DATA_OFFSET
 
-#define CONFIG_SYS_MONITOR_LEN		(256 * 1024)	/* Reserve 256 kB for Mon */
+#define CONFIG_SYS_MONITOR_LEN		(512 * 1024)	/* Reserve 512 kB for Mon */
 #define CONFIG_SYS_MALLOC_LEN		(1024 * 1024)	 /* Reserved for malloc */
 
 /* Serial Port */
@@ -298,13 +284,12 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 /*
  * I2C
  */
-#define CONFIG_FSL_I2C		/* Use FSL common I2C driver */
-#define CONFIG_HARD_I2C		/* I2C with hardware support*/
-#undef	CONFIG_SOFT_I2C			/* I2C bit-banged */
-#define CONFIG_SYS_I2C_SPEED		400000	/* I2C speed and slave address */
-#define CONFIG_SYS_I2C_SLAVE		0x7F
-#define CONFIG_SYS_I2C_NOPROBES	{0x69}	/* Don't probe these addrs */
-#define CONFIG_SYS_I2C_OFFSET		0x3100
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_FSL
+#define CONFIG_SYS_FSL_I2C_SPEED	400000
+#define CONFIG_SYS_FSL_I2C_SLAVE	0x7F
+#define CONFIG_SYS_FSL_I2C_OFFSET	0x3100
+#define CONFIG_SYS_I2C_NOPROBES		{ {0, 0x69} }
 
 /*
  * RapidIO MMU
@@ -429,6 +414,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #define CONFIG_SCSI_AHCI
 
 #ifdef CONFIG_SCSI_AHCI
+#define CONFIG_LIBATA
 #define CONFIG_SATA_ULI5288
 #define CONFIG_SYS_SCSI_MAX_SCSI_ID	4
 #define CONFIG_SYS_SCSI_MAX_LUN	1
@@ -510,6 +496,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
  * BAT2		Rapidio Memory
  */
 #ifdef CONFIG_PCI
+#define CONFIG_PCI_INDIRECT_BRIDGE
 #define CONFIG_SYS_DBAT2L	(BAT_PHYS_ADDR(CONFIG_SYS_PCIE1_MEM_PHYS_LOW, \
 					       CONFIG_SYS_PCIE1_MEM_PHYS_HIGH) \
 				 | BATL_PP_RW | BATL_CACHEINHIBIT \
@@ -615,7 +602,8 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
  */
 #ifndef CONFIG_SYS_RAMBOOT
     #define CONFIG_ENV_IS_IN_FLASH	1
-    #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE + 0x60000)
+    #define CONFIG_ENV_ADDR		\
+			(CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN)
     #define CONFIG_ENV_SECT_SIZE		0x10000	/* 64K(one sector) for env */
 #else
     #define CONFIG_ENV_IS_NOWHERE	1	/* Store ENV in memory only */
@@ -639,15 +627,9 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_REGINFO
-
-#if defined(CONFIG_SYS_RAMBOOT)
-    #undef CONFIG_CMD_SAVEENV
-#endif
 
 #if defined(CONFIG_PCI)
     #define CONFIG_CMD_PCI
@@ -665,7 +647,6 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #define CONFIG_SYS_LONGHELP			/* undef to save memory	*/
 #define CONFIG_CMDLINE_EDITING		/* Command-line editing */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
-#define CONFIG_SYS_PROMPT	"=> "		/* Monitor Command Prompt */
 
 #if defined(CONFIG_CMD_KGDB)
     #define CONFIG_SYS_CBSIZE	1024		/* Console I/O Buffer Size */
@@ -676,7 +657,6 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16) /* Print Buffer Size */
 #define CONFIG_SYS_MAXARGS	16		/* max number of command args */
 #define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE	/* Boot Argument Buffer Size */
-#define CONFIG_SYS_HZ		1000		/* decrementer freq: 1ms ticks */
 
 /*
  * For booting Linux, the board info and command line data
@@ -687,20 +667,11 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 
 #if defined(CONFIG_CMD_KGDB)
     #define CONFIG_KGDB_BAUDRATE	230400	/* speed to run kgdb serial port */
-    #define CONFIG_KGDB_SER_INDEX	2	/* which serial port to use */
 #endif
 
 /*
  * Environment Configuration
  */
-
-/* The mac addresses for all ethernet interface */
-#if defined(CONFIG_TSEC_ENET)
-#define CONFIG_ETHADDR	 00:E0:0C:00:00:01
-#define CONFIG_ETH1ADDR  00:E0:0C:00:01:FD
-#define CONFIG_ETH2ADDR  00:E0:0C:00:02:FD
-#define CONFIG_ETH3ADDR  00:E0:0C:00:03:FD
-#endif
 
 #define CONFIG_HAS_ETH0		1
 #define CONFIG_HAS_ETH1		1
@@ -728,13 +699,18 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 
 #define	CONFIG_EXTRA_ENV_SETTINGS					\
 	"netdev=eth0\0"							\
-	"uboot=" MK_STR(CONFIG_UBOOTPATH) "\0"				\
+	"uboot=" __stringify(CONFIG_UBOOTPATH) "\0"			\
 	"tftpflash=tftpboot $loadaddr $uboot; "				\
-		"protect off " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "	\
-		"erase " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "		\
-		"cp.b $loadaddr " MK_STR(CONFIG_SYS_TEXT_BASE) " $filesize; "	\
-		"protect on " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "		\
-		"cmp.b $loadaddr " MK_STR(CONFIG_SYS_TEXT_BASE) " $filesize\0"	\
+		"protect off " __stringify(CONFIG_SYS_TEXT_BASE)	\
+			" +$filesize; "	\
+		"erase " __stringify(CONFIG_SYS_TEXT_BASE)		\
+			" +$filesize; "	\
+		"cp.b $loadaddr " __stringify(CONFIG_SYS_TEXT_BASE)	\
+			" $filesize; "	\
+		"protect on " __stringify(CONFIG_SYS_TEXT_BASE)		\
+			" +$filesize; "	\
+		"cmp.b $loadaddr " __stringify(CONFIG_SYS_TEXT_BASE)	\
+			" $filesize\0"	\
 	"consoledev=ttyS0\0"						\
 	"ramdiskaddr=2000000\0"						\
 	"ramdiskfile=your.ramdisk.u-boot\0"				\

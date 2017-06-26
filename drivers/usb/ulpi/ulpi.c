@@ -17,15 +17,7 @@
  *   Sascha Hauer <s.hauer@pengutronix.de>
  *   Freescale Semiconductors
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -106,18 +98,42 @@ int ulpi_select_transceiver(struct ulpi_viewport *ulpi_vp, unsigned speed)
 	return ulpi_write(ulpi_vp, &ulpi->function_ctrl, val);
 }
 
-int ulpi_set_vbus(struct ulpi_viewport *ulpi_vp, int on, int ext_power,
-			int ext_ind)
+int ulpi_set_vbus(struct ulpi_viewport *ulpi_vp, int on, int ext_power)
 {
 	u32 flags = ULPI_OTG_DRVVBUS;
 	u8 *reg = on ? &ulpi->otg_ctrl_set : &ulpi->otg_ctrl_clear;
 
 	if (ext_power)
 		flags |= ULPI_OTG_DRVVBUS_EXT;
-	if (ext_ind)
-		flags |= ULPI_OTG_EXTVBUSIND;
 
 	return ulpi_write(ulpi_vp, reg, flags);
+}
+
+int ulpi_set_vbus_indicator(struct ulpi_viewport *ulpi_vp, int external,
+			int passthu, int complement)
+{
+	u32 flags, val;
+	u8 *reg;
+
+	reg = external ? &ulpi->otg_ctrl_set : &ulpi->otg_ctrl_clear;
+	val = ulpi_write(ulpi_vp, reg, ULPI_OTG_EXTVBUSIND);
+	if (val)
+		return val;
+
+	flags = passthu ? ULPI_IFACE_PASSTHRU : 0;
+	flags |= complement ? ULPI_IFACE_EXTVBUS_COMPLEMENT : 0;
+
+	val = ulpi_read(ulpi_vp, &ulpi->iface_ctrl);
+	if (val == ULPI_ERROR)
+		return val;
+
+	val = val & ~(ULPI_IFACE_PASSTHRU & ULPI_IFACE_EXTVBUS_COMPLEMENT);
+	val |= flags;
+	val = ulpi_write(ulpi_vp, &ulpi->iface_ctrl, val);
+	if (val)
+		return val;
+
+	return 0;
 }
 
 int ulpi_set_pd(struct ulpi_viewport *ulpi_vp, int enable)

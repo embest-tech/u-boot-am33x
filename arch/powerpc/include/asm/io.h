@@ -7,7 +7,6 @@
 #ifndef _PPC_IO_H
 #define _PPC_IO_H
 
-#include <linux/config.h>
 #include <asm/byteorder.h>
 
 #ifdef CONFIG_ADDR_MAP
@@ -124,10 +123,12 @@ static inline void isync(void)
 #define iobarrier_r()  eieio()
 #define iobarrier_w()  eieio()
 
+#define mb()	sync()
+#define isb()	isync()
+
 /*
  * Non ordered and non-swapping "raw" accessors
  */
-#define __iomem
 #define PCI_FIX_ADDR(addr)	(addr)
 
 static inline unsigned char __raw_readb(const volatile void __iomem *addr)

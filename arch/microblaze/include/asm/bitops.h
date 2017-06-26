@@ -5,7 +5,6 @@
  * Copyright 1992, Linus Torvalds.
  */
 
-#include <linux/config.h>
 #include <asm/byteorder.h>	/* swab32 */
 #include <asm/system.h>		/* save_flags */
 
@@ -319,7 +318,8 @@ extern __inline__ int ext2_test_bit(int nr, const volatile void * addr)
 #define ext2_find_first_zero_bit(addr, size) \
 	ext2_find_next_zero_bit((addr), (size), 0)
 
-extern __inline__ unsigned long ext2_find_next_zero_bit(void *addr, unsigned long size, unsigned long offset)
+static inline unsigned long ext2_find_next_zero_bit(void *addr,
+				unsigned long size, unsigned long offset)
 {
 	unsigned long *p = ((unsigned long *) addr) + (offset >> 5);
 	unsigned long result = offset & ~31UL;

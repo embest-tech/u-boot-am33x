@@ -6,19 +6,7 @@
  * Copyright (C) 2009 Nick Thompson, GE Fanuc, Ltd. <nick.thompson@gefanuc.com>
  * Copyright (C) 2007 Sergey Kubushyn <ksi@koi8.net>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -28,7 +16,7 @@
 #include <spi.h>
 #include <spi_flash.h>
 #include <asm/arch/hardware.h>
-#include <asm/arch/emif_defs.h>
+#include <asm/ti-common/davinci_nand.h>
 #include <asm/arch/emac_defs.h>
 #include <asm/arch/pinmux_defs.h>
 #include <asm/io.h>
@@ -157,7 +145,7 @@ int misc_init_r(void)
 	 */
 	if (!enetaddr_found) {
 		if (!spi_mac_read) {
-			if (is_valid_ether_addr(buff)) {
+			if (is_valid_ethaddr(buff)) {
 				if (eth_setenv_enetaddr("ethaddr", buff)) {
 					printf("Warning: Failed to "
 					"set MAC address from SPI flash\n");
@@ -172,8 +160,8 @@ int misc_init_r(void)
 		 * MAC address present in environment compare it with
 		 * the MAC address in SPI flash and warn on mismatch
 		 */
-		if (!spi_mac_read && is_valid_ether_addr(buff) &&
-						memcmp(env_enetaddr, buff, 6))
+		if (!spi_mac_read && is_valid_ethaddr(buff) &&
+		    memcmp(env_enetaddr, buff, 6))
 			printf("Warning: MAC address in SPI flash don't match "
 					"with the MAC address in the environment\n");
 			printf("Default using MAC address from environment\n");
@@ -335,10 +323,6 @@ int board_early_init_f(void)
 
 int board_init(void)
 {
-#if defined(CONFIG_USE_NOR) || defined(CONFIG_DAVINCI_MMC)
-	u32 val;
-#endif
-
 #ifndef CONFIG_USE_IRQ
 	irq_init();
 #endif
@@ -378,12 +362,10 @@ int board_init(void)
 
 #ifdef CONFIG_USE_NOR
 	/* Set the GPIO direction as output */
-	clrbits_be32((u32 *)GPIO_BANK0_REG_DIR_ADDR, (0x01 << 11));
+	clrbits_le32((u32 *)GPIO_BANK0_REG_DIR_ADDR, (0x01 << 11));
 
 	/* Set the output as low */
-	val = readl(GPIO_BANK0_REG_SET_ADDR);
-	val |= (0x01 << 11);
-	writel(val, GPIO_BANK0_REG_CLR_ADDR);
+	writel(0x01 << 11, GPIO_BANK0_REG_CLR_ADDR);
 #endif
 
 #ifdef CONFIG_DAVINCI_MMC
@@ -391,9 +373,7 @@ int board_init(void)
 	clrbits_le32((u32 *)GPIO_BANK0_REG_DIR_ADDR, (0x01 << 11));
 
 	/* Set the output as high */
-	val = readl(GPIO_BANK0_REG_SET_ADDR);
-	val |= (0x01 << 11);
-	writel(val, GPIO_BANK0_REG_SET_ADDR);
+	writel(0x01 << 11, GPIO_BANK0_REG_SET_ADDR);
 #endif
 
 #ifdef CONFIG_DRIVER_TI_EMAC

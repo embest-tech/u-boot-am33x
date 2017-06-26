@@ -2,23 +2,7 @@
  * (C) Copyright 2000, 2001, 2002
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Hacked for MPC8260 by Murray.Jensen@cmst.csiro.au, 19-Oct-00, with
  * changes based on the file arch/powerpc/mbxboot/m8260_tty.c from the
@@ -33,6 +17,8 @@
 #include <common.h>
 #include <mpc8260.h>
 #include <asm/cpm_8260.h>
+#include <serial.h>
+#include <linux/compiler.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -91,7 +77,7 @@ static unsigned char brg_map[] = {
 	3,	/* BRG1 for SCC4 */
 };
 
-int serial_init (void)
+static int mpc8260_smc_serial_init(void)
 {
 	volatile immap_t *im = (immap_t *)CONFIG_SYS_IMMR;
 	volatile smc_t *sp;
@@ -103,7 +89,7 @@ int serial_init (void)
 	/* initialize pointers to SMC */
 
 	sp = (smc_t *) &(im->im_smc[SMC_INDEX]);
-	*(ushort *)(&im->im_dprambase[PROFF_SMC_BASE]) = PROFF_SMC;
+	im->im_dprambase16[PROFF_SMC_BASE / sizeof(u16)] = PROFF_SMC;
 	up = (smc_uart_t *)&im->im_dprambase[PROFF_SMC];
 
 	/* Disable transmitter/receiver. */
@@ -183,8 +169,7 @@ int serial_init (void)
 	return (0);
 }
 
-void
-serial_setbrg (void)
+static void mpc8260_smc_serial_setbrg(void)
 {
 #if defined(CONFIG_CONS_USE_EXTC)
 	m8260_cpm_extcbrg(brg_map[SMC_INDEX], gd->baudrate,
@@ -194,8 +179,7 @@ serial_setbrg (void)
 #endif
 }
 
-void
-serial_putc(const char c)
+static void mpc8260_smc_serial_putc(const char c)
 {
 	volatile smc_uart_t	*up;
 	volatile immap_t	*im = (immap_t *)CONFIG_SYS_IMMR;
@@ -216,16 +200,7 @@ serial_putc(const char c)
 	rtx->txbd.cbd_sc |= BD_SC_READY;
 }
 
-void
-serial_puts (const char *s)
-{
-	while (*s) {
-		serial_putc (*s++);
-	}
-}
-
-int
-serial_getc(void)
+static int mpc8260_smc_serial_getc(void)
 {
 	volatile smc_uart_t	*up;
 	volatile immap_t	*im = (immap_t *)CONFIG_SYS_IMMR;
@@ -254,8 +229,7 @@ serial_getc(void)
 	return(c);
 }
 
-int
-serial_tstc()
+static int mpc8260_smc_serial_tstc(void)
 {
 	volatile smc_uart_t	*up;
 	volatile immap_t	*im = (immap_t *)CONFIG_SYS_IMMR;
@@ -267,6 +241,26 @@ serial_tstc()
 	return !(rtx->rxbd.cbd_sc & BD_SC_EMPTY);
 }
 
+static struct serial_device mpc8260_smc_serial_drv = {
+	.name	= "mpc8260_smc_uart",
+	.start	= mpc8260_smc_serial_init,
+	.stop	= NULL,
+	.setbrg	= mpc8260_smc_serial_setbrg,
+	.putc	= mpc8260_smc_serial_putc,
+	.puts	= default_serial_puts,
+	.getc	= mpc8260_smc_serial_getc,
+	.tstc	= mpc8260_smc_serial_tstc,
+};
+
+void mpc8260_smc_serial_initialize(void)
+{
+	serial_register(&mpc8260_smc_serial_drv);
+}
+
+__weak struct serial_device *default_serial_console(void)
+{
+	return &mpc8260_smc_serial_drv;
+}
 #endif	/* CONFIG_CONS_ON_SMC */
 
 #if defined(CONFIG_KGDB_ON_SMC)
@@ -321,7 +315,7 @@ kgdb_serial_init (void)
 	/* initialize pointers to SMC */
 
 	sp = (smc_t *) &(im->im_smc[KGDB_SMC_INDEX]);
-	*(ushort *)(&im->im_dprambase[KGDB_PROFF_SMC_BASE]) = KGDB_PROFF_SMC;
+	im->im_dprambase16[KGDB_PROFF_SMC_BASE / sizeof(u16)] = KGDB_PROFF_SMC;
 	up = (smc_uart_t *)&im->im_dprambase[KGDB_PROFF_SMC];
 
 	/* Disable transmitter/receiver. */

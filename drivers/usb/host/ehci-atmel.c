@@ -3,23 +3,7 @@
  * Atmel Semiconductor <www.atmel.com>
  * Written-by: Bo Shen <voice.shen@atmel.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -31,14 +15,14 @@
 #include <asm/arch/clk.h>
 
 #include "ehci.h"
-#include "ehci-core.h"
 
 /* Enable UTMI PLL time out 500us
  * 10 times as datasheet specified
  */
 #define EN_UPLL_TIMEOUT	500UL
 
-int ehci_hcd_init(void)
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
 	at91_pmc_t *pmc = (at91_pmc_t *)ATMEL_BASE_PMC;
 	ulong start_time, tmp_time;
@@ -56,22 +40,30 @@ int ehci_hcd_init(void)
 	}
 
 	/* Enable USB Host clock */
+#ifdef CPU_HAS_PCR
+	at91_periph_clk_enable(ATMEL_ID_UHPHS);
+#else
 	writel(1 << ATMEL_ID_UHPHS, &pmc->pcer);
+#endif
 
-	hccr = (struct ehci_hccr *)ATMEL_BASE_EHCI;
-	hcor = (struct ehci_hcor *)((uint32_t)hccr +
-			HC_LENGTH(ehci_readl(&hccr->cr_capbase)));
+	*hccr = (struct ehci_hccr *)ATMEL_BASE_EHCI;
+	*hcor = (struct ehci_hcor *)((uint32_t)*hccr +
+			HC_LENGTH(ehci_readl(&(*hccr)->cr_capbase)));
 
 	return 0;
 }
 
-int ehci_hcd_stop(void)
+int ehci_hcd_stop(int index)
 {
 	at91_pmc_t *pmc = (at91_pmc_t *)ATMEL_BASE_PMC;
 	ulong start_time, tmp_time;
 
 	/* Disable USB Host Clock */
+#ifdef CPU_HAS_PCR
+	at91_periph_clk_disable(ATMEL_ID_UHPHS);
+#else
 	writel(1 << ATMEL_ID_UHPHS, &pmc->pcdr);
+#endif
 
 	start_time = get_timer(0);
 	/* Disable UTMI PLL */

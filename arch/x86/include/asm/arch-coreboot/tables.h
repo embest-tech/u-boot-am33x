@@ -3,34 +3,13 @@
  *
  * Copyright (C) 2008 Advanced Micro Devices, Inc.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * SPDX-License-Identifier:	BSD-3-Clause
  */
 
 #ifndef _COREBOOT_TABLES_H
 #define _COREBOOT_TABLES_H
 
-#include <compiler.h>
+#include <linux/compiler.h>
 
 struct cbuint64 {
 	u32 lo;
@@ -164,6 +143,55 @@ struct cb_framebuffer {
 	u8 reserved_mask_size;
 };
 
+#define CB_TAG_GPIO 0x0013
+#define GPIO_MAX_NAME_LENGTH 16
+struct cb_gpio {
+	u32 port;
+	u32 polarity;
+	u32 value;
+	u8 name[GPIO_MAX_NAME_LENGTH];
+};
+
+struct cb_gpios {
+	u32 tag;
+	u32 size;
+
+	u32 count;
+	struct cb_gpio gpios[0];
+};
+
+#define CB_TAG_FDT	0x0014
+struct cb_fdt {
+	uint32_t tag;
+	uint32_t size;	/* size of the entire entry */
+	/* the actual FDT gets placed here */
+};
+
+#define CB_TAG_VDAT	0x0015
+struct cb_vdat {
+	uint32_t tag;
+	uint32_t size;	/* size of the entire entry */
+	void	 *vdat_addr;
+	uint32_t vdat_size;
+};
+
+#define CB_TAG_TIMESTAMPS	0x0016
+#define CB_TAG_CBMEM_CONSOLE	0x0017
+#define CB_TAG_MRC_CACHE	0x0018
+struct cb_cbmem_tab {
+	uint32_t tag;
+	uint32_t size;
+	void   *cbmem_tab;
+};
+
+#define CB_TAG_VBNV		0x0019
+struct cb_vbnv {
+	uint32_t tag;
+	uint32_t size;
+	uint32_t vbnv_start;
+	uint32_t vbnv_size;
+};
+
 #define CB_TAG_CMOS_OPTION_TABLE 0x00c8
 struct cb_cmos_option_table {
 	u32 tag;
@@ -237,5 +265,30 @@ struct	cb_cmos_checksum {
 struct sysinfo_t;
 
 int get_coreboot_info(struct sysinfo_t *info);
+
+#define CBMEM_TOC_RESERVED      512
+#define MAX_CBMEM_ENTRIES       16
+#define CBMEM_MAGIC             0x434f5245
+
+struct cbmem_entry {
+	u32 magic;
+	u32 id;
+	u64 base;
+	u64 size;
+} __packed;
+
+#define CBMEM_ID_FREESPACE      0x46524545
+#define CBMEM_ID_GDT            0x4c474454
+#define CBMEM_ID_ACPI           0x41435049
+#define CBMEM_ID_CBTABLE        0x43425442
+#define CBMEM_ID_PIRQ           0x49525154
+#define CBMEM_ID_MPTABLE        0x534d5054
+#define CBMEM_ID_RESUME         0x5245534d
+#define CBMEM_ID_RESUME_SCRATCH 0x52455343
+#define CBMEM_ID_SMBIOS         0x534d4254
+#define CBMEM_ID_TIMESTAMP      0x54494d45
+#define CBMEM_ID_MRCDATA        0x4d524344
+#define CBMEM_ID_CONSOLE        0x434f4e53
+#define CBMEM_ID_NONE           0x00000000
 
 #endif

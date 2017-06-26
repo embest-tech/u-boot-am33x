@@ -22,25 +22,11 @@
 #ifndef USB_EHCI_H
 #define USB_EHCI_H
 
+#include <usb.h>
+
 #if !defined(CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS)
 #define CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS	2
 #endif
-
-/* (shifted) direction/type/recipient from the USB 2.0 spec, table 9.2 */
-#define DeviceRequest \
-	((USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE) << 8)
-
-#define DeviceOutRequest \
-	((USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) << 8)
-
-#define InterfaceRequest \
-	((USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE) << 8)
-
-#define EndpointRequest \
-	((USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE) << 8)
-
-#define EndpointOutRequest \
-	((USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE) << 8)
 
 /*
  * Register Space.
@@ -61,14 +47,15 @@ struct ehci_hcor {
 	uint32_t or_usbcmd;
 #define CMD_PARK	(1 << 11)		/* enable "park" */
 #define CMD_PARK_CNT(c)	(((c) >> 8) & 3)	/* how many transfers to park */
-#define CMD_ASE		(1 << 5)		/* async schedule enable */
 #define CMD_LRESET	(1 << 7)		/* partial reset */
-#define CMD_IAAD	(1 << 5)		/* "doorbell" interrupt */
+#define CMD_IAAD	(1 << 6)		/* "doorbell" interrupt */
+#define CMD_ASE		(1 << 5)		/* async schedule enable */
 #define CMD_PSE		(1 << 4)		/* periodic schedule enable */
 #define CMD_RESET	(1 << 1)		/* reset HC not bus */
 #define CMD_RUN		(1 << 0)		/* start/stop HC */
 	uint32_t or_usbsts;
 #define STS_ASS		(1 << 15)
+#define	STS_PSS		(1 << 14)
 #define STS_HALT	(1 << 12)
 	uint32_t or_usbintr;
 #define INTR_UE         (1 << 0)                /* USB interrupt enable */
@@ -245,11 +232,74 @@ struct QH {
 	 * Add dummy fill value to make the size of this struct
 	 * aligned to 32 bytes
 	 */
-	uint8_t fill[16];
+	union {
+		uint32_t fill[4];
+		void *buffer;
+	};
 };
 
+/* Tweak flags for EHCI, used to control operation */
+enum {
+	/* don't use or_configflag in init */
+	EHCI_TWEAK_NO_INIT_CF		= 1 << 0,
+};
+
+struct ehci_ctrl;
+
+struct ehci_ops {
+	void (*set_usb_mode)(struct ehci_ctrl *ctrl);
+	int (*get_port_speed)(struct ehci_ctrl *ctrl, uint32_t reg);
+	void (*powerup_fixup)(struct ehci_ctrl *ctrl, uint32_t *status_reg,
+			      uint32_t *reg);
+	uint32_t *(*get_portsc_register)(struct ehci_ctrl *ctrl, int port);
+};
+
+struct ehci_ctrl {
+	struct ehci_hccr *hccr;	/* R/O registers, not need for volatile */
+	struct ehci_hcor *hcor;
+	int rootdev;
+	uint16_t portreset;
+	struct QH qh_list __aligned(USB_DMA_MINALIGN);
+	struct QH periodic_queue __aligned(USB_DMA_MINALIGN);
+	uint32_t *periodic_list;
+	int periodic_schedules;
+	int ntds;
+	struct ehci_ops ops;
+	void *priv;	/* client's private data */
+};
+
+/**
+ * ehci_set_controller_info() - Set up private data for the controller
+ *
+ * This function can be called in ehci_hcd_init() to tell the EHCI layer
+ * about the controller's private data pointer. Then in the above functions
+ * this can be accessed given the struct ehci_ctrl pointer. Also special
+ * EHCI operation methods can be provided if required
+ *
+ * @index:	Controller number to set
+ * @priv:	Controller pointer
+ * @ops:	Controller operations, or NULL to use default
+ */
+void ehci_set_controller_priv(int index, void *priv,
+			      const struct ehci_ops *ops);
+
+/**
+ * ehci_get_controller_priv() - Get controller private data
+ *
+ * @index	Controller number to get
+ * @return controller pointer for this index
+ */
+void *ehci_get_controller_priv(int index);
+
 /* Low level init functions */
-int ehci_hcd_init(void);
-int ehci_hcd_stop(void);
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor);
+int ehci_hcd_stop(int index);
+
+int ehci_register(struct udevice *dev, struct ehci_hccr *hccr,
+		  struct ehci_hcor *hcor, const struct ehci_ops *ops,
+		  uint tweaks, enum usb_init_type init);
+int ehci_deregister(struct udevice *dev);
+extern struct dm_usb_ops ehci_usb_ops;
 
 #endif /* USB_EHCI_H */

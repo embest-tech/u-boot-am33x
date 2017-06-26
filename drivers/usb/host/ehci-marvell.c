@@ -3,34 +3,18 @@
  * Marvell Semiconductor <www.marvell.com>
  * Written-by: Prafulla Wadaskar <prafulla@marvell.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <asm/io.h>
 #include <usb.h>
 #include "ehci.h"
-#include "ehci-core.h"
+#include <linux/mbus.h>
 #include <asm/arch/cpu.h>
 
 #if defined(CONFIG_KIRKWOOD)
-#include <asm/arch/kirkwood.h>
+#include <asm/arch/soc.h>
 #elif defined(CONFIG_ORION5X)
 #include <asm/arch/orion5x.h>
 #endif
@@ -47,6 +31,40 @@ DECLARE_GLOBAL_DATA_PTR;
 /*
  * USB 2.0 Bridge Address Decoding registers setup
  */
+#ifdef CONFIG_ARMADA_XP
+
+#define MVUSB0_BASE		MVEBU_USB20_BASE
+
+/*
+ * Once all the older Marvell SoC's (Orion, Kirkwood) are converted
+ * to the common mvebu archticture including the mbus setup, this
+ * will be the only function needed to configure the access windows
+ */
+static void usb_brg_adrdec_setup(void)
+{
+	const struct mbus_dram_target_info *dram;
+	int i;
+
+	dram = mvebu_mbus_dram_info();
+
+	for (i = 0; i < 4; i++) {
+		wrl(USB_WINDOW_CTRL(i), 0);
+		wrl(USB_WINDOW_BASE(i), 0);
+	}
+
+	for (i = 0; i < dram->num_cs; i++) {
+		const struct mbus_dram_window *cs = dram->cs + i;
+
+		/* Write size, attributes and target id to control register */
+		wrl(USB_WINDOW_CTRL(i),
+		    ((cs->size - 1) & 0xffff0000) | (cs->mbus_attr << 8) |
+		    (dram->mbus_dram_target_id << 4) | 1);
+
+		/* Write base address to base register */
+		wrl(USB_WINDOW_BASE(i), cs->base);
+	}
+}
+#else
 static void usb_brg_adrdec_setup(void)
 {
 	int i;
@@ -86,22 +104,24 @@ static void usb_brg_adrdec_setup(void)
 		wrl(USB_WINDOW_BASE(i), base);
 	}
 }
+#endif
 
 /*
  * Create the appropriate control structures to manage
  * a new EHCI host controller.
  */
-int ehci_hcd_init(void)
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
 	usb_brg_adrdec_setup();
 
-	hccr = (struct ehci_hccr *)(MVUSB0_BASE + 0x100);
-	hcor = (struct ehci_hcor *)((uint32_t) hccr
-			+ HC_LENGTH(ehci_readl(&hccr->cr_capbase)));
+	*hccr = (struct ehci_hccr *)(MVUSB0_BASE + 0x100);
+	*hcor = (struct ehci_hcor *)((uint32_t) *hccr
+			+ HC_LENGTH(ehci_readl(&(*hccr)->cr_capbase)));
 
 	debug("ehci-marvell: init hccr %x and hcor %x hc_length %d\n",
-		(uint32_t)hccr, (uint32_t)hcor,
-		(uint32_t)HC_LENGTH(ehci_readl(&hccr->cr_capbase)));
+		(uint32_t)*hccr, (uint32_t)*hcor,
+		(uint32_t)HC_LENGTH(ehci_readl(&(*hccr)->cr_capbase)));
 
 	return 0;
 }
@@ -110,7 +130,7 @@ int ehci_hcd_init(void)
  * Destroy the appropriate control structures corresponding
  * the the EHCI host controller.
  */
-int ehci_hcd_stop(void)
+int ehci_hcd_stop(int index)
 {
 	return 0;
 }

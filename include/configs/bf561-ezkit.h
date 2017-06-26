@@ -64,8 +64,6 @@
 #define CONFIG_SMC91111_BASE	0x2C010300
 #define CONFIG_SMC_USE_32_BIT	1
 #define CONFIG_HOSTNAME		bf561-ezkit
-/* Uncomment next line to use fixed MAC address */
-/* #define CONFIG_ETHADDR	02:80:ad:20:31:e8 */
 
 
 /*
@@ -88,15 +86,25 @@
 /*
  * I2C Settings
  */
-#define CONFIG_SOFT_I2C
+#define CONFIG_SYS_I2C_SOFT
+#ifdef CONFIG_SYS_I2C_SOFT
+#define CONFIG_SYS_I2C
 #define CONFIG_SOFT_I2C_GPIO_SCL GPIO_PF0
 #define CONFIG_SOFT_I2C_GPIO_SDA GPIO_PF1
-
+#define I2C_DELAY		udelay(5)	/* 1/4 I2C clock duration */
+#define CONFIG_SYS_I2C_SOFT_SPEED	50000
+#define CONFIG_SYS_I2C_SOFT_SLAVE	0
+#endif
 
 /*
  * Misc Settings
  */
 #define CONFIG_UART_CONSOLE	0
+
+/*
+ * Run core 1 from L1 SRAM start address when init uboot on core 0
+ */
+/* #define CONFIG_CORE1_RUN	1 */
 
 
 /*

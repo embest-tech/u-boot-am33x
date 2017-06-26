@@ -1,23 +1,7 @@
 /*
  * Copyright (C) 2005-2006 Atmel Corporation
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #ifndef __ATMEL_MCI_H__
 #define __ATMEL_MCI_H__
@@ -38,7 +22,7 @@ typedef struct atmel_mci {
 	u32	sdcr;	/* 0x0c */
 	u32	argr;	/* 0x10 */
 	u32	cmdr;	/* 0x14 */
-	u32	_18;	/* 0x18 */
+	u32	blkr;	/* 0x18 */
 	u32	_1c;	/* 0x1c */
 	u32	rspr;	/* 0x20 */
 	u32	rspr1;	/* 0x24 */
@@ -52,6 +36,10 @@ typedef struct atmel_mci {
 	u32	ier;	/* 0x44 */
 	u32	idr;	/* 0x48 */
 	u32	imr;	/* 0x4c */
+	u32	dma;	/* 0x50 */
+	u32	cfg;	/* 0x54 */
+	u32	reserved[41];
+	u32	version;
 } atmel_mci_t;
 
 #endif /* __ASSEMBLY__ */
@@ -81,6 +69,10 @@ typedef struct atmel_mci {
 #define MMCI_PDCPADV_SIZE			1
 #define MMCI_PDCMODE_OFFSET			15
 #define MMCI_PDCMODE_SIZE			1
+/* MCI IP version >= 0x500, MR bit 16 used for CLKODD */
+#define MMCI_CLKODD_OFFSET			16
+#define MMCI_CLKODD_SIZE			1
+/* MCI IP version < 0x200, MR higher 16bits for BLKLEN */
 #define MMCI_BLKLEN_OFFSET			16
 #define MMCI_BLKLEN_SIZE			16
 
@@ -117,6 +109,11 @@ typedef struct atmel_mci {
 #define MMCI_TRDIR_SIZE				1
 #define MMCI_TRTYP_OFFSET			19
 #define MMCI_TRTYP_SIZE				2
+
+/* Bitfields in BLKR */
+/* MMCI_BLKLEN_OFFSET/SIZE already defined in MR */
+#define MMCI_BCNT_OFFSET			0
+#define MMCI_BCNT_SIZE			16
 
 /* Bitfields in RSPRx */
 #define MMCI_RSP_OFFSET				0
@@ -193,6 +190,16 @@ typedef struct atmel_mci {
 #define MMCI_TRTYP_BLOCK			0
 #define MMCI_TRTYP_MULTI_BLOCK			1
 #define MMCI_TRTYP_STREAM			2
+
+/* Bitfields in CFG */
+#define MMCI_FIFOMODE_OFFSET			0
+#define MMCI_FIFOMODE_SIZE			1
+#define MMCI_FERRCTRL_OFFSET			4
+#define MMCI_FERRCTRL_SIZE			1
+#define MMCI_HSMODE_OFFSET			8
+#define MMCI_HSMODE_SIZE			1
+#define MMCI_LSYNC_OFFSET			12
+#define MMCI_LSYNC_SIZE				1
 
 /* Bit manipulation macros */
 #define MMCI_BIT(name)					\

@@ -8,23 +8,7 @@
  * (C) Copyright 2000 Sysgo Real-Time Solutions, GmbH <www.elinos.com>
  * Marius Groeger <mgroeger@sysgo.de>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -202,7 +186,7 @@ static int fec_recv(struct eth_device* dev)
 	}
 	else {
 	    /* Pass the packet up to the protocol layers. */
-	    NetReceive(NetRxPackets[rxIdx], length - 4);
+	    net_process_received_packet(net_rx_packets[rxIdx], length - 4);
 	}
 
 
@@ -279,7 +263,7 @@ static int fec_init(struct eth_device* dev, bd_t *bis)
     {
       rtx.rxbd[i].cbd_sc = BD_ENET_RX_EMPTY;
       rtx.rxbd[i].cbd_datlen = 0;
-      rtx.rxbd[i].cbd_bufaddr = (uint)NetRxPackets[i];
+      rtx.rxbd[i].cbd_bufaddr = (uint)net_rx_packets[i];
     }
     rtx.rxbd[PKTBUFSRX - 1].cbd_sc |= BD_ENET_RX_WRAP;
 
@@ -354,7 +338,7 @@ static int fec_init(struct eth_device* dev, bd_t *bis)
      * it unique by setting a few bits in the upper byte of the
      * non-static part of the address.
      */
-#define ea eth_get_dev()->enetaddr
+#define ea eth_get_ethaddr()
     pram_ptr->fen_paddrh = (ea[5] << 8) + ea[4];
     pram_ptr->fen_paddrm = (ea[3] << 8) + ea[2];
     pram_ptr->fen_paddrl = (ea[1] << 8) + ea[0];

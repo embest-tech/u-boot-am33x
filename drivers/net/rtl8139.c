@@ -188,7 +188,7 @@ static int rtl_transmit(struct eth_device *dev, void *packet, int length);
 static int rtl_poll(struct eth_device *dev);
 static void rtl_disable(struct eth_device *dev);
 #ifdef CONFIG_MCAST_TFTP/*  This driver already accepts all b/mcast */
-static int rtl_bcast_addr (struct eth_device *dev, u8 bcast_mac, u8 set)
+static int rtl_bcast_addr(struct eth_device *dev, const u8 *bcast_mac, u8 set)
 {
 	return (0);
 }
@@ -504,11 +504,11 @@ static int rtl_poll(struct eth_device *dev)
 		memcpy(rxdata, rx_ring + ring_offs + 4, semi_count);
 		memcpy(&(rxdata[semi_count]), rx_ring, rx_size-4-semi_count);
 
-		NetReceive(rxdata, length);
+		net_process_received_packet(rxdata, length);
 		debug_cond(DEBUG_RX, "rx packet %d+%d bytes",
 			semi_count, rx_size-4-semi_count);
 	} else {
-		NetReceive(rx_ring + ring_offs + 4, length);
+		net_process_received_packet(rx_ring + ring_offs + 4, length);
 		debug_cond(DEBUG_RX, "rx packet %d bytes", rx_size-4);
 	}
 	flush_cache((unsigned long)rx_ring, RX_BUF_LEN);

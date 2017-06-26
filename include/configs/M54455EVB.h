@@ -4,23 +4,7 @@
  * Copyright (C) 2004-2007 Freescale Semiconductor, Inc.
  * TsiChung Liew (Tsi-Chung.Liew@freescale.com)
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -34,9 +18,9 @@
  * High Level Configuration Options
  * (easy to change)
  */
-#define CONFIG_MCF5445x		/* define processor family */
-#define CONFIG_M54455		/* define processor type */
 #define CONFIG_M54455EVB	/* M54455EVB board */
+
+#define CONFIG_DISPLAY_BOARDINFO
 
 #define CONFIG_MCFUART
 #define CONFIG_SYS_UART_PORT		(0)
@@ -55,31 +39,22 @@
 #define CONFIG_BOOTP_HOSTNAME
 
 /* Command line configuration */
-#include <config_cmd_default.h>
-
-#define CONFIG_CMD_BOOTD
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_ELF
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
-#define CONFIG_CMD_FLASH
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_IDE
 #define CONFIG_CMD_JFFS2
-#define CONFIG_CMD_MEMORY
-#define CONFIG_CMD_MISC
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 #undef CONFIG_CMD_PCI
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
 #define CONFIG_CMD_SPI
 #define CONFIG_CMD_SF
 
-#undef CONFIG_CMD_LOADB
-#undef CONFIG_CMD_LOADS
 
 /* Network configuration */
 #define CONFIG_MCFFEC
@@ -99,14 +74,11 @@
 
 #	define CONFIG_BOOTDELAY	1	/* autoboot after 5 seconds */
 #	define CONFIG_BOOTARGS		"root=/dev/mtdblock1 rw rootfstype=jffs2 ip=none mtdparts=physmap-flash.0:5M(kernel)ro,-(jffs2)"
-#	define CONFIG_ETHADDR		00:e0:0c:bc:e5:60
-#	define CONFIG_ETH1ADDR		00:e0:0c:bc:e5:61
 #	define CONFIG_ETHPRIME		"FEC0"
 #	define CONFIG_IPADDR		192.162.1.2
 #	define CONFIG_NETMASK		255.255.255.0
 #	define CONFIG_SERVERIP		192.162.1.1
 #	define CONFIG_GATEWAYIP		192.162.1.1
-#	define CONFIG_OVERWRITE_ETHADDR_ONCE
 
 /* If CONFIG_SYS_DISCOVER_PHY is not defined - hardcoded */
 #	ifndef CONFIG_SYS_DISCOVER_PHY
@@ -125,12 +97,12 @@
 #define	CONFIG_SYS_LOAD_ADDR2		0x40010013
 #define CONFIG_EXTRA_ENV_SETTINGS		\
 	"netdev=eth0\0"				\
-	"inpclk=" MK_STR(CONFIG_SYS_INPUT_CLKSRC) "\0"	\
+	"inpclk=" __stringify(CONFIG_SYS_INPUT_CLKSRC) "\0"	\
 	"loadaddr=0x40010000\0"			\
 	"sbfhdr=sbfhdr.bin\0"			\
 	"uboot=u-boot.bin\0"			\
 	"load=tftp ${loadaddr} ${sbfhdr};"	\
-	"tftp " MK_STR(CONFIG_SYS_LOAD_ADDR2) " ${uboot} \0"	\
+	"tftp " __stringify(CONFIG_SYS_LOAD_ADDR2) " ${uboot} \0"	\
 	"upd=run load; run prog\0"		\
 	"prog=sf probe 0:1 1000000 3;"		\
 	"sf erase 0 30000;"			\
@@ -146,16 +118,16 @@
 #endif
 #define CONFIG_EXTRA_ENV_SETTINGS		\
 	"netdev=eth0\0"				\
-	"inpclk=" MK_STR(CONFIG_SYS_INPUT_CLKSRC) "\0"	\
+	"inpclk=" __stringify(CONFIG_SYS_INPUT_CLKSRC) "\0"	\
 	"loadaddr=0x40010000\0"			\
 	"uboot=u-boot.bin\0"			\
 	"load=tftp ${loadaddr} ${uboot}\0"	\
 	"upd=run load; run prog\0"		\
-	"prog=prot off " MK_STR(CONFIG_SYS_FLASH_BASE)	\
-	" " MK_STR(CONFIG_SYS_UBOOT_END) ";"		\
-	"era " MK_STR(CONFIG_SYS_FLASH_BASE) " "	\
-	MK_STR(CONFIG_SYS_UBOOT_END) ";"		\
-	"cp.b ${loadaddr} " MK_STR(CONFIG_SYS_FLASH_BASE)	\
+	"prog=prot off " __stringify(CONFIG_SYS_FLASH_BASE)	\
+	" " __stringify(CONFIG_SYS_UBOOT_END) ";"		\
+	"era " __stringify(CONFIG_SYS_FLASH_BASE) " "		\
+	__stringify(CONFIG_SYS_UBOOT_END) ";"			\
+	"cp.b ${loadaddr} " __stringify(CONFIG_SYS_FLASH_BASE)	\
 	" ${filesize}; save\0"			\
 	""
 #endif
@@ -189,12 +161,11 @@
 #undef CONFIG_MCFPIT
 
 /* I2c */
-#define CONFIG_FSL_I2C
-#define CONFIG_HARD_I2C		/* I2C with hardware support */
-#undef	CONFIG_SOFT_I2C		/* I2C bit-banged               */
-#define CONFIG_SYS_I2C_SPEED		80000	/* I2C speed and slave address  */
-#define CONFIG_SYS_I2C_SLAVE		0x7F
-#define CONFIG_SYS_I2C_OFFSET		0x58000
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_FSL
+#define CONFIG_SYS_FSL_I2C_SPEED	80000
+#define CONFIG_SYS_FSL_I2C_SLAVE	0x7F
+#define CONFIG_SYS_FSL_I2C_OFFSET	0x58000
 #define CONFIG_SYS_IMMR		CONFIG_SYS_MBAR
 
 /* DSPI and Serial Flash */
@@ -203,7 +174,6 @@
 #define CONFIG_HARD_SPI
 #define CONFIG_SYS_SBFHDR_SIZE		0x13
 #ifdef CONFIG_CMD_SPI
-#	define CONFIG_SPI_FLASH
 #	define CONFIG_SPI_FLASH_STMICRO
 
 #	define CONFIG_SYS_DSPI_CTAR0		(DSPI_CTAR_TRSZ(7) | \
@@ -238,7 +208,7 @@
 
 /* FPGA - Spartan 2 */
 /* experiment
-#define CONFIG_FPGA		CONFIG_SYS_SPARTAN3
+#define CONFIG_FPGA
 #define CONFIG_FPGA_COUNT	1
 #define CONFIG_SYS_FPGA_PROG_FEEDBACK
 #define CONFIG_SYS_FPGA_CHECK_CTRLC
@@ -262,8 +232,6 @@
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE	/* Boot Argument Buffer Size    */
 
 #define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x10000)
-
-#define CONFIG_SYS_HZ			1000
 
 #define CONFIG_SYS_MBAR		0xFC000000
 

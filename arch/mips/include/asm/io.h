@@ -11,7 +11,6 @@
 #ifndef _ASM_IO_H
 #define _ASM_IO_H
 
-#include <linux/config.h>
 #if 0
 #include <linux/pagemap.h>
 #endif
@@ -118,27 +117,43 @@ static inline void set_io_port_base(unsigned long base)
  * Change virtual addresses to physical addresses and vv.
  * These are trivial on the 1:1 Linux/MIPS mapping
  */
-extern inline phys_addr_t virt_to_phys(volatile void * address)
+static inline phys_addr_t virt_to_phys(volatile void * address)
 {
+#ifndef CONFIG_64BIT
 	return CPHYSADDR(address);
+#else
+	return XPHYSADDR(address);
+#endif
 }
 
-extern inline void * phys_to_virt(unsigned long address)
+static inline void * phys_to_virt(unsigned long address)
 {
+#ifndef CONFIG_64BIT
 	return (void *)KSEG0ADDR(address);
+#else
+	return (void *)CKSEG0ADDR(address);
+#endif
 }
 
 /*
  * IO bus memory addresses are also 1:1 with the physical address
  */
-extern inline unsigned long virt_to_bus(volatile void * address)
+static inline unsigned long virt_to_bus(volatile void * address)
 {
+#ifndef CONFIG_64BIT
 	return CPHYSADDR(address);
+#else
+	return XPHYSADDR(address);
+#endif
 }
 
-extern inline void * bus_to_virt(unsigned long address)
+static inline void * bus_to_virt(unsigned long address)
 {
+#ifndef CONFIG_64BIT
 	return (void *)KSEG0ADDR(address);
+#else
+	return (void *)CKSEG0ADDR(address);
+#endif
 }
 
 /*
@@ -150,12 +165,12 @@ extern unsigned long isa_slot_offset;
 extern void * __ioremap(unsigned long offset, unsigned long size, unsigned long flags);
 
 #if 0
-extern inline void *ioremap(unsigned long offset, unsigned long size)
+static inline void *ioremap(unsigned long offset, unsigned long size)
 {
 	return __ioremap(offset, size, _CACHE_UNCACHED);
 }
 
-extern inline void *ioremap_nocache(unsigned long offset, unsigned long size)
+static inline void *ioremap_nocache(unsigned long offset, unsigned long size)
 {
 	return __ioremap(offset, size, _CACHE_UNCACHED);
 }
@@ -168,19 +183,19 @@ extern void iounmap(void *addr);
  * 24-31 on SNI.
  * XXX more SNI hacks.
  */
-#define readb(addr) (*(volatile unsigned char *)(addr))
-#define readw(addr) __ioswab16((*(volatile unsigned short *)(addr)))
-#define readl(addr) __ioswab32((*(volatile unsigned int *)(addr)))
-#define __raw_readb readb
-#define __raw_readw readw
-#define __raw_readl readl
+#define __raw_readb(addr) (*(volatile unsigned char *)(addr))
+#define __raw_readw(addr) (*(volatile unsigned short *)(addr))
+#define __raw_readl(addr) (*(volatile unsigned int *)(addr))
+#define readb(addr) __raw_readb((addr))
+#define readw(addr) __ioswab16(__raw_readw((addr)))
+#define readl(addr) __ioswab32(__raw_readl((addr)))
 
-#define writeb(b,addr) (*(volatile unsigned char *)(addr)) = (b)
-#define writew(b,addr) (*(volatile unsigned short *)(addr)) = (__ioswab16(b))
-#define writel(b,addr) (*(volatile unsigned int *)(addr)) = (__ioswab32(b))
-#define __raw_writeb writeb
-#define __raw_writew writew
-#define __raw_writel writel
+#define __raw_writeb(b, addr) (*(volatile unsigned char *)(addr)) = (b)
+#define __raw_writew(b, addr) (*(volatile unsigned short *)(addr)) = (b)
+#define __raw_writel(b, addr) (*(volatile unsigned int *)(addr)) = (b)
+#define writeb(b, addr) __raw_writeb((b), (addr))
+#define writew(b, addr) __raw_writew(__ioswab16(b), (addr))
+#define writel(b, addr) __raw_writel(__ioswab32(b), (addr))
 
 #define memset_io(a,b,c)	memset((void *)(a),(b),(c))
 #define memcpy_fromio(a,b,c)	memcpy((a),(void *)(b),(c))
@@ -238,7 +253,7 @@ out:
  */
 
 #define __OUT1(s) \
-extern inline void __out##s(unsigned int value, unsigned int port) {
+static inline void __out##s(unsigned int value, unsigned int port) {
 
 #define __OUT2(m) \
 __asm__ __volatile__ ("s" #m "\t%0,%1(%2)"
@@ -252,7 +267,7 @@ __OUT1(s##c_p) __OUT2(m) : : "r" (__ioswab##w(value)), "ir" (port), "r" (mips_io
 	SLOW_DOWN_IO; }
 
 #define __IN1(t,s) \
-extern __inline__ t __in##s(unsigned int port) { t _v;
+static inline t __in##s(unsigned int port) { t _v;
 
 /*
  * Required nops will be inserted by the assembler
@@ -267,7 +282,7 @@ __IN1(t,s##_p) __IN2(m) : "=r" (_v) : "i" (0), "r" (mips_io_port_base+port)); SL
 __IN1(t,s##c_p) __IN2(m) : "=r" (_v) : "ir" (port), "r" (mips_io_port_base)); SLOW_DOWN_IO; return __ioswab##w(_v); }
 
 #define __INS1(s) \
-extern inline void __ins##s(unsigned int port, void * addr, unsigned long count) {
+static inline void __ins##s(unsigned int port, void * addr, unsigned long count) {
 
 #define __INS2(m) \
 if (count) \
@@ -295,7 +310,7 @@ __INS1(s##c) __INS2(m) \
 	: "$1");}
 
 #define __OUTS1(s) \
-extern inline void __outs##s(unsigned int port, const void * addr, unsigned long count) {
+static inline void __outs##s(unsigned int port, const void * addr, unsigned long count) {
 
 #define __OUTS2(m) \
 if (count) \

@@ -3,23 +3,7 @@
  *
  * Copyright (C) 2007 Atmel Corporation
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -27,17 +11,8 @@
 #include <asm/arch/gpio.h>
 #include <asm/arch/clk.h>
 #include <lcd.h>
+#include <bmp_layout.h>
 #include <atmel_lcdc.h>
-
-int lcd_line_length;
-int lcd_color_fg;
-int lcd_color_bg;
-
-void *lcd_base;				/* Start of framebuffer memory	*/
-void *lcd_console_address;		/* Start of console buffer	*/
-
-short console_col;
-short console_row;
 
 /* configurable parameters */
 #define ATMEL_LCDC_CVAL_DEFAULT		0xc8
@@ -46,7 +21,7 @@ short console_row;
 #define ATMEL_LCDC_GUARD_TIME		1
 #endif
 
-#if defined(CONFIG_AT91SAM9263) || defined(CONFIG_AT91CAP9)
+#if defined(CONFIG_AT91SAM9263)
 #define ATMEL_LCDC_FIFO_SIZE		2048
 #else
 #define ATMEL_LCDC_FIFO_SIZE		512
@@ -54,6 +29,46 @@ short console_row;
 
 #define lcdc_readl(mmio, reg)		__raw_readl((mmio)+(reg))
 #define lcdc_writel(mmio, reg, val)	__raw_writel((val), (mmio)+(reg))
+
+ushort *configuration_get_cmap(void)
+{
+	return (ushort *)(panel_info.mmio + ATMEL_LCDC_LUT(0));
+}
+
+#if defined(CONFIG_BMP_16BPP) && defined(CONFIG_ATMEL_LCD_BGR555)
+void fb_put_word(uchar **fb, uchar **from)
+{
+	*(*fb)++ = (((*from)[0] & 0x1f) << 2) | ((*from)[1] & 0x03);
+	*(*fb)++ = ((*from)[0] & 0xe0) | (((*from)[1] & 0x7c) >> 2);
+	*from += 2;
+}
+#endif
+
+#ifdef CONFIG_LCD_LOGO
+#include <bmp_logo.h>
+void lcd_logo_set_cmap(void)
+{
+	int i;
+	uint lut_entry;
+	ushort colreg;
+	uint *cmap = (uint *)configuration_get_cmap();
+
+	for (i = 0; i < BMP_LOGO_COLORS; ++i) {
+		colreg = bmp_logo_palette[i];
+#ifdef CONFIG_ATMEL_LCD_BGR555
+		lut_entry = ((colreg & 0x000F) << 11) |
+				((colreg & 0x00F0) <<  2) |
+				((colreg & 0x0F00) >>  7);
+#else
+		lut_entry = ((colreg & 0x000F) << 1) |
+				((colreg & 0x00F0) << 3) |
+				((colreg & 0x0F00) << 4);
+#endif
+		*(cmap + BMP_LOGO_OFFSET) = lut_entry;
+		cmap++;
+	}
+}
+#endif
 
 void lcd_setcolreg(ushort regno, ushort red, ushort green, ushort blue)
 {
@@ -64,6 +79,16 @@ void lcd_setcolreg(ushort regno, ushort red, ushort green, ushort blue)
 	lcdc_writel(panel_info.mmio, ATMEL_LCDC_LUT(regno),
 		    (blue >> 3) | ((green & 0xfc) << 3) | ((red & 0xf8) << 8));
 #endif
+}
+
+void lcd_set_cmap(struct bmp_image *bmp, unsigned colors)
+{
+	int i;
+
+	for (i = 0; i < colors; ++i) {
+		struct bmp_color_table_entry cte = bmp->color_table[i];
+		lcd_setcolreg(i, cte.red, cte.green, cte.blue);
+	}
 }
 
 void lcd_ctrl_init(void *lcdbase)

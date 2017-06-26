@@ -2,20 +2,7 @@
  * Copyright (C) 2011 Freescale Semiconductor, Inc.
  * Author: Tang Yuantian <b29983@freescale.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -25,7 +12,9 @@
 #include <malloc.h>
 #include <asm/io.h>
 #include <fis.h>
+#include <sata.h>
 #include <libata.h>
+#include <sata.h>
 #include "sata_sil.h"
 
 /* Convert sectorsize to wordsize */
@@ -368,8 +357,8 @@ static ulong sil_sata_rw_cmd_ext(int dev, ulong start, ulong blkcnt,
 	return blkcnt;
 }
 
-ulong sil_sata_rw_lba28(int dev, ulong blknr, lbaint_t blkcnt,
-		void *buffer, int is_write)
+static ulong sil_sata_rw_lba28(int dev, ulong blknr, lbaint_t blkcnt,
+			       const void *buffer, int is_write)
 {
 	ulong start, blks, max_blks;
 	u8 *addr;
@@ -396,8 +385,8 @@ ulong sil_sata_rw_lba28(int dev, ulong blknr, lbaint_t blkcnt,
 	return blkcnt;
 }
 
-ulong sil_sata_rw_lba48(int dev, ulong blknr, lbaint_t blkcnt,
-		void *buffer, int is_write)
+static ulong sil_sata_rw_lba48(int dev, ulong blknr, lbaint_t blkcnt,
+			       const void *buffer, int is_write)
 {
 	ulong start, blks, max_blks;
 	u8 *addr;
@@ -426,7 +415,7 @@ ulong sil_sata_rw_lba48(int dev, ulong blknr, lbaint_t blkcnt,
 	return blkcnt;
 }
 
-void sil_sata_cmd_flush_cache(int dev)
+static void sil_sata_cmd_flush_cache(int dev)
 {
 	struct sil_cmd_block cmdb, *pcmd = &cmdb;
 
@@ -438,7 +427,7 @@ void sil_sata_cmd_flush_cache(int dev)
 	sil_exec_cmd(dev, pcmd, 0);
 }
 
-void sil_sata_cmd_flush_cache_ext(int dev)
+static void sil_sata_cmd_flush_cache_ext(int dev)
 {
 	struct sil_cmd_block cmdb, *pcmd = &cmdb;
 
@@ -502,7 +491,7 @@ ulong sata_read(int dev, ulong blknr, lbaint_t blkcnt, void *buffer)
 /*
  * SATA interface between low level driver and command layer
  */
-ulong sata_write(int dev, ulong blknr, lbaint_t blkcnt, void *buffer)
+ulong sata_write(int dev, ulong blknr, lbaint_t blkcnt, const void *buffer)
 {
 	struct sil_sata *sata = sata_dev_desc[dev].priv;
 	ulong rc;
@@ -530,7 +519,7 @@ int init_sata(int dev)
 	u16 word;
 
 	if (init_done == 1 && dev < sata_info.maxport)
-		return 1;
+		return 0;
 
 	init_done = 1;
 
@@ -579,6 +568,11 @@ int init_sata(int dev)
 	/* clear global reset & mask interrupts during initialization */
 	writel(0, (void *)(sata_info.iobase[0] + HOST_CTRL));
 
+	return 0;
+}
+
+int reset_sata(int dev)
+{
 	return 0;
 }
 

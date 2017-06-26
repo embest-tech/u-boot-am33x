@@ -1,0 +1,2 @@
+config CREATE_BOARD_SYMLINK
+	bool

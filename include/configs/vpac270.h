@@ -3,20 +3,7 @@
  *
  * Copyright (C) 2010 Marek Vasut <marek.vasut@gmail.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef	__CONFIG_H
@@ -30,7 +17,6 @@
 #define	CONFIG_SYS_TEXT_BASE	0xa0000000
 
 #ifdef	CONFIG_ONENAND
-#define	CONFIG_SPL
 #define	CONFIG_SPL_ONENAND_SUPPORT
 #define	CONFIG_SPL_ONENAND_LOAD_ADDR	0x2000
 #define	CONFIG_SPL_ONENAND_LOAD_SIZE	\
@@ -75,26 +61,21 @@
  */
 #define	CONFIG_PXA_SERIAL
 #define	CONFIG_FFUART			1
+#define CONFIG_CONS_INDEX		3
 #define	CONFIG_BAUDRATE			115200
 
 /*
  * Bootloader Components Configuration
  */
-#include <config_cmd_default.h>
-
-#define	CONFIG_CMD_NET
 #define	CONFIG_CMD_ENV
-#undef	CONFIG_CMD_IMLS
 #define	CONFIG_CMD_MMC
 #define	CONFIG_CMD_USB
 #undef	CONFIG_LCD
 #define	CONFIG_CMD_IDE
 
 #ifdef	CONFIG_ONENAND
-#undef	CONFIG_CMD_FLASH
 #define	CONFIG_CMD_ONENAND
 #else
-#define	CONFIG_CMD_FLASH
 #undef	CONFIG_CMD_ONENAND
 #endif
 
@@ -136,7 +117,6 @@
  */
 #ifdef	CONFIG_CMD_KGDB
 #define	CONFIG_KGDB_BAUDRATE		230400	/* kgdb serial port speed */
-#define	CONFIG_KGDB_SER_INDEX		2	/* which serial port to use */
 #endif
 
 /*
@@ -148,7 +128,6 @@
 #ifdef	CONFIG_SYS_HUSH_PARSER
 #define	CONFIG_SYS_PROMPT		"$ "
 #else
-#define	CONFIG_SYS_PROMPT		"=> "
 #endif
 #define	CONFIG_SYS_CBSIZE		256
 #define	CONFIG_SYS_PBSIZE		\
@@ -162,7 +141,6 @@
 /*
  * Clock Configuration
  */
-#define	CONFIG_SYS_HZ			1000		/* Timer @ 3250000 Hz */
 #define	CONFIG_SYS_CPUSPEED		0x190		/* 312MHz */
 
 
@@ -237,7 +215,7 @@
 
 #else	/* No flash */
 #define	CONFIG_SYS_NO_FLASH
-#define	CONFIG_SYS_ENV_IS_NOWHERE
+#define	CONFIG_ENV_IS_NOWHERE
 #endif
 
 /*
@@ -301,7 +279,7 @@
 /*
  * Memory settings
  */
-#define	CONFIG_SYS_MSC0_VAL	0x3ffc95fa
+#define	CONFIG_SYS_MSC0_VAL	0x3ffc95f9
 #define	CONFIG_SYS_MSC1_VAL	0x02ccf974
 #define	CONFIG_SYS_MSC2_VAL	0x00000000
 #ifdef	CONFIG_RAM_256M
@@ -313,7 +291,6 @@
 #define	CONFIG_SYS_MDMRS_VAL	0x00000000
 #define	CONFIG_SYS_FLYCNFG_VAL	0x00000000
 #define	CONFIG_SYS_SXCNFG_VAL	0x40044004
-#define	CONFIG_SYS_MEM_BUF_IMP	0x0f
 
 /*
  * PCMCIA and CF Interfaces

@@ -2,23 +2,7 @@
  * Copyright 2004, 2007-2012 Freescale Semiconductor, Inc.
  * Copyright (C) 2003  Motorola,Inc.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* U-Boot Startup Code for Motorola 85xx PowerPC based Embedded Boards
@@ -33,8 +17,6 @@
 #include <mpc85xx.h>
 #include <version.h>
 
-#define _LINUX_CONFIG_H 1	/* avoid reading Linux autoconf.h file	*/
-
 #include <ppc_asm.tmpl>
 #include <ppc_defs.h>
 
@@ -43,6 +25,18 @@
 
 #undef	MSR_KERNEL
 #define MSR_KERNEL ( MSR_ME )	/* Machine Check */
+
+#define LAW_EN		0x80000000
+
+#if defined(CONFIG_NAND_SPL) || \
+	(defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_INIT_MINIMAL))
+#define MINIMAL_SPL
+#endif
+
+#if !defined(CONFIG_SPL) && !defined(CONFIG_SYS_RAMBOOT) && \
+	!defined(CONFIG_SECURE_BOOT) && !defined(CONFIG_SRIO_PCIE_BOOT_SLAVE)
+#define NOR_BOOT
+#endif
 
 /*
  * Set up GOT: Global Offset Table
@@ -53,7 +47,7 @@
 	GOT_ENTRY(_GOT2_TABLE_)
 	GOT_ENTRY(_FIXUP_TABLE_)
 
-#ifndef CONFIG_NAND_SPL
+#ifndef MINIMAL_SPL
 	GOT_ENTRY(_start)
 	GOT_ENTRY(_start_of_vectors)
 	GOT_ENTRY(_end_of_vectors)
@@ -61,7 +55,7 @@
 #endif
 
 	GOT_ENTRY(__init_end)
-	GOT_ENTRY(__bss_end__)
+	GOT_ENTRY(__bss_end)
 	GOT_ENTRY(__bss_start)
 	END_GOT
 
@@ -86,6 +80,13 @@ _start_e500:
 	li	r1,MSR_DE
 	mtmsr 	r1
 
+	/*
+	 * If we got an ePAPR device tree pointer passed in as r3, we need that
+	 * later in cpu_init_early_f(). Save it to a safe register before we
+	 * clobber it so that we can fetch it from there later.
+	 */
+	mr	r24, r3
+
 #ifdef CONFIG_SYS_FSL_ERRATUM_A004510
 	mfspr	r3,SPRN_SVR
 	rlwinm	r3,r3,0,0xff
@@ -107,15 +108,24 @@ _start_e500:
 	/* Erratum says set bits 55:60 to 001001 */
 	msync
 	isync
-	mfspr	r3,976
+	mfspr	r3,SPRN_HDBCR0
 	li	r4,0x48
 	rlwimi	r3,r4,0,0x1f8
-	mtspr	976,r3
+	mtspr	SPRN_HDBCR0,r3
 	isync
 2:
 #endif
+#ifdef CONFIG_SYS_FSL_ERRATUM_A005125
+	msync
+	isync
+	mfspr	r3, SPRN_HDBCR0
+	oris	r3, r3, 0x0080
+	mtspr	SPRN_HDBCR0, r3
+#endif
 
-#if defined(CONFIG_SECURE_BOOT) && defined(CONFIG_E500MC)
+
+#if defined(CONFIG_SECURE_BOOT) && defined(CONFIG_E500MC) && \
+	!defined(CONFIG_E6500)
 	/* ISBC uses L2 as stack.
 	 * Disable L2 cache here so that u-boot can enable it later
 	 * as part of it's normal flow
@@ -164,161 +174,114 @@ l2_disabled:
 	mfspr	r1,DBSR
 	mtspr	DBSR,r1		/* Clear all valid bits */
 
-	/*
-	 *	Enable L1 Caches early
-	 *
-	 */
 
-#if defined(CONFIG_E500MC) && defined(CONFIG_SYS_CACHE_STASHING)
-	/* set stash id to (coreID) * 2 + 32 + L1 CT (0) */
-	li	r2,(32 + 0)
-	mtspr	L1CSR2,r2
-#endif
-
-	/* Enable/invalidate the I-Cache */
-	lis	r2,(L1CSR1_ICFI|L1CSR1_ICLFR)@h
-	ori	r2,r2,(L1CSR1_ICFI|L1CSR1_ICLFR)@l
-	mtspr	SPRN_L1CSR1,r2
-1:
-	mfspr	r3,SPRN_L1CSR1
-	and.	r1,r3,r2
-	bne	1b
-
-	lis	r3,(L1CSR1_CPE|L1CSR1_ICE)@h
-	ori	r3,r3,(L1CSR1_CPE|L1CSR1_ICE)@l
-	mtspr	SPRN_L1CSR1,r3
+	.macro	create_tlb1_entry esel ts tsize epn wimg rpn perm phy_high scratch
+	lis	\scratch, FSL_BOOKE_MAS0(1, \esel, 0)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS0(1, \esel, 0)@l
+	mtspr	MAS0, \scratch
+	lis	\scratch, FSL_BOOKE_MAS1(1, 1, 0, \ts, \tsize)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS1(1, 1, 0, \ts, \tsize)@l
+	mtspr	MAS1, \scratch
+	lis	\scratch, FSL_BOOKE_MAS2(\epn, \wimg)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS2(\epn, \wimg)@l
+	mtspr	MAS2, \scratch
+	lis	\scratch, FSL_BOOKE_MAS3(\rpn, 0, \perm)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS3(\rpn, 0, \perm)@l
+	mtspr	MAS3, \scratch
+	lis	\scratch, \phy_high@h
+	ori	\scratch, \scratch, \phy_high@l
+	mtspr	MAS7, \scratch
 	isync
-2:
-	mfspr	r3,SPRN_L1CSR1
-	andi.	r1,r3,L1CSR1_ICE@l
-	beq	2b
-
-	/* Enable/invalidate the D-Cache */
-	lis	r2,(L1CSR0_DCFI|L1CSR0_DCLFR)@h
-	ori	r2,r2,(L1CSR0_DCFI|L1CSR0_DCLFR)@l
-	mtspr	SPRN_L1CSR0,r2
-1:
-	mfspr	r3,SPRN_L1CSR0
-	and.	r1,r3,r2
-	bne	1b
-
-	lis	r3,(L1CSR0_CPE|L1CSR0_DCE)@h
-	ori	r3,r3,(L1CSR0_CPE|L1CSR0_DCE)@l
-	mtspr	SPRN_L1CSR0,r3
-	isync
-2:
-	mfspr	r3,SPRN_L1CSR0
-	andi.	r1,r3,L1CSR0_DCE@l
-	beq	2b
-
-#if defined(CONFIG_SYS_PPC_E500_DEBUG_TLB) && !defined(CONFIG_NAND_SPL)
-/*
- * TLB entry for debuggging in AS1
- * Create temporary TLB entry in AS0 to handle debug exception
- * As on debug exception MSR is cleared i.e. Address space is changed
- * to 0. A TLB entry (in AS0) is required to handle debug exception generated
- * in AS1.
- */
-
-	lis     r6,FSL_BOOKE_MAS0(1,
-			CONFIG_SYS_PPC_E500_DEBUG_TLB, 0)@h
-	ori     r6,r6,FSL_BOOKE_MAS0(1,
-			CONFIG_SYS_PPC_E500_DEBUG_TLB, 0)@l
-
-#if !defined(CONFIG_SYS_RAMBOOT) && !defined(CONFIG_SECURE_BOOT)
-/*
- * TLB entry is created for IVPR + IVOR15 to map on valid OP code address
- * bacause flash's virtual address maps to 0xff800000 - 0xffffffff.
- * and this window is outside of 4K boot window.
- */
-	lis     r7,FSL_BOOKE_MAS1(1, 1, 0, 0, BOOKE_PAGESZ_4M)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 1, 0, 0, BOOKE_PAGESZ_4M)@l
-
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE & 0xffc00000,
-							(MAS2_I|MAS2_G))@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE & 0xffc00000,
-							(MAS2_I|MAS2_G))@l
-
-	/* The 85xx has the default boot window 0xff800000 - 0xffffffff */
-	lis     r9,FSL_BOOKE_MAS3(0xffc00000, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(0xffc00000, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@l
-#elif !defined(CONFIG_SYS_RAMBOOT) && defined(CONFIG_SECURE_BOOT)
-	lis     r7,FSL_BOOKE_MAS1(1, 1, 0, 0, BOOKE_PAGESZ_1M)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 1, 0, 0, BOOKE_PAGESZ_1M)@l
-
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE,(MAS2_I|MAS2_G))@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE,(MAS2_I|MAS2_G))@l
-
-	lis     r9,FSL_BOOKE_MAS3(CONFIG_SYS_PBI_FLASH_WINDOW, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(CONFIG_SYS_PBI_FLASH_WINDOW, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@l
-#else
-/*
- * TLB entry is created for IVPR + IVOR15 to map on valid OP code address
- * because "nexti" will resize TLB to 4K
- */
-	lis     r7,FSL_BOOKE_MAS1(1, 1, 0, 0, BOOKE_PAGESZ_256K)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 1, 0, 0, BOOKE_PAGESZ_256K)@l
-
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE, (MAS2_I))@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE,
-							(MAS2_I))@l
-	lis     r9,FSL_BOOKE_MAS3(CONFIG_SYS_MONITOR_BASE, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(CONFIG_SYS_MONITOR_BASE, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@l
-#endif
-	mtspr   MAS0,r6
-	mtspr   MAS1,r7
-	mtspr   MAS2,r8
-	mtspr   MAS3,r9
+	msync
 	tlbwe
 	isync
-#endif
+	.endm
 
-/*
- * Ne need to setup interrupt vector for NAND SPL
- * because NAND SPL never compiles it.
- */
-#if !defined(CONFIG_NAND_SPL)
+	.macro	create_tlb0_entry esel ts tsize epn wimg rpn perm phy_high scratch
+	lis	\scratch, FSL_BOOKE_MAS0(0, \esel, 0)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS0(0, \esel, 0)@l
+	mtspr	MAS0, \scratch
+	lis	\scratch, FSL_BOOKE_MAS1(1, 0, 0, \ts, \tsize)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS1(1, 0, 0, \ts, \tsize)@l
+	mtspr	MAS1, \scratch
+	lis	\scratch, FSL_BOOKE_MAS2(\epn, \wimg)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS2(\epn, \wimg)@l
+	mtspr	MAS2, \scratch
+	lis	\scratch, FSL_BOOKE_MAS3(\rpn, 0, \perm)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS3(\rpn, 0, \perm)@l
+	mtspr	MAS3, \scratch
+	lis	\scratch, \phy_high@h
+	ori	\scratch, \scratch, \phy_high@l
+	mtspr	MAS7, \scratch
+	isync
+	msync
+	tlbwe
+	isync
+	.endm
+
+	.macro	delete_tlb1_entry esel scratch
+	lis	\scratch, FSL_BOOKE_MAS0(1, \esel, 0)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS0(1, \esel, 0)@l
+	mtspr	MAS0, \scratch
+	li	\scratch, 0
+	mtspr	MAS1, \scratch
+	isync
+	msync
+	tlbwe
+	isync
+	.endm
+
+	.macro	delete_tlb0_entry esel epn wimg scratch
+	lis	\scratch, FSL_BOOKE_MAS0(0, \esel, 0)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS0(0, \esel, 0)@l
+	mtspr	MAS0, \scratch
+	li	\scratch, 0
+	mtspr	MAS1, \scratch
+	lis	\scratch, FSL_BOOKE_MAS2(\epn, \wimg)@h
+	ori	\scratch, \scratch, FSL_BOOKE_MAS2(\epn, \wimg)@l
+	mtspr	MAS2, \scratch
+	isync
+	msync
+	tlbwe
+	isync
+	.endm
+
+/* Interrupt vectors do not fit in minimal SPL. */
+#if !defined(MINIMAL_SPL)
 	/* Setup interrupt vectors */
 	lis	r1,CONFIG_SYS_MONITOR_BASE@h
 	mtspr	IVPR,r1
 
-	lis	r3,(CONFIG_SYS_MONITOR_BASE & 0xffff)@h
-	ori	r3,r3,(CONFIG_SYS_MONITOR_BASE & 0xffff)@l
-
-	addi	r4,r3,CriticalInput - _start + _START_OFFSET
+	li	r4,CriticalInput@l
 	mtspr	IVOR0,r4	/* 0: Critical input */
-	addi	r4,r3,MachineCheck - _start + _START_OFFSET
+	li	r4,MachineCheck@l
 	mtspr	IVOR1,r4	/* 1: Machine check */
-	addi	r4,r3,DataStorage - _start + _START_OFFSET
+	li	r4,DataStorage@l
 	mtspr	IVOR2,r4	/* 2: Data storage */
-	addi	r4,r3,InstStorage - _start + _START_OFFSET
+	li	r4,InstStorage@l
 	mtspr	IVOR3,r4	/* 3: Instruction storage */
-	addi	r4,r3,ExtInterrupt - _start + _START_OFFSET
+	li	r4,ExtInterrupt@l
 	mtspr	IVOR4,r4	/* 4: External interrupt */
-	addi	r4,r3,Alignment - _start + _START_OFFSET
+	li	r4,Alignment@l
 	mtspr	IVOR5,r4	/* 5: Alignment */
-	addi	r4,r3,ProgramCheck - _start + _START_OFFSET
+	li	r4,ProgramCheck@l
 	mtspr	IVOR6,r4	/* 6: Program check */
-	addi	r4,r3,FPUnavailable - _start + _START_OFFSET
+	li	r4,FPUnavailable@l
 	mtspr	IVOR7,r4	/* 7: floating point unavailable */
-	addi	r4,r3,SystemCall - _start + _START_OFFSET
+	li	r4,SystemCall@l
 	mtspr	IVOR8,r4	/* 8: System call */
 	/* 9: Auxiliary processor unavailable(unsupported) */
-	addi	r4,r3,Decrementer - _start + _START_OFFSET
+	li	r4,Decrementer@l
 	mtspr	IVOR10,r4	/* 10: Decrementer */
-	addi	r4,r3,IntervalTimer - _start + _START_OFFSET
+	li	r4,IntervalTimer@l
 	mtspr	IVOR11,r4	/* 11: Interval timer */
-	addi	r4,r3,WatchdogTimer - _start + _START_OFFSET
+	li	r4,WatchdogTimer@l
 	mtspr	IVOR12,r4	/* 12: Watchdog timer */
-	addi	r4,r3,DataTLBError - _start + _START_OFFSET
+	li	r4,DataTLBError@l
 	mtspr	IVOR13,r4	/* 13: Data TLB error */
-	addi	r4,r3,InstructionTLBError - _start + _START_OFFSET
+	li	r4,InstructionTLBError@l
 	mtspr	IVOR14,r4	/* 14: Instruction TLB error */
-	addi	r4,r3,DebugBreakpoint - _start + _START_OFFSET
+	li	r4,DebugBreakpoint@l
 	mtspr	IVOR15,r4	/* 15: Debug */
 #endif
 
@@ -348,7 +311,7 @@ l2_disabled:
 #endif
 	mtspr	HID0,r0
 
-#ifndef CONFIG_E500MC
+#if !defined(CONFIG_E500MC) && !defined(CONFIG_QEMU_E500)
 	li	r0,(HID1_ASTME|HID1_ABE)@l	/* Addr streaming & broadcast */
 	mfspr	r3,PVR
 	andi.	r3,r3, 0xff
@@ -361,9 +324,9 @@ l2_disabled:
 #endif
 
 #ifdef CONFIG_SYS_FSL_ERRATUM_CPU_A003999
-	mfspr	r3,977
+	mfspr	r3,SPRN_HDBCR1
 	oris	r3,r3,0x0100
-	mtspr	977,r3
+	mtspr	SPRN_HDBCR1,r3
 #endif
 
 	/* Enable Branch Prediction */
@@ -392,27 +355,11 @@ l2_disabled:
 	 */
 
 	/* create a temp mapping TLB0[0] for LBCR  */
-	lis     r6,FSL_BOOKE_MAS0(0, 0, 0)@h
-	ori     r6,r6,FSL_BOOKE_MAS0(0, 0, 0)@l
-
-	lis     r7,FSL_BOOKE_MAS1(1, 0, 0, 0, BOOKE_PAGESZ_4K)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 0, 0, 0, BOOKE_PAGESZ_4K)@l
-
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_LBC_ADDR, MAS2_I|MAS2_G)@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_LBC_ADDR, MAS2_I|MAS2_G)@l
-
-	lis     r9,FSL_BOOKE_MAS3(CONFIG_SYS_LBC_ADDR, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(CONFIG_SYS_LBC_ADDR, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@l
-
-	mtspr   MAS0,r6
-	mtspr   MAS1,r7
-	mtspr   MAS2,r8
-	mtspr   MAS3,r9
-	isync
-	msync
-	tlbwe
+	create_tlb0_entry 0, \
+		0, BOOKE_PAGESZ_4K, \
+		CONFIG_SYS_LBC_ADDR, MAS2_I|MAS2_G, \
+		CONFIG_SYS_LBC_ADDR, MAS3_SW|MAS3_SR, \
+		0, r6
 
 	/* Set LBCR register */
 	lis     r4,CONFIG_SYS_LBCR_ADDR@h
@@ -454,7 +401,7 @@ nexti:	mflr	r1		/* R1 = our PC */
 
 	/* Set the size of the TLB to 4KB */
 	mfspr	r3, MAS1
-	li	r2, 0xF00
+	li	r2, 0xF80
 	andc	r3, r3, r2	/* Clear the TSIZE bits */
 	ori	r3, r3, MAS1_TSIZE(BOOKE_PAGESZ_4K)@l
 	oris	r3, r3, MAS1_IPROT@h
@@ -505,10 +452,6 @@ nexti:	mflr	r1		/* R1 = our PC */
 	li	r3, 0
 	mtspr	MAS1, r3
 1:	cmpw	r3, r14
-#if defined(CONFIG_SYS_PPC_E500_DEBUG_TLB) && !defined(CONFIG_NAND_SPL)
-	cmpwi	cr1, r3, CONFIG_SYS_PPC_E500_DEBUG_TLB
-	cror	cr0*4+eq, cr0*4+eq, cr1*4+eq
-#endif
 	rlwinm	r5, r3, 16, MAS0_ESEL_MSK
 	addi	r3, r3, 1
 	beq	2f		/* skip the entry we're executing from */
@@ -523,6 +466,41 @@ nexti:	mflr	r1		/* R1 = our PC */
 
 2:	cmpw	r3, r4
 	blt	1b
+
+#if defined(CONFIG_SYS_PPC_E500_DEBUG_TLB) && !defined(MINIMAL_SPL) && \
+	!defined(CONFIG_SECURE_BOOT)
+/*
+ * TLB entry for debuggging in AS1
+ * Create temporary TLB entry in AS0 to handle debug exception
+ * As on debug exception MSR is cleared i.e. Address space is changed
+ * to 0. A TLB entry (in AS0) is required to handle debug exception generated
+ * in AS1.
+ */
+
+#ifdef NOR_BOOT
+/*
+ * TLB entry is created for IVPR + IVOR15 to map on valid OP code address
+ * bacause flash's virtual address maps to 0xff800000 - 0xffffffff.
+ * and this window is outside of 4K boot window.
+ */
+	create_tlb1_entry CONFIG_SYS_PPC_E500_DEBUG_TLB, \
+		0, BOOKE_PAGESZ_4M, \
+		CONFIG_SYS_MONITOR_BASE & 0xffc00000,  MAS2_I|MAS2_G, \
+		0xffc00000, MAS3_SX|MAS3_SW|MAS3_SR, \
+		0, r6
+
+#else
+/*
+ * TLB entry is created for IVPR + IVOR15 to map on valid OP code address
+ * because "nexti" will resize TLB to 4K
+ */
+	create_tlb1_entry CONFIG_SYS_PPC_E500_DEBUG_TLB, \
+		0, BOOKE_PAGESZ_256K, \
+		CONFIG_SYS_MONITOR_BASE & 0xfffc0000, MAS2_I, \
+		CONFIG_SYS_MONITOR_BASE & 0xfffc0000, MAS3_SX|MAS3_SW|MAS3_SR, \
+		0, r6
+#endif
+#endif
 
 /*
  * Relocate CCSR, if necessary.  We relocate CCSR if (obviously) the default
@@ -551,49 +529,22 @@ create_ccsr_new_tlb:
 	ori	r8, r8, CONFIG_SYS_CCSRBAR@l
 	lis	r9, (CONFIG_SYS_CCSRBAR + 0x1000)@h
 	ori	r9, r9, (CONFIG_SYS_CCSRBAR + 0x1000)@l
-	lis     r0, FSL_BOOKE_MAS0(0, 0, 0)@h
-	ori     r0, r0, FSL_BOOKE_MAS0(0, 0, 0)@l
-	lis     r1, FSL_BOOKE_MAS1(1, 0, 0, 0, BOOKE_PAGESZ_4K)@h
-	ori     r1, r1, FSL_BOOKE_MAS1(1, 0, 0, 0, BOOKE_PAGESZ_4K)@l
-	lis     r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR, (MAS2_I|MAS2_G))@h
-	ori     r2, r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR, (MAS2_I|MAS2_G))@l
-	lis     r3, FSL_BOOKE_MAS3(CONFIG_SYS_CCSRBAR_PHYS_LOW, 0, (MAS3_SW|MAS3_SR))@h
-	ori     r3, r3, FSL_BOOKE_MAS3(CONFIG_SYS_CCSRBAR_PHYS_LOW, 0, (MAS3_SW|MAS3_SR))@l
-#ifdef CONFIG_ENABLE_36BIT_PHYS
-	lis	r7, CONFIG_SYS_CCSRBAR_PHYS_HIGH@h
-	ori	r7, r7, CONFIG_SYS_CCSRBAR_PHYS_HIGH@l
-	mtspr   MAS7, r7
-#endif
-	mtspr   MAS0, r0
-	mtspr   MAS1, r1
-	mtspr   MAS2, r2
-	mtspr   MAS3, r3
-	isync
-	msync
-	tlbwe
-
+	create_tlb0_entry 0, \
+		0, BOOKE_PAGESZ_4K, \
+		CONFIG_SYS_CCSRBAR, MAS2_I|MAS2_G, \
+		CONFIG_SYS_CCSRBAR_PHYS_LOW, MAS3_SW|MAS3_SR, \
+		CONFIG_SYS_CCSRBAR_PHYS_HIGH, r3
 	/*
 	 * Create a TLB for the current location of CCSR.  Register R9 is reserved
 	 * for the virtual address of this TLB (CONFIG_SYS_CCSRBAR + 0x1000).
 	 */
 create_ccsr_old_tlb:
-	lis     r0, FSL_BOOKE_MAS0(0, 1, 0)@h
-	ori     r0, r0, FSL_BOOKE_MAS0(0, 1, 0)@l
-	lis     r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR + 0x1000, (MAS2_I|MAS2_G))@h
-	ori     r2, r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR + 0x1000, (MAS2_I|MAS2_G))@l
-	lis     r3, FSL_BOOKE_MAS3(CONFIG_SYS_CCSRBAR_DEFAULT, 0, (MAS3_SW|MAS3_SR))@h
-	ori     r3, r3, FSL_BOOKE_MAS3(CONFIG_SYS_CCSRBAR_DEFAULT, 0, (MAS3_SW|MAS3_SR))@l
-#ifdef CONFIG_ENABLE_36BIT_PHYS
-	li	r7, 0	/* The default CCSR address is always a 32-bit number */
-	mtspr   MAS7, r7
-#endif
-	mtspr   MAS0, r0
-	/* MAS1 is the same as above */
-	mtspr   MAS2, r2
-	mtspr   MAS3, r3
-	isync
-	msync
-	tlbwe
+	create_tlb0_entry 1, \
+		0, BOOKE_PAGESZ_4K, \
+		CONFIG_SYS_CCSRBAR + 0x1000, MAS2_I|MAS2_G, \
+		CONFIG_SYS_CCSRBAR_DEFAULT, MAS3_SW|MAS3_SR, \
+		0, r3 /* The default CCSR address is always a 32-bit number */
+
 
 	/*
 	 * We have a TLB for what we think is the current (old) CCSR.  Let's
@@ -625,7 +576,6 @@ infinite_debug_loop:
 #ifdef CONFIG_FSL_CORENET
 
 #define CCSR_LAWBARH0	(CONFIG_SYS_CCSRBAR + 0x1000)
-#define LAW_EN		0x80000000
 #define LAW_SIZE_4K	0xb
 #define CCSRBAR_LAWAR	(LAW_EN | (0x1e << 20) | LAW_SIZE_4K)
 #define CCSRAR_C	0x80000000	/* Commit */
@@ -743,29 +693,93 @@ write_new_ccsrbar:
 
 	/* Delete the temporary TLBs */
 delete_temp_tlbs:
-	lis     r0, FSL_BOOKE_MAS0(0, 0, 0)@h
-	ori     r0, r0, FSL_BOOKE_MAS0(0, 0, 0)@l
-	li	r1, 0
-	lis     r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR, (MAS2_I|MAS2_G))@h
-	ori     r2, r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR, (MAS2_I|MAS2_G))@l
-	mtspr   MAS0, r0
-	mtspr   MAS1, r1
-	mtspr   MAS2, r2
-	isync
-	msync
-	tlbwe
+	delete_tlb0_entry 0, CONFIG_SYS_CCSRBAR, MAS2_I|MAS2_G, r3
+	delete_tlb0_entry 1, CONFIG_SYS_CCSRBAR + 0x1000, MAS2_I|MAS2_G, r3
 
-	lis     r0, FSL_BOOKE_MAS0(0, 1, 0)@h
-	ori     r0, r0, FSL_BOOKE_MAS0(0, 1, 0)@l
-	lis     r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR + 0x1000, (MAS2_I|MAS2_G))@h
-	ori     r2, r2, FSL_BOOKE_MAS2(CONFIG_SYS_CCSRBAR + 0x1000, (MAS2_I|MAS2_G))@l
-	mtspr   MAS0, r0
-	mtspr   MAS2, r2
-	isync
-	msync
-	tlbwe
 #endif /* #if (CONFIG_SYS_CCSRBAR_DEFAULT != CONFIG_SYS_CCSRBAR_PHYS) */
 
+#if defined(CONFIG_SYS_FSL_QORIQ_CHASSIS2) && defined(CONFIG_E6500)
+create_ccsr_l2_tlb:
+	/*
+	 * Create a TLB for the MMR location of CCSR
+	 * to access L2CSR0 register
+	 */
+	create_tlb0_entry 0, \
+		0, BOOKE_PAGESZ_4K, \
+		CONFIG_SYS_CCSRBAR + 0xC20000, MAS2_I|MAS2_G, \
+		CONFIG_SYS_CCSRBAR_PHYS_LOW + 0xC20000, MAS3_SW|MAS3_SR, \
+		CONFIG_SYS_CCSRBAR_PHYS_HIGH, r3
+
+enable_l2_cluster_l2:
+	/* enable L2 cache */
+	lis	r3, (CONFIG_SYS_CCSRBAR + 0xC20000)@h
+	ori	r3, r3, (CONFIG_SYS_CCSRBAR + 0xC20000)@l
+	li	r4, 33	/* stash id */
+	stw	r4, 4(r3)
+	lis	r4, (L2CSR0_L2FI|L2CSR0_L2LFC)@h
+	ori	r4, r4, (L2CSR0_L2FI|L2CSR0_L2LFC)@l
+	sync
+	stw	r4, 0(r3)	/* invalidate L2 */
+1:	sync
+	lwz	r0, 0(r3)
+	twi	0, r0, 0
+	isync
+	and.	r1, r0, r4
+	bne	1b
+	lis	r4, (L2CSR0_L2E|L2CSR0_L2PE)@h
+	ori	r4, r4, (L2CSR0_L2REP_MODE)@l
+	sync
+	stw	r4, 0(r3)	/* enable L2 */
+delete_ccsr_l2_tlb:
+	delete_tlb0_entry 0, CONFIG_SYS_CCSRBAR + 0xC20000, MAS2_I|MAS2_G, r3
+#endif
+
+	/*
+	 * Enable the L1. On e6500, this has to be done
+	 * after the L2 is up.
+	 */
+
+#ifdef CONFIG_SYS_CACHE_STASHING
+	/* set stash id to (coreID) * 2 + 32 + L1 CT (0) */
+	li	r2,(32 + 0)
+	mtspr	L1CSR2,r2
+#endif
+
+	/* Enable/invalidate the I-Cache */
+	lis	r2,(L1CSR1_ICFI|L1CSR1_ICLFR)@h
+	ori	r2,r2,(L1CSR1_ICFI|L1CSR1_ICLFR)@l
+	mtspr	SPRN_L1CSR1,r2
+1:
+	mfspr	r3,SPRN_L1CSR1
+	and.	r1,r3,r2
+	bne	1b
+
+	lis	r3,(L1CSR1_CPE|L1CSR1_ICE)@h
+	ori	r3,r3,(L1CSR1_CPE|L1CSR1_ICE)@l
+	mtspr	SPRN_L1CSR1,r3
+	isync
+2:
+	mfspr	r3,SPRN_L1CSR1
+	andi.	r1,r3,L1CSR1_ICE@l
+	beq	2b
+
+	/* Enable/invalidate the D-Cache */
+	lis	r2,(L1CSR0_DCFI|L1CSR0_DCLFR)@h
+	ori	r2,r2,(L1CSR0_DCFI|L1CSR0_DCLFR)@l
+	mtspr	SPRN_L1CSR0,r2
+1:
+	mfspr	r3,SPRN_L1CSR0
+	and.	r1,r3,r2
+	bne	1b
+
+	lis	r3,(L1CSR0_CPE|L1CSR0_DCE)@h
+	ori	r3,r3,(L1CSR0_CPE|L1CSR0_DCE)@l
+	mtspr	SPRN_L1CSR0,r3
+	isync
+2:
+	mfspr	r3,SPRN_L1CSR0
+	andi.	r1,r3,L1CSR0_DCE@l
+	beq	2b
 #ifdef CONFIG_SYS_FSL_ERRATUM_A004510
 #define DCSR_LAWBARH0	(CONFIG_SYS_CCSRBAR + 0x1000)
 #define LAW_SIZE_1M	0x13
@@ -871,7 +885,11 @@ delete_temp_tlbs:
 	erratum_set_dcsr 0xb0008 0x00900000
 	erratum_set_dcsr 0xb0e40 0xe00a0000
 	erratum_set_ccsr 0x18600 CONFIG_SYS_FSL_CORENET_SNOOPVEC_COREONLY
+#ifdef  CONFIG_RAMBOOT_PBL
+	erratum_set_ccsr 0x10f00 0x495e5000
+#else
 	erratum_set_ccsr 0x10f00 0x415e5000
+#endif
 	erratum_set_ccsr 0x11f00 0x415e5000
 
 	/* Make temp mapping uncacheable again, if it was initially */
@@ -1017,84 +1035,51 @@ create_init_ram_area:
 	lis     r6,FSL_BOOKE_MAS0(1, 15, 0)@h
 	ori     r6,r6,FSL_BOOKE_MAS0(1, 15, 0)@l
 
-#if !defined(CONFIG_SYS_RAMBOOT) && !defined(CONFIG_SECURE_BOOT)
+#ifdef NOR_BOOT
 	/* create a temp mapping in AS=1 to the 4M boot window */
-	lis     r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_4M)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_4M)@l
+	create_tlb1_entry 15, \
+		1, BOOKE_PAGESZ_4M, \
+		CONFIG_SYS_MONITOR_BASE & 0xffc00000, MAS2_I|MAS2_G, \
+		0xffc00000, MAS3_SX|MAS3_SW|MAS3_SR, \
+		0, r6
 
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE & 0xffc00000, (MAS2_I|MAS2_G))@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE & 0xffc00000, (MAS2_I|MAS2_G))@l
-
-	/* The 85xx has the default boot window 0xff800000 - 0xffffffff */
-	lis     r9,FSL_BOOKE_MAS3(0xffc00000, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(0xffc00000, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@l
 #elif !defined(CONFIG_SYS_RAMBOOT) && defined(CONFIG_SECURE_BOOT)
 	/* create a temp mapping in AS = 1 for Flash mapping
 	 * created by PBL for ISBC code
 	*/
-	lis     r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_1M)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_1M)@l
-
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE, (MAS2_I|MAS2_G))@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE, (MAS2_I|MAS2_G))@l
-
-	lis     r9,FSL_BOOKE_MAS3(CONFIG_SYS_PBI_FLASH_WINDOW, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(CONFIG_SYS_PBI_FLASH_WINDOW, 0,
-						(MAS3_SX|MAS3_SW|MAS3_SR))@l
+	create_tlb1_entry 15, \
+		1, BOOKE_PAGESZ_1M, \
+		CONFIG_SYS_MONITOR_BASE & 0xfff00000, MAS2_I|MAS2_G, \
+		CONFIG_SYS_PBI_FLASH_WINDOW & 0xfff00000, MAS3_SX|MAS3_SW|MAS3_SR, \
+		0, r6
 #else
 	/*
 	 * create a temp mapping in AS=1 to the 1M CONFIG_SYS_MONITOR_BASE space, the main
 	 * image has been relocated to CONFIG_SYS_MONITOR_BASE on the second stage.
 	 */
-	lis     r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_1M)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_1M)@l
-
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE, (MAS2_I|MAS2_G))@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_MONITOR_BASE, (MAS2_I|MAS2_G))@l
-
-	lis     r9,FSL_BOOKE_MAS3(CONFIG_SYS_MONITOR_BASE, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(CONFIG_SYS_MONITOR_BASE, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@l
+	create_tlb1_entry 15, \
+		1, BOOKE_PAGESZ_1M, \
+		CONFIG_SYS_MONITOR_BASE & 0xfff00000, MAS2_I|MAS2_G, \
+		CONFIG_SYS_MONITOR_BASE & 0xfff00000, MAS3_SX|MAS3_SW|MAS3_SR, \
+		0, r6
 #endif
-
-	mtspr   MAS0,r6
-	mtspr   MAS1,r7
-	mtspr   MAS2,r8
-	mtspr   MAS3,r9
-	isync
-	msync
-	tlbwe
 
 	/* create a temp mapping in AS=1 to the stack */
-	lis     r6,FSL_BOOKE_MAS0(1, 14, 0)@h
-	ori     r6,r6,FSL_BOOKE_MAS0(1, 14, 0)@l
-
-	lis     r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_16K)@h
-	ori     r7,r7,FSL_BOOKE_MAS1(1, 1, 0, 1, BOOKE_PAGESZ_16K)@l
-
-	lis     r8,FSL_BOOKE_MAS2(CONFIG_SYS_INIT_RAM_ADDR, 0)@h
-	ori     r8,r8,FSL_BOOKE_MAS2(CONFIG_SYS_INIT_RAM_ADDR, 0)@l
-
 #if defined(CONFIG_SYS_INIT_RAM_ADDR_PHYS_LOW) && \
     defined(CONFIG_SYS_INIT_RAM_ADDR_PHYS_HIGH)
-	lis     r9,FSL_BOOKE_MAS3(CONFIG_SYS_INIT_RAM_ADDR_PHYS_LOW, 0,
-				(MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(CONFIG_SYS_INIT_RAM_ADDR_PHYS_LOW, 0,
-				(MAS3_SX|MAS3_SW|MAS3_SR))@l
-	li      r10,CONFIG_SYS_INIT_RAM_ADDR_PHYS_HIGH
-	mtspr	MAS7,r10
-#else
-	lis     r9,FSL_BOOKE_MAS3(CONFIG_SYS_INIT_RAM_ADDR, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@h
-	ori     r9,r9,FSL_BOOKE_MAS3(CONFIG_SYS_INIT_RAM_ADDR, 0, (MAS3_SX|MAS3_SW|MAS3_SR))@l
-#endif
+	create_tlb1_entry 14, \
+		1, BOOKE_PAGESZ_16K, \
+		CONFIG_SYS_INIT_RAM_ADDR, 0, \
+		CONFIG_SYS_INIT_RAM_ADDR_PHYS_LOW, MAS3_SX|MAS3_SW|MAS3_SR, \
+		CONFIG_SYS_INIT_RAM_ADDR_PHYS_HIGH, r6
 
-	mtspr   MAS0,r6
-	mtspr   MAS1,r7
-	mtspr   MAS2,r8
-	mtspr   MAS3,r9
-	isync
-	msync
-	tlbwe
+#else
+	create_tlb1_entry 14, \
+		1, BOOKE_PAGESZ_16K, \
+		CONFIG_SYS_INIT_RAM_ADDR, 0, \
+		CONFIG_SYS_INIT_RAM_ADDR, MAS3_SX|MAS3_SW|MAS3_SR, \
+		0, r6
+#endif
 
 	lis	r6,MSR_IS|MSR_DS|MSR_DE@h
 	ori	r6,r6,MSR_IS|MSR_DS|MSR_DE@l
@@ -1125,14 +1110,15 @@ switch_as:
 	bdnz	1b
 
 	/* Jump out the last 4K page and continue to 'normal' start */
-#ifdef CONFIG_SYS_RAMBOOT
+#if defined(CONFIG_SYS_RAMBOOT) || defined(CONFIG_SPL)
+	/* We assume that we're already running at the address we're linked at */
 	b	_start_cont
 #else
 	/* Calculate absolute address in FLASH and jump there		*/
 	/*--------------------------------------------------------------*/
 	lis	r3,CONFIG_SYS_MONITOR_BASE@h
 	ori	r3,r3,CONFIG_SYS_MONITOR_BASE@l
-	addi	r3,r3,_start_cont - _start + _START_OFFSET
+	addi	r3,r3,_start_cont - _start
 	mtlr	r3
 	blr
 #endif
@@ -1157,6 +1143,10 @@ _start_cont:
 	mr	r1,r3		/* Transfer to SP(r1) */
 
 	GET_GOT
+
+	/* Pass our potential ePAPR device tree pointer to cpu_init_early_f */
+	mr	r3, r24
+
 	bl	cpu_init_early_f
 
 	/* switch back to AS = 0 */
@@ -1165,14 +1155,13 @@ _start_cont:
 	mtmsr	r3
 	isync
 
-	bl	cpu_init_f
+	bl	cpu_init_f	/* return boot_flag for calling board_init_f */
 	bl	board_init_f
 	isync
 
 	/* NOTREACHED - board_init_f() does not return */
 
-#ifndef CONFIG_NAND_SPL
-	. = EXC_OFF_SYS_RESET
+#ifndef MINIMAL_SPL
 	.globl	_start_of_vectors
 _start_of_vectors:
 
@@ -1192,7 +1181,6 @@ _start_of_vectors:
 	STD_EXCEPTION(0x0500, ExtInterrupt, ExtIntException)
 
 /* Alignment exception. */
-	. = 0x0600
 Alignment:
 	EXCEPTION_PROLOG(SRR0, SRR1)
 	mfspr	r4,DAR
@@ -1200,87 +1188,20 @@ Alignment:
 	mfspr	r5,DSISR
 	stw	r5,_DSISR(r21)
 	addi	r3,r1,STACK_FRAME_OVERHEAD
-	EXC_XFER_TEMPLATE(Alignment, AlignmentException, MSR_KERNEL, COPY_EE)
+	EXC_XFER_TEMPLATE(0x600, Alignment, AlignmentException,
+		MSR_KERNEL, COPY_EE)
 
 /* Program check exception */
-	. = 0x0700
 ProgramCheck:
 	EXCEPTION_PROLOG(SRR0, SRR1)
 	addi	r3,r1,STACK_FRAME_OVERHEAD
-	EXC_XFER_TEMPLATE(ProgramCheck, ProgramCheckException,
+	EXC_XFER_TEMPLATE(0x700, ProgramCheck, ProgramCheckException,
 		MSR_KERNEL, COPY_EE)
 
 	/* No FPU on MPC85xx.  This exception is not supposed to happen.
 	*/
 	STD_EXCEPTION(0x0800, FPUnavailable, UnknownException)
-
-	. = 0x0900
-/*
- * r0 - SYSCALL number
- * r3-... arguments
- */
-SystemCall:
-	addis	r11,r0,0	/* get functions table addr */
-	ori	r11,r11,0	/* Note: this code is patched in trap_init */
-	addis	r12,r0,0	/* get number of functions */
-	ori	r12,r12,0
-
-	cmplw	0,r0,r12
-	bge	1f
-
-	rlwinm	r0,r0,2,0,31	/* fn_addr = fn_tbl[r0] */
-	add	r11,r11,r0
-	lwz	r11,0(r11)
-
-	li	r20,0xd00-4	/* Get stack pointer */
-	lwz	r12,0(r20)
-	subi	r12,r12,12	/* Adjust stack pointer */
-	li	r0,0xc00+_end_back-SystemCall
-	cmplw	0,r0,r12	/* Check stack overflow */
-	bgt	1f
-	stw	r12,0(r20)
-
-	mflr	r0
-	stw	r0,0(r12)
-	mfspr	r0,SRR0
-	stw	r0,4(r12)
-	mfspr	r0,SRR1
-	stw	r0,8(r12)
-
-	li	r12,0xc00+_back-SystemCall
-	mtlr	r12
-	mtspr	SRR0,r11
-
-1:	SYNC
-	rfi
-_back:
-
-	mfmsr	r11			/* Disable interrupts */
-	li	r12,0
-	ori	r12,r12,MSR_EE
-	andc	r11,r11,r12
-	SYNC				/* Some chip revs need this... */
-	mtmsr	r11
-	SYNC
-
-	li	r12,0xd00-4		/* restore regs */
-	lwz	r12,0(r12)
-
-	lwz	r11,0(r12)
-	mtlr	r11
-	lwz	r11,4(r12)
-	mtspr	SRR0,r11
-	lwz	r11,8(r12)
-	mtspr	SRR1,r11
-
-	addi	r12,r12,12		/* Adjust stack pointer */
-	li	r20,0xd00-4
-	stw	r12,0(r20)
-
-	SYNC
-	rfi
-_end_back:
-
+	STD_EXCEPTION(0x0900, SystemCall, UnknownException)
 	STD_EXCEPTION(0x0a00, Decrementer, timer_interrupt)
 	STD_EXCEPTION(0x0b00, IntervalTimer, UnknownException)
 	STD_EXCEPTION(0x0c00, WatchdogTimer, UnknownException)
@@ -1300,32 +1221,22 @@ _end_of_vectors:
  * This code finishes saving the registers to the exception frame
  * and jumps to the appropriate handler for the exception.
  * Register r21 is pointer into trap frame, r1 has new stack pointer.
+ * r23 is the address of the handler.
  */
 	.globl	transfer_to_handler
 transfer_to_handler:
-	stw	r22,_NIP(r21)
-	lis	r22,MSR_POW@h
-	andc	r23,r23,r22
-	stw	r23,_MSR(r21)
 	SAVE_GPR(7, r21)
 	SAVE_4GPRS(8, r21)
 	SAVE_8GPRS(12, r21)
 	SAVE_8GPRS(24, r21)
 
-	mflr	r23
-	andi.	r24,r23,0x3f00		/* get vector offset */
-	stw	r24,TRAP(r21)
 	li	r22,0
 	stw	r22,RESULT(r21)
 	mtspr	SPRG2,r22		/* r1 is now kernel sp */
 
-	lwz	r24,0(r23)		/* virtual address of handler */
-	lwz	r23,4(r23)		/* where to go when done */
-	mtspr	SRR0,r24
-	mtspr	SRR1,r20
-	mtlr	r23
-	SYNC
-	rfi				/* jump to handler, enable MMU */
+	mtctr	r23			/* virtual address of handler */
+	mtmsr	r20
+	bctrl
 
 int_return:
 	mfmsr	r28		/* Disable interrupts */
@@ -1356,66 +1267,6 @@ int_return:
 	lwz	r1,GPR1(r1)
 	SYNC
 	rfi
-
-crit_return:
-	mfmsr	r28		/* Disable interrupts */
-	li	r4,0
-	ori	r4,r4,MSR_EE
-	andc	r28,r28,r4
-	SYNC			/* Some chip revs need this... */
-	mtmsr	r28
-	SYNC
-	lwz	r2,_CTR(r1)
-	lwz	r0,_LINK(r1)
-	mtctr	r2
-	mtlr	r0
-	lwz	r2,_XER(r1)
-	lwz	r0,_CCR(r1)
-	mtspr	XER,r2
-	mtcrf	0xFF,r0
-	REST_10GPRS(3, r1)
-	REST_10GPRS(13, r1)
-	REST_8GPRS(23, r1)
-	REST_GPR(31, r1)
-	lwz	r2,_NIP(r1)	/* Restore environment */
-	lwz	r0,_MSR(r1)
-	mtspr	SPRN_CSRR0,r2
-	mtspr	SPRN_CSRR1,r0
-	lwz	r0,GPR0(r1)
-	lwz	r2,GPR2(r1)
-	lwz	r1,GPR1(r1)
-	SYNC
-	rfci
-
-mck_return:
-	mfmsr	r28		/* Disable interrupts */
-	li	r4,0
-	ori	r4,r4,MSR_EE
-	andc	r28,r28,r4
-	SYNC			/* Some chip revs need this... */
-	mtmsr	r28
-	SYNC
-	lwz	r2,_CTR(r1)
-	lwz	r0,_LINK(r1)
-	mtctr	r2
-	mtlr	r0
-	lwz	r2,_XER(r1)
-	lwz	r0,_CCR(r1)
-	mtspr	XER,r2
-	mtcrf	0xFF,r0
-	REST_10GPRS(3, r1)
-	REST_10GPRS(13, r1)
-	REST_8GPRS(23, r1)
-	REST_GPR(31, r1)
-	lwz	r2,_NIP(r1)	/* Restore environment */
-	lwz	r0,_MSR(r1)
-	mtspr	SPRN_MCSRR0,r2
-	mtspr	SPRN_MCSRR1,r0
-	lwz	r0,GPR0(r1)
-	lwz	r2,GPR2(r1)
-	lwz	r1,GPR1(r1)
-	SYNC
-	rfmci
 
 /* Cache functions.
 */
@@ -1501,11 +1352,6 @@ dcache_status:
 	andi.	r3,r3,L1CSR0_DCE
 	blr
 
-	.globl get_pir
-get_pir:
-	mfspr	r3,PIR
-	blr
-
 	.globl get_pvr
 get_pvr:
 	mfspr	r3,PVR
@@ -1514,11 +1360,6 @@ get_pvr:
 	.globl get_svr
 get_svr:
 	mfspr	r3,SVR
-	blr
-
-	.globl wr_tcr
-wr_tcr:
-	mtspr	TCR,r3
 	blr
 
 /*------------------------------------------------------------------------------- */
@@ -1615,7 +1456,7 @@ in32:
 in32r:
 	lwbrx	r3,r0,r3
 	blr
-#endif  /* !CONFIG_NAND_SPL */
+#endif  /* !MINIMAL_SPL */
 
 /*------------------------------------------------------------------------------*/
 
@@ -1659,6 +1500,7 @@ relocate_code:
 	mr	r10,r5		/* Save copy of Destination Address	*/
 
 	GET_GOT
+#ifndef CONFIG_SPL_SKIP_RELOCATE
 	mr	r3,r5				/* Destination Address	*/
 	lis	r4,CONFIG_SYS_MONITOR_BASE@h		/* Source      Address	*/
 	ori	r4,r4,CONFIG_SYS_MONITOR_BASE@l
@@ -1734,7 +1576,7 @@ relocate_code:
  * initialization, now running from RAM.
  */
 
-	addi	r0,r10,in_ram - _start + _START_OFFSET
+	addi	r0,r10,in_ram - _start
 
 	/*
 	 * As IVPR is going to point RAM address,
@@ -1749,6 +1591,7 @@ relocate_code:
 
 	mtlr	r0
 	blr				/* NEVER RETURNS! */
+#endif
 	.globl	in_ram
 in_ram:
 
@@ -1795,7 +1638,7 @@ clear_bss:
 	 * Now clear BSS segment
 	 */
 	lwz	r3,GOT(__bss_start)
-	lwz	r4,GOT(__bss_end__)
+	lwz	r4,GOT(__bss_end)
 
 	cmplw	0,r3,r4
 	beq	6f
@@ -1805,14 +1648,14 @@ clear_bss:
 	stw	r0,0(r3)
 	addi	r3,r3,4
 	cmplw	0,r3,r4
-	bne	5b
+	blt	5b
 6:
 
 	mr	r3,r9		/* Init Data pointer		*/
 	mr	r4,r10		/* Destination Address		*/
 	bl	board_init_r
 
-#ifndef CONFIG_NAND_SPL
+#ifndef MINIMAL_SPL
 	/*
 	 * Copy exception vector code to low memory
 	 *
@@ -1821,89 +1664,46 @@ clear_bss:
 	 */
 	.globl	trap_init
 trap_init:
-	mflr	r4			/* save link register		*/
-	GET_GOT
-	lwz	r7,GOT(_start_of_vectors)
-	lwz	r8,GOT(_end_of_vectors)
+	mflr	r11
+	bl	_GLOBAL_OFFSET_TABLE_-4
+	mflr	r12
 
-	li	r9,0x100		/* reset vector always at 0x100 */
+	/* Update IVORs as per relocation */
+	mtspr	IVPR,r3
 
-	cmplw	0,r7,r8
-	bgelr				/* return if r7>=r8 - just in case */
-1:
-	lwz	r0,0(r7)
-	stw	r0,0(r9)
-	addi	r7,r7,4
-	addi	r9,r9,4
-	cmplw	0,r7,r8
-	bne	1b
-
-	/*
-	 * relocate `hdlr' and `int_return' entries
-	 */
-	li	r7,.L_CriticalInput - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_MachineCheck - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_DataStorage - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_InstStorage - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_ExtInterrupt - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_Alignment - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_ProgramCheck - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_FPUnavailable - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_Decrementer - _start + _START_OFFSET
-	bl	trap_reloc
-	li	r7,.L_IntervalTimer - _start + _START_OFFSET
-	li	r8,_end_of_vectors - _start + _START_OFFSET
-2:
-	bl	trap_reloc
-	addi	r7,r7,0x100		/* next exception vector	*/
-	cmplw	0,r7,r8
-	blt	2b
-
-	/* Update IVORs as per relocated vector table address */
-	li	r7,0x0100
-	mtspr	IVOR0,r7	/* 0: Critical input */
-	li	r7,0x0200
-	mtspr	IVOR1,r7	/* 1: Machine check */
-	li	r7,0x0300
-	mtspr	IVOR2,r7	/* 2: Data storage */
-	li	r7,0x0400
-	mtspr	IVOR3,r7	/* 3: Instruction storage */
-	li	r7,0x0500
-	mtspr	IVOR4,r7	/* 4: External interrupt */
-	li	r7,0x0600
-	mtspr	IVOR5,r7	/* 5: Alignment */
-	li	r7,0x0700
-	mtspr	IVOR6,r7	/* 6: Program check */
-	li	r7,0x0800
-	mtspr	IVOR7,r7	/* 7: floating point unavailable */
-	li	r7,0x0900
-	mtspr	IVOR8,r7	/* 8: System call */
+	lwz	r4,CriticalInput@got(r12)
+	mtspr	IVOR0,r4	/* 0: Critical input */
+	lwz	r4,MachineCheck@got(r12)
+	mtspr	IVOR1,r4	/* 1: Machine check */
+	lwz	r4,DataStorage@got(r12)
+	mtspr	IVOR2,r4	/* 2: Data storage */
+	lwz	r4,InstStorage@got(r12)
+	mtspr	IVOR3,r4	/* 3: Instruction storage */
+	lwz	r4,ExtInterrupt@got(r12)
+	mtspr	IVOR4,r4	/* 4: External interrupt */
+	lwz	r4,Alignment@got(r12)
+	mtspr	IVOR5,r4	/* 5: Alignment */
+	lwz	r4,ProgramCheck@got(r12)
+	mtspr	IVOR6,r4	/* 6: Program check */
+	lwz	r4,FPUnavailable@got(r12)
+	mtspr	IVOR7,r4	/* 7: floating point unavailable */
+	lwz	r4,SystemCall@got(r12)
+	mtspr	IVOR8,r4	/* 8: System call */
 	/* 9: Auxiliary processor unavailable(unsupported) */
-	li	r7,0x0a00
-	mtspr	IVOR10,r7	/* 10: Decrementer */
-	li	r7,0x0b00
-	mtspr	IVOR11,r7	/* 11: Interval timer */
-	li	r7,0x0c00
-	mtspr	IVOR12,r7	/* 12: Watchdog timer */
-	li	r7,0x0d00
-	mtspr	IVOR13,r7	/* 13: Data TLB error */
-	li	r7,0x0e00
-	mtspr	IVOR14,r7	/* 14: Instruction TLB error */
-	li	r7,0x0f00
-	mtspr	IVOR15,r7	/* 15: Debug */
+	lwz	r4,Decrementer@got(r12)
+	mtspr	IVOR10,r4	/* 10: Decrementer */
+	lwz	r4,IntervalTimer@got(r12)
+	mtspr	IVOR11,r4	/* 11: Interval timer */
+	lwz	r4,WatchdogTimer@got(r12)
+	mtspr	IVOR12,r4	/* 12: Watchdog timer */
+	lwz	r4,DataTLBError@got(r12)
+	mtspr	IVOR13,r4	/* 13: Data TLB error */
+	lwz	r4,InstructionTLBError@got(r12)
+	mtspr	IVOR14,r4	/* 14: Instruction TLB error */
+	lwz	r4,DebugBreakpoint@got(r12)
+	mtspr	IVOR15,r4	/* 15: Debug */
 
-	lis	r7,0x0
-	mtspr	IVPR,r7
-
-	mtlr	r4			/* restore link register	*/
+	mtlr	r11
 	blr
 
 .globl unlock_ram_in_cache
@@ -1916,6 +1716,7 @@ unlock_ram_in_cache:
 	slwi	r4,r4,(10 - 1 - L1_CACHE_SHIFT)
 	mtctr	r4
 1:	dcbi	r0,r3
+	dcblc	r0,r3
 	addi	r3,r3,CONFIG_SYS_CACHELINE_SIZE
 	bdnz	1b
 	sync
@@ -1979,10 +1780,4 @@ flush_dcache:
 	isync
 
 	blr
-
-.globl setup_ivors
-setup_ivors:
-
-#include "fixed_ivor.S"
-	blr
-#endif /* !CONFIG_NAND_SPL */
+#endif /* !MINIMAL_SPL */

@@ -4,29 +4,15 @@
  *
  * Configuation settings for Ethernut 5 with AT91SAM9XE.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
 #include <asm/hardware.h>
+
+#define CONFIG_SYS_GENERIC_BOARD
 
 /* The first stage boot loader expects u-boot running at this address. */
 #define CONFIG_SYS_TEXT_BASE	0x27000000	/* 16MB available */
@@ -39,15 +25,12 @@
 #define CONFIG_MACH_TYPE MACH_TYPE_ETHERNUT5
 
 /* CPU information */
-#define CONFIG_ARM926EJS
-#define CONFIG_AT91FAMILY
 #define CONFIG_DISPLAY_CPUINFO		/* Display at console. */
 #define CONFIG_ARCH_CPU_INIT
 
 /* ARM asynchronous clock */
 #define CONFIG_SYS_AT91_SLOW_CLOCK	32768	/* slow clock xtal */
 #define CONFIG_SYS_AT91_MAIN_CLOCK	18432000 /* 18.432 MHz crystal */
-#define CONFIG_SYS_HZ			1000
 
 /* 32kB internal SRAM */
 #define CONFIG_SRAM_BASE	0x00300000 /*AT91SAM9XE_SRAM_BASE */
@@ -77,7 +60,6 @@
 /* 512kB DataFlash at NPCS0 */
 #define CONFIG_SYS_MAX_DATAFLASH_BANKS	1
 #define CONFIG_HAS_DATAFLASH
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_ATMEL
 #define CONFIG_ATMEL_DATAFLASH_SPI
 #define CONFIG_SYS_DATAFLASH_LOGIC_ADDR_CS0	0xC0000000
@@ -95,7 +77,6 @@
 
 /* SPI */
 #define CONFIG_ATMEL_SPI
-#define CONFIG_SYS_SPI_WRITE_TOUT	(5 * CONFIG_SYS_HZ)
 #define AT91_SPI_CLK			15000000
 
 /* Serial port */
@@ -109,29 +90,13 @@
 #define CONFIG_AT91_GPIO
 
 /* Command line configuration */
-#include <config_cmd_default.h>
-#undef CONFIG_CMD_BDI
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_LOADS
-
 #define CONFIG_CMD_JFFS2
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_MTDPARTS
 #define CONFIG_CMD_NAND
 #define CONFIG_CMD_SPI
 
-#ifdef MINIMAL_LOADER
-#undef CONFIG_CMD_CONSOLE
-#undef CONFIG_CMD_EDITENV
-#undef CONFIG_CMD_IMI
-#undef CONFIG_CMD_ITEST
-#undef CONFIG_CMD_IMLS
-#undef CONFIG_CMD_LOADB
-#undef CONFIG_CMD_LOADS
-#undef CONFIG_CMD_NFS
-#undef CONFIG_CMD_SETGETDCR
-#undef CONFIG_CMD_XIMG
-#else
+#ifndef MINIMAL_LOADER
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_BSP
 #define CONFIG_CMD_CACHE
@@ -147,7 +112,6 @@
 #define CONFIG_CMD_RARP
 #define CONFIG_CMD_REISER
 #define CONFIG_CMD_SAVES
-#define CONFIG_CMD_SETEXPR
 #define CONFIG_CMD_SF
 #define CONFIG_CMD_SNTP
 #define CONFIG_CMD_UBI
@@ -166,12 +130,11 @@
 #define CONFIG_SYS_NAND_MASK_ALE	(1 << 21)
 /* our CLE is AD22 */
 #define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
-#define CONFIG_SYS_NAND_ENABLE_PIN	AT91_PIO_PORTC, 14
+#define CONFIG_SYS_NAND_ENABLE_PIN	GPIO_PIN_PC(14)
 #endif
 
 /* JFFS2 */
 #ifdef CONFIG_CMD_JFFS2
-#define CONFIG_MTD_NAND_ECC_JFFS2
 #define CONFIG_JFFS2_CMDLINE
 #define CONFIG_JFFS2_NAND
 #endif
@@ -194,6 +157,7 @@
 /* USB */
 #ifdef CONFIG_CMD_USB
 #define CONFIG_USB_ATMEL
+#define CONFIG_USB_ATMEL_CLK_SEL_PLLB
 #define CONFIG_USB_OHCI_NEW
 #define CONFIG_SYS_USB_OHCI_CPU_INIT
 #define CONFIG_SYS_USB_OHCI_REGS_BASE	0x00500000
@@ -210,10 +174,12 @@
 
 /* I2C */
 #define CONFIG_SYS_MAX_I2C_BUS	1
-#define CONFIG_SYS_I2C_SLAVE	0
-#define CONFIG_SYS_I2C_SPEED	100000
 
-#define CONFIG_SOFT_I2C
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_SOFT			/* I2C bit-banged */
+#define CONFIG_SYS_I2C_SOFT_SPEED	100000
+#define CONFIG_SYS_I2C_SOFT_SLAVE	0
+
 #define I2C_SOFT_DECLARATIONS
 
 #define GPIO_I2C_SCL		AT91_PIO_PORTA, 24

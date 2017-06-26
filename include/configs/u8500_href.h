@@ -1,23 +1,7 @@
 /*
  * Copyright (C) ST-Ericsson SA 2009
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -28,11 +12,9 @@
  * (easy to change)
  */
 #define CONFIG_U8500
-#define CONFIG_L2_OFF
 
 #define CONFIG_SYS_MEMTEST_START	0x00000000
 #define CONFIG_SYS_MEMTEST_END	0x1FFFFFFF
-#define CONFIG_SYS_HZ		1000		/* must be 1000 */
 
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_LATE_INIT
@@ -47,7 +29,6 @@
 #define CONFIG_ENV_SIZE		(128*1024)
 #define CONFIG_SYS_MALLOC_LEN	(CONFIG_ENV_SIZE + 256*1024)
 #endif
-#define CONFIG_SYS_GBL_DATA_SIZE	128	/* for initial data */
 
 /*
  * PL011 Configuration
@@ -81,20 +62,9 @@
 /*
  * Commands
  */
-#define CONFIG_CMD_MEMORY
-#define CONFIG_CMD_BOOTD
-#define CONFIG_CMD_BDI
-#define CONFIG_CMD_IMI
-#define CONFIG_CMD_MISC
-#define CONFIG_CMD_RUN
-#define CONFIG_CMD_ECHO
-#define CONFIG_CMD_CONSOLE
-#define CONFIG_CMD_LOADS
-#define CONFIG_CMD_LOADB
 #define CONFIG_CMD_MMC
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_EXT2
-#define CONFIG_CMD_SOURCE
 #define CONFIG_CMD_I2C
 
 #ifndef CONFIG_BOOTDELAY
@@ -150,7 +120,6 @@
 #define CONFIG_SYS_MAXARGS	32	/* max number of command args */
 #define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE /* Boot Arg Buffer Size */
 
-#undef	CONFIG_SYS_CLKS_IN_HZ		/* everything, incl board info, in Hz */
 #define CONFIG_SYS_LOAD_ADDR		0x00100000 /* default load address */
 #define CONFIG_SYS_LOADS_BAUD_CHANGE
 
@@ -166,7 +135,6 @@
  */
 #define CONFIG_U8500_I2C
 #undef	CONFIG_HARD_I2C			/* I2C with hardware support */
-#undef	CONFIG_SOFT_I2C			/* I2C bit-banged */
 #define CONFIG_I2C_MULTI_BUS
 #define CONFIG_SYS_I2C_SPEED		100000
 #define CONFIG_SYS_I2C_SLAVE		0	/* slave addr of controller */
@@ -212,7 +180,6 @@
 #define CONFIG_MMC_DEV_NUM		1
 
 #define CONFIG_CMD_ENV
-#define CONFIG_CMD_SAVEENV	/* CMD_ENV is obsolete but used in env_emmc.c */
 #define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_ENV_OFFSET		0x13F80000
 #define CONFIG_SYS_MMC_ENV_DEV          0               /* SLOT2: eMMC */

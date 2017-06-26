@@ -2,23 +2,8 @@
  * Keyboard input helper functions (too small to be called a layer)
  *
  * Copyright (c) 2011 The Chromium OS Authors.
- * See file CREDITS for list of people who contributed to this
- * project.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _INPUT_H
@@ -84,6 +69,8 @@ struct stdio_dev;
  * @param config	Input state
  * @param keycode	List of key codes to examine
  * @param num_keycodes	Number of key codes
+ * @return number of ascii characters sent, or 0 if none, or -1 for an
+ *	internal error
  */
 int input_send_keycodes(struct input_config *config, int keycode[], int count);
 
@@ -126,16 +113,22 @@ int input_getc(struct input_config *config);
 int input_stdio_register(struct stdio_dev *dev);
 
 /**
+ * Set up the keyboard autorepeat delays
+ *
+ * @param repeat_delay_ms	Delay before key auto-repeat starts (in ms)
+ * @param repeat_rate_ms	Delay between successive key repeats (in ms)
+ */
+void input_set_delays(struct input_config *config, int repeat_delay_ms,
+	       int repeat_rate_ms);
+
+/**
  * Set up the input handler with basic key maps.
  *
  * @param config	Input state
  * @param leds		Initial LED value (INPUT_LED_ mask), 0 suggested
- * @param repeat_delay_ms	Delay before key auto-repeat starts (in ms)
- * @param repeat_rate_ms	Delay between successive key repeats (in ms)
  * @return 0 if ok, -1 on error
  */
-int input_init(struct input_config *config, int leds, int repeat_delay_ms,
-	       int repeat_rate_ms);
+int input_init(struct input_config *config, int leds);
 
 #ifdef CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE
 extern int overwrite_console(void);

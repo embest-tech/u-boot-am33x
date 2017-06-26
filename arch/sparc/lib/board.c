@@ -6,23 +6,7 @@
  * (C) Copyright 2007
  * Daniel Hellstrom, Gaisler Research, daniel@gaisler.com.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -189,7 +173,6 @@ void board_init_f(ulong bootflag)
 	bd->bi_sramstart = CONFIG_SYS_SRAM_BASE;
 	bd->bi_sramsize = CONFIG_SYS_SRAM_SIZE;
 #endif
-	bd->bi_baudrate = CONFIG_BAUDRATE;
 	bd->bi_bootflags = bootflag;	/* boot / reboot flag (for LynxOS)    */
 
 	gd->flags |= GD_FLG_RELOC;	/* tell others: relocation done */
@@ -246,8 +229,8 @@ void board_init_f(ulong bootflag)
 	/*
 	 * We have to relocate the command table manually
 	 */
-	fixup_cmdtable(&__u_boot_cmd_start,
-		(ulong)(&__u_boot_cmd_end - &__u_boot_cmd_start));
+	fixup_cmdtable(ll_entry_start(cmd_tbl_t, cmd),
+			ll_entry_count(cmd_tbl_t, cmd));
 #endif /* defined(CONFIG_NEEDS_MANUAL_RELOC) */
 
 #if defined(CONFIG_CMD_AMBAPP) && defined(CONFIG_SYS_AMBAPP_PRINT_ON_STARTUP)
@@ -271,7 +254,6 @@ void board_init_f(ulong bootflag)
 	/* The Malloc area is immediately below the monitor copy in RAM */
 	mem_malloc_init(CONFIG_SYS_MALLOC_BASE,
 			CONFIG_SYS_MALLOC_END - CONFIG_SYS_MALLOC_BASE);
-	malloc_bin_reloc();
 
 #if !defined(CONFIG_SYS_NO_FLASH)
 	puts("Flash: ");
@@ -284,8 +266,7 @@ void board_init_f(ulong bootflag)
 		 *
 		 * NOTE: Maybe we should add some WATCHDOG_RESET()? XXX
 		 */
-		s = getenv("flashchecksum");
-		if (s && (*s == 'y')) {
+		if (getenv_yesno("flashchecksum") == 1) {
 			printf("  CRC: %08lX",
 			       crc32(0, (const unsigned char *)CONFIG_SYS_FLASH_BASE,
 				     flash_size)
@@ -370,7 +351,7 @@ void board_init_f(ulong bootflag)
 #if defined(CONFIG_CMD_NET)
 	WATCHDOG_RESET();
 	puts("Net:   ");
-	eth_initialize(bd);
+	eth_initialize();
 #endif
 
 #if defined(CONFIG_CMD_NET) && defined(CONFIG_RESET_PHY_R)
@@ -411,15 +392,6 @@ void board_init_f(ulong bootflag)
 		main_loop();
 	}
 
-}
-
-void hang(void)
-{
-	puts("### ERROR ### Please RESET the board ###\n");
-#ifdef CONFIG_SHOW_BOOT_PROGRESS
-	bootstage_error(BOOTSTAGE_ID_NEED_RESET);
-#endif
-	for (;;) ;
 }
 
 /************************************************************************/

@@ -5,23 +5,7 @@
  * (C) Copyright 2001 Sysgo Real-Time Solutions, GmbH <www.elinos.com>
  * Andreas Heppel <aheppel@sysgo.de>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -37,115 +21,16 @@ DECLARE_GLOBAL_DATA_PTR;
 /************************************************************************
  * Default settings to be used when no valid environment is found
  */
-#define XMK_STR(x)	#x
-#define MK_STR(x)	XMK_STR(x)
-
-const uchar default_environment[] = {
-#ifdef	CONFIG_BOOTARGS
-	"bootargs="	CONFIG_BOOTARGS			"\0"
-#endif
-#ifdef	CONFIG_BOOTCOMMAND
-	"bootcmd="	CONFIG_BOOTCOMMAND		"\0"
-#endif
-#ifdef	CONFIG_RAMBOOTCOMMAND
-	"ramboot="	CONFIG_RAMBOOTCOMMAND		"\0"
-#endif
-#ifdef	CONFIG_NFSBOOTCOMMAND
-	"nfsboot="	CONFIG_NFSBOOTCOMMAND		"\0"
-#endif
-#if defined(CONFIG_BOOTDELAY) && (CONFIG_BOOTDELAY >= 0)
-	"bootdelay="	MK_STR(CONFIG_BOOTDELAY)	"\0"
-#endif
-#if defined(CONFIG_BAUDRATE) && (CONFIG_BAUDRATE >= 0)
-	"baudrate="	MK_STR(CONFIG_BAUDRATE)		"\0"
-#endif
-#ifdef	CONFIG_LOADS_ECHO
-	"loads_echo="	MK_STR(CONFIG_LOADS_ECHO)	"\0"
-#endif
-#ifdef	CONFIG_ETHADDR
-	"ethaddr="	MK_STR(CONFIG_ETHADDR)		"\0"
-#endif
-#ifdef	CONFIG_ETH1ADDR
-	"eth1addr="	MK_STR(CONFIG_ETH1ADDR)		"\0"
-#endif
-#ifdef	CONFIG_ETH2ADDR
-	"eth2addr="	MK_STR(CONFIG_ETH2ADDR)		"\0"
-#endif
-#ifdef	CONFIG_ETH3ADDR
-	"eth3addr="	MK_STR(CONFIG_ETH3ADDR)		"\0"
-#endif
-#ifdef	CONFIG_ETH4ADDR
-	"eth4addr="	MK_STR(CONFIG_ETH4ADDR)		"\0"
-#endif
-#ifdef	CONFIG_ETH5ADDR
-	"eth5addr="	MK_STR(CONFIG_ETH5ADDR)		"\0"
-#endif
-#ifdef	CONFIG_ETHPRIME
-	"ethprime="	CONFIG_ETHPRIME			"\0"
-#endif
-#ifdef	CONFIG_IPADDR
-	"ipaddr="	MK_STR(CONFIG_IPADDR)		"\0"
-#endif
-#ifdef	CONFIG_SERVERIP
-	"serverip="	MK_STR(CONFIG_SERVERIP)		"\0"
-#endif
-#ifdef	CONFIG_SYS_AUTOLOAD
-	"autoload="	CONFIG_SYS_AUTOLOAD		"\0"
-#endif
-#ifdef	CONFIG_PREBOOT
-	"preboot="	CONFIG_PREBOOT			"\0"
-#endif
-#ifdef	CONFIG_ROOTPATH
-	"rootpath="	CONFIG_ROOTPATH			"\0"
-#endif
-#ifdef	CONFIG_GATEWAYIP
-	"gatewayip="	MK_STR(CONFIG_GATEWAYIP)	"\0"
-#endif
-#ifdef	CONFIG_NETMASK
-	"netmask="	MK_STR(CONFIG_NETMASK)		"\0"
-#endif
-#ifdef	CONFIG_HOSTNAME
-	"hostname="	MK_STR(CONFIG_HOSTNAME)		"\0"
-#endif
-#ifdef	CONFIG_BOOTFILE
-	"bootfile="	CONFIG_BOOTFILE			"\0"
-#endif
-#ifdef	CONFIG_LOADADDR
-	"loadaddr="	MK_STR(CONFIG_LOADADDR)		"\0"
-#endif
-#ifdef	CONFIG_CLOCKS_IN_MHZ
-	"clocks_in_mhz=1\0"
-#endif
-#if defined(CONFIG_PCI_BOOTDELAY) && (CONFIG_PCI_BOOTDELAY > 0)
-	"pcidelay="	MK_STR(CONFIG_PCI_BOOTDELAY)	"\0"
-#endif
-#ifdef	CONFIG_ENV_VARS_UBOOT_CONFIG
-	"arch="		CONFIG_SYS_ARCH			"\0"
-	"cpu="		CONFIG_SYS_CPU			"\0"
-	"board="	CONFIG_SYS_BOARD		"\0"
-#ifdef CONFIG_SYS_VENDOR
-	"vendor="	CONFIG_SYS_VENDOR		"\0"
-#endif
-#ifdef CONFIG_SYS_SOC
-	"soc="		CONFIG_SYS_SOC			"\0"
-#endif
-#endif
-#ifdef	CONFIG_EXTRA_ENV_SETTINGS
-	CONFIG_EXTRA_ENV_SETTINGS
-#endif
-	"\0"
-};
+#include <env_default.h>
 
 struct hsearch_data env_htab = {
-	.apply = env_check_apply,
+	.change_ok = env_flags_validate,
 };
 
-static uchar __env_get_char_spec(int index)
+__weak uchar env_get_char_spec(int index)
 {
 	return *((uchar *)(gd->env_addr + index));
 }
-uchar env_get_char_spec(int)
-	__attribute__((weak, alias("__env_get_char_spec")));
 
 static uchar env_get_char_init(int index)
 {
@@ -178,13 +63,42 @@ const uchar *env_get_addr(int index)
 		return &default_environment[index];
 }
 
+/*
+ * Read an environment variable as a boolean
+ * Return -1 if variable does not exist (default to true)
+ */
+int getenv_yesno(const char *var)
+{
+	char *s = getenv(var);
+
+	if (s == NULL)
+		return -1;
+	return (*s == '1' || *s == 'y' || *s == 'Y' || *s == 't' || *s == 'T') ?
+		1 : 0;
+}
+
+/*
+ * Look up the variable from the default environment
+ */
+char *getenv_default(const char *name)
+{
+	char *ret_val;
+	unsigned long really_valid = gd->env_valid;
+	unsigned long real_gd_flags = gd->flags;
+
+	/* Pretend that the image is bad. */
+	gd->flags &= ~GD_FLG_ENV_READY;
+	gd->env_valid = 0;
+	ret_val = getenv(name);
+	gd->env_valid = really_valid;
+	gd->flags = real_gd_flags;
+	return ret_val;
+}
+
 void set_default_env(const char *s)
 {
-	/*
-	 * By default, do not apply changes as they will eventually
-	 * be applied by someone else
-	 */
-	int do_apply = 0;
+	int flags = 0;
+
 	if (sizeof(default_environment) > ENV_SIZE) {
 		puts("*** Error - default environment is too large\n\n");
 		return;
@@ -196,14 +110,7 @@ void set_default_env(const char *s)
 				"using default environment\n\n",
 				s + 1);
 		} else {
-			/*
-			 * This set_to_default was explicitly asked for
-			 * by the user, as opposed to being a recovery
-			 * mechanism.  Therefore we check every single
-			 * variable and apply changes to the system
-			 * right away (e.g. baudrate, console).
-			 */
-			do_apply = 1;
+			flags = H_INTERACTIVE;
 			puts(s);
 		}
 	} else {
@@ -211,8 +118,8 @@ void set_default_env(const char *s)
 	}
 
 	if (himport_r(&env_htab, (char *)default_environment,
-			sizeof(default_environment), '\0', 0,
-			0, NULL, do_apply) == 0)
+			sizeof(default_environment), '\0', flags, 0,
+			0, NULL) == 0)
 		error("Environment import failed: errno = %d\n", errno);
 
 	gd->flags |= GD_FLG_ENV_READY;
@@ -227,11 +134,56 @@ int set_default_vars(int nvars, char * const vars[])
 	 * (and use \0 as a separator)
 	 */
 	return himport_r(&env_htab, (const char *)default_environment,
-				sizeof(default_environment), '\0', H_NOCLEAR,
-				nvars, vars, 1 /* do_apply */);
+				sizeof(default_environment), '\0',
+				H_NOCLEAR | H_INTERACTIVE, 0, nvars, vars);
 }
 
-#ifndef CONFIG_SPL_BUILD
+#ifdef CONFIG_ENV_AES
+#include <aes.h>
+/**
+ * env_aes_cbc_get_key() - Get AES-128-CBC key for the environment
+ *
+ * This function shall return 16-byte array containing AES-128 key used
+ * to encrypt and decrypt the environment. This function must be overriden
+ * by the implementer as otherwise the environment encryption will not
+ * work.
+ */
+__weak uint8_t *env_aes_cbc_get_key(void)
+{
+	return NULL;
+}
+
+static int env_aes_cbc_crypt(env_t *env, const int enc)
+{
+	unsigned char *data = env->data;
+	uint8_t *key;
+	uint8_t key_exp[AES_EXPAND_KEY_LENGTH];
+	uint32_t aes_blocks;
+
+	key = env_aes_cbc_get_key();
+	if (!key)
+		return -EINVAL;
+
+	/* First we expand the key. */
+	aes_expand_key(key, key_exp);
+
+	/* Calculate the number of AES blocks to encrypt. */
+	aes_blocks = ENV_SIZE / AES_KEY_LENGTH;
+
+	if (enc)
+		aes_cbc_encrypt_blocks(key_exp, data, data, aes_blocks);
+	else
+		aes_cbc_decrypt_blocks(key_exp, data, data, aes_blocks);
+
+	return 0;
+}
+#else
+static inline int env_aes_cbc_crypt(env_t *env, const int enc)
+{
+	return 0;
+}
+#endif
+
 /*
  * Check if CRC is valid and (if yes) import the environment.
  * Note that "buf" may or may not be aligned.
@@ -239,6 +191,7 @@ int set_default_vars(int nvars, char * const vars[])
 int env_import(const char *buf, int check)
 {
 	env_t *ep = (env_t *)buf;
+	int ret;
 
 	if (check) {
 		uint32_t crc;
@@ -251,8 +204,16 @@ int env_import(const char *buf, int check)
 		}
 	}
 
-	if (himport_r(&env_htab, (char *)ep->data, ENV_SIZE, '\0', 0,
-			0, NULL, 0 /* do_apply */)) {
+	/* Decrypt the env if desired. */
+	ret = env_aes_cbc_crypt(ep, 0);
+	if (ret) {
+		error("Failed to decrypt env!\n");
+		set_default_env("!import failed");
+		return ret;
+	}
+
+	if (himport_r(&env_htab, (char *)ep->data, ENV_SIZE, '\0', 0, 0,
+			0, NULL)) {
 		gd->flags |= GD_FLG_ENV_READY;
 		return 1;
 	}
@@ -263,12 +224,36 @@ int env_import(const char *buf, int check)
 
 	return 0;
 }
-#endif
+
+/* Emport the environment and generate CRC for it. */
+int env_export(env_t *env_out)
+{
+	char *res;
+	ssize_t	len;
+	int ret;
+
+	res = (char *)env_out->data;
+	len = hexport_r(&env_htab, '\0', 0, &res, ENV_SIZE, 0, NULL);
+	if (len < 0) {
+		error("Cannot export environment: errno = %d\n", errno);
+		return 1;
+	}
+
+	/* Encrypt the env if desired. */
+	ret = env_aes_cbc_crypt(env_out, 1);
+	if (ret)
+		return ret;
+
+	env_out->crc = crc32(0, env_out->data, ENV_SIZE);
+
+	return 0;
+}
 
 void env_relocate(void)
 {
 #if defined(CONFIG_NEEDS_MANUAL_RELOC)
 	env_reloc();
+	env_htab.change_ok += gd->reloc_off;
 #endif
 	if (gd->env_valid == 0) {
 #if defined(CONFIG_ENV_IS_NOWHERE) || defined(CONFIG_SPL_BUILD)

@@ -5,23 +5,7 @@
  * (C) Copyright 2007 Freescale Semiconductor, Inc.
  * TsiChung Liew (Tsi-Chung.Liew@freescale.com)
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -235,7 +219,8 @@ int fec_recv(struct eth_device *dev)
 
 			length -= 4;
 			/* Pass the packet up to the protocol layers. */
-			NetReceive(NetRxPackets[info->rxIdx], length);
+			net_process_received_packet(net_rx_packets[info->rxIdx],
+						    length);
 
 			fecp->eir |= FEC_EIR_RXF;
 		}
@@ -493,7 +478,7 @@ int fec_init(struct eth_device *dev, bd_t * bd)
 	for (i = 0; i < PKTBUFSRX; i++) {
 		info->rxbd[i].cbd_sc = BD_ENET_RX_EMPTY;
 		info->rxbd[i].cbd_datlen = 0;	/* Reset */
-		info->rxbd[i].cbd_bufaddr = (uint) NetRxPackets[i];
+		info->rxbd[i].cbd_bufaddr = (uint) net_rx_packets[i];
 	}
 	info->rxbd[PKTBUFSRX - 1].cbd_sc |= BD_ENET_RX_WRAP;
 
@@ -559,7 +544,7 @@ int mcffec_initialize(bd_t * bis)
 	u32 tmp = CONFIG_SYS_INIT_RAM_ADDR + 0x1000;
 #endif
 
-	for (i = 0; i < sizeof(fec_info) / sizeof(fec_info[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(fec_info); i++) {
 
 		dev =
 		    (struct eth_device *)memalign(CONFIG_SYS_CACHELINE_SIZE,

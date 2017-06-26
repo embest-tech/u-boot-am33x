@@ -3,40 +3,17 @@
  *
  * Configuration settings for the ATSTK1002 CPU daughterboard
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
 #include <asm/arch/hardware.h>
 
-#define CONFIG_AVR32
 #define CONFIG_AT32AP
 #define CONFIG_AT32AP7000
 #define CONFIG_ATSTK1002
 #define CONFIG_ATSTK1000
-
-/*
- * Timer clock frequency. We're using the CPU-internal COUNT register
- * for this, so this is equivalent to the CPU core clock frequency
- */
-#define CONFIG_SYS_HZ				1000
 
 /*
  * Set up the PLL to run at 140 MHz, the CPU to run at the PLL
@@ -102,17 +79,7 @@
 #define CONFIG_BOOTCOMMAND						\
 	"fsload; bootm $(fileaddr)"
 
-/*
- * Only interrupt autoboot if <space> is pressed. Otherwise, garbage
- * data on the serial line may interrupt the boot sequence.
- */
 #define CONFIG_BOOTDELAY		1
-#define CONFIG_AUTOBOOT
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_PROMPT		\
-	"Press SPACE to abort autoboot in %d seconds\n", bootdelay
-#define CONFIG_AUTOBOOT_DELAY_STR	"d"
-#define CONFIG_AUTOBOOT_STOP_STR	" "
 
 /*
  * After booting the board for the first time, new ethernet addresses
@@ -127,12 +94,13 @@
 #define CONFIG_BOOTP_SUBNETMASK
 #define CONFIG_BOOTP_GATEWAY
 
+/* generic board */
+#define CONFIG_BOARD_EARLY_INIT_F
+#define CONFIG_BOARD_EARLY_INIT_R
 
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_EXT2
@@ -140,10 +108,6 @@
 #define CONFIG_CMD_JFFS2
 #define CONFIG_CMD_MMC
 
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_SETGETDCR
-#undef CONFIG_CMD_SOURCE
-#undef CONFIG_CMD_XIMG
 
 #define CONFIG_ATMEL_USART
 #define CONFIG_MACB
@@ -153,7 +117,6 @@
 #define CONFIG_MMC
 #define CONFIG_GENERIC_ATMEL_MCI
 #define CONFIG_GENERIC_MMC
-#define CONFIG_SYS_MMC_MAX_BLK_COUNT 1
 
 #define CONFIG_SYS_DCACHE_LINESZ		32
 #define CONFIG_SYS_ICACHE_LINESZ		32
@@ -182,7 +145,6 @@
 #define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_INTRAM_BASE + CONFIG_SYS_INTRAM_SIZE)
 
 #define CONFIG_SYS_MALLOC_LEN			(256*1024)
-#define CONFIG_SYS_DMA_ALLOC_LEN		(16384)
 
 /* Allow 4MB for the kernel run-time image */
 #define CONFIG_SYS_LOAD_ADDR			(EBI_SDRAM_BASE + 0x00400000)

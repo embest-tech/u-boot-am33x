@@ -3,14 +3,14 @@
  * Holger Brunck, Keymile GmbH Hannover, <holger.brunck@keymile.com>
  * Christian Herzig, Keymile AG Switzerland, <christian.herzig@keymile.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
+
+#define CONFIG_SYS_GENERIC_BOARD
+#define CONFIG_DISPLAY_BOARDINFO
 
 /* KMBEC FPGA (PRIO) */
 #define CONFIG_SYS_KMBEC_FPGA_BASE	0xE8000000
@@ -25,6 +25,8 @@
 #define CONFIG_KM_BOARD_NAME	"kmcoge5ne"
 #define CONFIG_KM_DEF_NETDEV	"netdev=eth1\0"
 #define CONFIG_CMD_NAND
+#define CONFIG_NAND_ECC_BCH
+#define CONFIG_BCH
 #define CONFIG_NAND_KMETER1
 #define CONFIG_SYS_MAX_NAND_DEVICE		1
 #define NAND_MAX_CHIPS				1

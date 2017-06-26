@@ -2,22 +2,7 @@
  * Copyright (C) 2011 Andes Technology Corporation
  * Macpaul Lin, Andes Technology Corporation <macpaul@andestech.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -47,12 +32,6 @@
 /*
  * Timer
  */
-
-/*
- * According to the discussion in u-boot mailing list before,
- * CONFIG_SYS_HZ at 1000 is mandatory.
- */
-#define CONFIG_SYS_HZ		1000
 #define CONFIG_SYS_CLK_FREQ	(66000000 * 2)
 #define VERSION_CLOCK		CONFIG_SYS_CLK_FREQ
 
@@ -102,7 +81,6 @@
 /*
  * Ethernet
  */
-#define CONFIG_NET_MULTI
 #define CONFIG_PHY_MAX_ADDR	32	/* this comes from <linux/phy.h> */
 #define CONFIG_SYS_DISCOVER_PHY
 #define CONFIG_FTGMAC100
@@ -126,8 +104,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_PING
@@ -135,14 +111,13 @@
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_ELF
 
-#undef CONFIG_CMD_FLASH
-#undef CONFIG_CMD_IMLS
 
 /*
  * PCI
  */
 #define CONFIG_PCI
 #define CONFIG_FTPCI100
+#define CONFIG_PCI_INDIRECT_BRIDGE
 #define CONFIG_FTPCI100_MEM_BASE        0xa0000000
 #define CONFIG_FTPCI100_IO_SIZE         FTPCI100_BASE_IO_SIZE(256) /* 256M */
 #define CONFIG_FTPCI100_MEM_SIZE        FTPCI100_MEM_SIZE(128)  /* 128M */
@@ -222,11 +197,6 @@
  * Size of malloc() pool
  */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 128 * 1024)
-
-/*
- * size in bytes reserved for initial data
-*/
-#define CONFIG_SYS_GBL_DATA_SIZE	128
 
 /*
  * AHB Controller configuration

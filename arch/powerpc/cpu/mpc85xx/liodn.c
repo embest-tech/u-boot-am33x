@@ -1,23 +1,7 @@
 /*
  * Copyright 2008-2011 Freescale Semiconductor, Inc.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -40,6 +24,7 @@ int get_dpaa_liodn(enum fsl_dpaa_dev dpaa_dev, u32 *liodns, int liodn_offset)
 	return liodn_bases[dpaa_dev].num_ids;
 }
 
+#ifdef CONFIG_SYS_SRIO
 static void set_srio_liodn(struct srio_liodn_id_table *tbl, int size)
 {
 	int i;
@@ -54,6 +39,7 @@ static void set_srio_liodn(struct srio_liodn_id_table *tbl, int size)
 		}
 	}
 }
+#endif
 
 static void set_liodn(struct liodn_id_table *tbl, int size)
 {
@@ -80,12 +66,12 @@ static void setup_sec_liodn_base(void)
 		return;
 
 	/* QILCR[QSLOM] */
-	out_be32(&sec->qilcr_ms, 0x3ff<<16);
+	sec_out32(&sec->qilcr_ms, 0x3ff<<16);
 
 	base = (liodn_bases[FSL_HW_PORTAL_SEC].id[0] << 16) |
 		liodn_bases[FSL_HW_PORTAL_SEC].id[1];
 
-	out_be32(&sec->qilcr_ls, base);
+	sec_out32(&sec->qilcr_ls, base);
 }
 
 #ifdef CONFIG_SYS_DPAA_FMAN
@@ -181,8 +167,10 @@ void set_liodns(void)
 	/* setup general liodn offsets */
 	set_liodn(liodn_tbl, liodn_tbl_sz);
 
+#ifdef CONFIG_SYS_SRIO
 	/* setup SRIO port liodns */
 	set_srio_liodn(srio_liodn_tbl, srio_liodn_tbl_sz);
+#endif
 
 	/* setup SEC block liodn bases & offsets if we have one */
 	if (IS_E_PROCESSOR(get_svr())) {
@@ -219,6 +207,7 @@ void set_liodns(void)
 #endif
 }
 
+#ifdef CONFIG_SYS_SRIO
 static void fdt_fixup_srio_liodn(void *blob, struct srio_liodn_id_table *tbl)
 {
 	int i, srio_off;
@@ -245,6 +234,57 @@ static void fdt_fixup_srio_liodn(void *blob, struct srio_liodn_id_table *tbl)
 			debug("WARNING: couldn't set fsl,liodn for srio: %s.\n",
 				fdt_strerror(off));
 		}
+	}
+}
+#endif
+
+#define CONFIG_SYS_MAX_PCI_EPS		8
+
+static void fdt_fixup_pci_liodn_offsets(void *fdt, const char *compat,
+					int ep_liodn_start)
+{
+	int off, pci_idx = 0, pci_cnt = 0, i, rc;
+	const uint32_t *base_liodn;
+	uint32_t liodn_offs[CONFIG_SYS_MAX_PCI_EPS + 1] = { 0 };
+
+	/*
+	 * Count the number of pci nodes.
+	 * It's needed later when the interleaved liodn offsets are generated.
+	 */
+	off = fdt_node_offset_by_compatible(fdt, -1, compat);
+	while (off != -FDT_ERR_NOTFOUND) {
+		pci_cnt++;
+		off = fdt_node_offset_by_compatible(fdt, off, compat);
+	}
+
+	for (off = fdt_node_offset_by_compatible(fdt, -1, compat);
+	     off != -FDT_ERR_NOTFOUND;
+	     off = fdt_node_offset_by_compatible(fdt, off, compat)) {
+		base_liodn = fdt_getprop(fdt, off, "fsl,liodn", &rc);
+		if (!base_liodn) {
+			char path[64];
+
+			if (fdt_get_path(fdt, off, path, sizeof(path)) < 0)
+				strcpy(path, "(unknown)");
+			printf("WARNING Could not get liodn of node %s: %s\n",
+			       path, fdt_strerror(rc));
+			continue;
+		}
+		for (i = 0; i < CONFIG_SYS_MAX_PCI_EPS; i++)
+			liodn_offs[i + 1] = ep_liodn_start +
+					i * pci_cnt + pci_idx - *base_liodn;
+		rc = fdt_setprop(fdt, off, "fsl,liodn-offset-list",
+				 liodn_offs, sizeof(liodn_offs));
+		if (rc) {
+			char path[64];
+
+			if (fdt_get_path(fdt, off, path, sizeof(path)) < 0)
+				strcpy(path, "(unknown)");
+			printf("WARNING Unable to set fsl,liodn-offset-list for "
+			       "node %s: %s\n", path, fdt_strerror(rc));
+			continue;
+		}
+		pci_idx++;
 	}
 }
 
@@ -277,7 +317,9 @@ static void fdt_fixup_liodn_tbl(void *blob, struct liodn_id_table *tbl, int sz)
 
 void fdt_fixup_liodn(void *blob)
 {
+#ifdef CONFIG_SYS_SRIO
 	fdt_fixup_srio_liodn(blob, srio_liodn_tbl);
+#endif
 
 	fdt_fixup_liodn_tbl(blob, liodn_tbl, liodn_tbl_sz);
 #ifdef CONFIG_SYS_DPAA_FMAN
@@ -295,4 +337,23 @@ void fdt_fixup_liodn(void *blob)
 #ifdef CONFIG_SYS_DPAA_RMAN
 	fdt_fixup_liodn_tbl(blob, rman_liodn_tbl, rman_liodn_tbl_sz);
 #endif
+
+	ccsr_pcix_t *pcix = (ccsr_pcix_t *)CONFIG_SYS_PCIE1_ADDR;
+	int pci_ver = pcix->ipver1 & 0xffff, liodn_base = 0;
+
+	if (pci_ver >= 0x0204) {
+		if (pci_ver >= 0x0300)
+			liodn_base = 1024;
+		else
+			liodn_base = 256;
+	}
+
+	if (liodn_base) {
+		char compat[32];
+
+		sprintf(compat, "fsl,qoriq-pcie-v%d.%d",
+			(pci_ver & 0xff00) >> 8, pci_ver & 0xff);
+		fdt_fixup_pci_liodn_offsets(blob, compat, liodn_base);
+		fdt_fixup_pci_liodn_offsets(blob, "fsl,qoriq-pcie", liodn_base);
+	}
 }

@@ -2,23 +2,7 @@
  * (C) Copyright 2000
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -28,7 +12,6 @@ static int do_unzip(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned long src, dst;
 	unsigned long src_len = ~0UL, dst_len = ~0UL;
-	char buf[32];
 
 	switch (argc) {
 		case 4:
@@ -46,8 +29,7 @@ static int do_unzip(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return 1;
 
 	printf("Uncompressed size: %ld = 0x%lX\n", src_len, src_len);
-	sprintf(buf, "%lX", src_len);
-	setenv("filesize", buf);
+	setenv_hex("filesize", src_len);
 
 	return 0;
 }
@@ -56,4 +38,51 @@ U_BOOT_CMD(
 	unzip,	4,	1,	do_unzip,
 	"unzip a memory region",
 	"srcaddr dstaddr [dstsize]"
+);
+
+static int do_gzwrite(cmd_tbl_t *cmdtp, int flag,
+		      int argc, char * const argv[])
+{
+	block_dev_desc_t *bdev;
+	int ret;
+	unsigned char *addr;
+	unsigned long length;
+	unsigned long writebuf = 1<<20;
+	u64 startoffs = 0;
+	u64 szexpected = 0;
+
+	if (argc < 5)
+		return CMD_RET_USAGE;
+	ret = get_device(argv[1], argv[2], &bdev);
+	if (ret < 0)
+		return CMD_RET_FAILURE;
+
+	addr = (unsigned char *)simple_strtoul(argv[3], NULL, 16);
+	length = simple_strtoul(argv[4], NULL, 16);
+
+	if (5 < argc) {
+		writebuf = simple_strtoul(argv[5], NULL, 16);
+		if (6 < argc) {
+			startoffs = simple_strtoull(argv[6], NULL, 16);
+			if (7 < argc)
+				szexpected = simple_strtoull(argv[7],
+							     NULL, 16);
+		}
+	}
+
+	ret = gzwrite(addr, length, bdev, writebuf, startoffs, szexpected);
+
+	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+}
+
+U_BOOT_CMD(
+	gzwrite, 8, 0, do_gzwrite,
+	"unzip and write memory to block device",
+	"<interface> <dev> <addr> length [wbuf=1M [offs=0 [outsize=0]]]\n"
+	"\twbuf is the size in bytes (hex) of write buffer\n"
+	"\t\tand should be padded to erase size for SSDs\n"
+	"\toffs is the output start offset in bytes (hex)\n"
+	"\toutsize is the size of the expected output (hex bytes)\n"
+	"\t\tand is required for files with uncompressed lengths\n"
+	"\t\t4 GiB or larger\n"
 );

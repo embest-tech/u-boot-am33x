@@ -5,40 +5,15 @@
  * (C) Copyright 2003
  * Author : Hamid Ikdoumi (Atmel)
 
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <asm/io.h>
-#ifndef CONFIG_AT91_LEGACY
 #include <asm/arch/hardware.h>
 #include <asm/arch/at91_emac.h>
 #include <asm/arch/at91_pmc.h>
 #include <asm/arch/at91_pio.h>
-#else
-/* remove next 5 lines, if all RM9200 boards convert to at91 arch */
-#include <asm/arch-at91/at91rm9200.h>
-#include <asm/arch-at91/hardware.h>
-#include <asm/arch-at91/at91_emac.h>
-#include <asm/arch-at91/at91_pmc.h>
-#include <asm/arch-at91/at91_pio.h>
-#endif
 #include <net.h>
 #include <netdev.h>
 #include <malloc.h>
@@ -377,7 +352,7 @@ static int at91emac_init(struct eth_device *netdev, bd_t *bd)
 
 	/* Init Ethernet buffers */
 	for (i = 0; i < RBF_FRAMEMAX; i++) {
-		dev->rbfdt[i].addr = (unsigned long) NetRxPackets[i];
+		dev->rbfdt[i].addr = (unsigned long) net_rx_packets[i];
 		dev->rbfdt[i].size = 0;
 	}
 	dev->rbfdt[RBF_FRAMEMAX - 1].addr |= RBF_WRAP;
@@ -445,7 +420,7 @@ static int at91emac_recv(struct eth_device *netdev)
 	rbfp = &dev->rbfdt[dev->rbindex];
 	while (rbfp->addr & RBF_OWNER)	{
 		size = rbfp->size & RBF_SIZE;
-		NetReceive(NetRxPackets[dev->rbindex], size);
+		net_process_received_packet(net_rx_packets[dev->rbindex], size);
 
 		debug_cond(DEBUG_AT91EMAC, "Recv[%ld]: %d bytes @ %lx\n",
 			dev->rbindex, size, rbfp->addr);

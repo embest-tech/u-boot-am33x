@@ -4,19 +4,7 @@
  * (C) Copyright 2009 Faraday Technology
  * Po-Yu Chuang <ratbert@faraday-tech.com>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <config.h>
@@ -114,7 +102,7 @@ static int ftmac100_init (struct eth_device *dev, bd_t *bd)
 
 	for (i = 0; i < PKTBUFSRX; i++) {
 		/* RXBUF_BADR */
-		rxdes[i].rxdes2 = (unsigned int)NetRxPackets[i];
+		rxdes[i].rxdes2 = (unsigned int)net_rx_packets[i];
 		rxdes[i].rxdes1 |= FTMAC100_RXDES1_RXBUF_SIZE (PKTSIZE_ALIGN);
 		rxdes[i].rxdes0 = FTMAC100_RXDES0_RXDMA_OWN;
 	}
@@ -176,7 +164,7 @@ static int ftmac100_recv (struct eth_device *dev)
 
 	/* pass the packet up to the protocol layers. */
 
-	NetReceive ((void *)curr_des->rxdes2, rxlen);
+	net_process_received_packet((void *)curr_des->rxdes2, rxlen);
 
 	/* release buffer to DMA */
 

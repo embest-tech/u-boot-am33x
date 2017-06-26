@@ -17,14 +17,14 @@
  * (C) Copyright 2010-2011
  * Thomas Reufer, KEYMILE Ltd, thomas.reufer@keymile.com
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_KM8321_COMMON_H
 #define __CONFIG_KM8321_COMMON_H
+
+#define CONFIG_SYS_GENERIC_BOARD
+#define CONFIG_DISPLAY_BOARDINFO
 
 /*
  * High Level Configuration Options
@@ -37,8 +37,6 @@
 
 /* include common defines/options for all 83xx Keymile boards */
 #include "km83xx-common.h"
-
-#define CONFIG_MISC_INIT_R
 
 /*
  * System IO Config
@@ -115,7 +113,7 @@
 #define CONFIG_SYS_DDR_TIMING_3	0x00000000
 
 #define CONFIG_SYS_KMBEC_FPGA_BASE	0xE8000000
-#define	CONFIG_SYS_KMBEC_FPGA_SIZE	128
+#define CONFIG_SYS_KMBEC_FPGA_SIZE	128
 
 /* EEprom support */
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN	1

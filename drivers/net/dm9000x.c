@@ -4,15 +4,7 @@
 	A Davicom DM9000 ISA NIC fast Ethernet driver for Linux.
 	Copyright (C) 1997  Sten Wang
 
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+ * SPDX-License-Identifier:	GPL-2.0+
 
   (C)Copyright 1997-1998 DAVICOM Semiconductor,Inc. All Rights Reserved.
 
@@ -25,7 +17,7 @@ V0.11	06/20/2001	REG_0A bit3=1, default enable BP with DA match
 		R17 = (R17 & 0xfff0) | NF
 
 v1.00			modify by simon 2001.9.5
-	                change for kernel 2.4.x
+			change for kernel 2.4.x
 
 v1.1   11/09/2001	fix force mode bug
 
@@ -350,6 +342,9 @@ static int dm9000_init(struct eth_device *dev, bd_t *bd)
 	DM9000_iow(DM9000_ISR, ISR_ROOS | ISR_ROS | ISR_PTS | ISR_PRS);
 
 	printf("MAC: %pM\n", dev->enetaddr);
+	if (!is_valid_ethaddr(dev->enetaddr)) {
+		printf("WARNING: Bad MAC address (uninitialized EEPROM?)\n");
+	}
 
 	/* fill device MAC address registers */
 	for (i = 0, oft = DM9000_PAR; i < 6; i++, oft++)
@@ -463,7 +458,8 @@ static void dm9000_halt(struct eth_device *netdev)
 */
 static int dm9000_rx(struct eth_device *netdev)
 {
-	u8 rxbyte, *rdptr = (u8 *) NetRxPackets[0];
+	u8 rxbyte;
+	u8 *rdptr = (u8 *)net_rx_packets[0];
 	u16 RxStatus, RxLen = 0;
 	struct board_info *db = &dm9000_info;
 
@@ -524,7 +520,7 @@ static int dm9000_rx(struct eth_device *netdev)
 			DM9000_DMP_PACKET(__func__ , rdptr, RxLen);
 
 			DM9000_DBG("passing packet to upper layer\n");
-			NetReceive(NetRxPackets[0], RxLen);
+			net_process_received_packet(net_rx_packets[0], RxLen);
 		}
 	}
 	return 0;

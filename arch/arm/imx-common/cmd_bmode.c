@@ -1,29 +1,14 @@
 /*
  * Copyright (C) 2012 Boundary Devices Inc.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <asm/errno.h>
 #include <asm/io.h>
 #include <asm/imx-common/boot_mode.h>
 #include <malloc.h>
+#include <command.h>
 
 static const struct boot_mode *modes[2];
 
@@ -103,9 +88,11 @@ void add_board_boot_modes(const struct boot_mode *p)
 	int size;
 	char *dest;
 
-	if (__u_boot_cmd_bmode.usage) {
-		free(__u_boot_cmd_bmode.usage);
-		__u_boot_cmd_bmode.usage = NULL;
+	cmd_tbl_t *entry = ll_entry_get(cmd_tbl_t, bmode, cmd);
+
+	if (entry->usage) {
+		free(entry->usage);
+		entry->usage = NULL;
 	}
 
 	modes[0] = p;
@@ -114,6 +101,6 @@ void add_board_boot_modes(const struct boot_mode *p)
 	dest = malloc(size);
 	if (dest) {
 		create_usage(dest);
-		__u_boot_cmd_bmode.usage = dest;
+		entry->usage = dest;
 	}
 }

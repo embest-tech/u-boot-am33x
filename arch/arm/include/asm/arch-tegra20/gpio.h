@@ -1,27 +1,12 @@
 /*
  * Copyright (c) 2011, Google Inc. All rights reserved.
- * See file CREDITS for list of people who contributed to this
- * project.
  * Portions Copyright 2011-2012 NVIDIA Corporation
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#ifndef _TEGRA_GPIO_H_
-#define _TEGRA_GPIO_H_
+#ifndef _TEGRA20_GPIO_H_
+#define _TEGRA20_GPIO_H_
 
 /*
  * The Tegra 2x GPIO controller has 224 GPIOs arranged in 7 banks of 4 ports,
@@ -29,8 +14,8 @@
  */
 #define TEGRA_GPIO_PORTS	4	/* number of ports per bank */
 #define TEGRA_GPIO_BANKS	7	/* number of banks */
-#define MAX_NUM_GPIOS		(TEGRA_GPIO_PORTS * TEGRA_GPIO_BANKS * 8)
-#define GPIO_NAME_SIZE		20	/* gpio_request max label len */
+
+#include <asm/arch-tegra/gpio.h>
 
 /* GPIO Controller registers for a single bank */
 struct gpio_ctlr_bank {
@@ -47,11 +32,6 @@ struct gpio_ctlr_bank {
 struct gpio_ctlr {
 	struct gpio_ctlr_bank gpio_bank[TEGRA_GPIO_BANKS];
 };
-
-#define GPIO_BANK(x)		((x) >> 5)
-#define GPIO_PORT(x)		(((x) >> 3) & 0x3)
-#define GPIO_FULLPORT(x)	((x) >> 3)
-#define GPIO_BIT(x)		((x) & 0x7)
 
 enum gpio_pin {
 	GPIO_PA0 = 0,	/* pin 0 */
@@ -280,11 +260,4 @@ enum gpio_pin {
 	GPIO_PBB7,	/* pin 223 */
 };
 
-/*
- * Tegra20-specific GPIO API
- */
-
-void gpio_info(void);
-
-#define gpio_status()	gpio_info()
-#endif	/* TEGRA_GPIO_H_ */
+#endif	/* TEGRA20_GPIO_H_ */

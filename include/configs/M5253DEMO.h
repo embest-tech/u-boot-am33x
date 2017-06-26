@@ -1,31 +1,12 @@
-/*
- * Copyright (C) 2004-2007 Freescale Semiconductor, Inc.
+/* Copyright (C) 2004-2007 Freescale Semiconductor, Inc.
  * Hayden Fraser (Hayden.Fraser@freescale.com)
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _M5253DEMO_H
 #define _M5253DEMO_H
 
-#define CONFIG_MCF52x2		/* define processor family */
-#define CONFIG_M5253		/* define processor type */
 #define CONFIG_M5253DEMO	/* define board type */
 
 #define CONFIG_MCFTMR
@@ -51,19 +32,17 @@
 #	define CONFIG_ENV_IS_IN_FLASH	1
 #endif
 
+#define LDS_BOARD_TEXT \
+        . = DEFINED(env_offset) ? env_offset : .; \
+        common/env_embedded.o (.text*);
+
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_CACHE
-#define CONFIG_CMD_LOADB
-#define CONFIG_CMD_LOADS
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_IDE
-#define CONFIG_CMD_MEMORY
-#define CONFIG_CMD_MISC
 #define CONFIG_CMD_PING
 
 #ifdef CONFIG_CMD_IDE
@@ -99,7 +78,7 @@
 
 #	define CONFIG_EXTRA_ENV_SETTINGS		\
 		"netdev=eth0\0"				\
-		"inpclk=" MK_STR(CONFIG_SYS_INPUT_CLKSRC) "\0"	\
+		"inpclk=" __stringify(CONFIG_SYS_INPUT_CLKSRC) "\0"	\
 		"loadaddr=10000\0"			\
 		"u-boot=u-boot.bin\0"			\
 		"load=tftp ${loadaddr) ${u-boot}\0"	\
@@ -114,17 +93,16 @@
 #define CONFIG_HOSTNAME		M5253DEMO
 
 /* I2C */
-#define CONFIG_FSL_I2C
-#define CONFIG_HARD_I2C		/* I2C with hw support */
-#define CONFIG_SYS_I2C_SPEED		80000
-#define CONFIG_SYS_I2C_SLAVE		0x7F
-#define CONFIG_SYS_I2C_OFFSET		0x00000280
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_FSL
+#define CONFIG_SYS_FSL_I2C_SPEED	80000
+#define CONFIG_SYS_FSL_I2C_SLAVE	0x7F
+#define CONFIG_SYS_FSL_I2C_OFFSET	0x00000280
 #define CONFIG_SYS_IMMR		CONFIG_SYS_MBAR
 #define CONFIG_SYS_I2C_PINMUX_REG	(*(u32 *) (CONFIG_SYS_MBAR+0x19C))
 #define CONFIG_SYS_I2C_PINMUX_CLR	(0xFFFFE7FF)
 #define CONFIG_SYS_I2C_PINMUX_SET	(0)
 
-#define CONFIG_SYS_PROMPT		"=> "
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 
 #if defined(CONFIG_CMD_KGDB)
@@ -140,8 +118,6 @@
 
 #define CONFIG_SYS_MEMTEST_START	0x400
 #define CONFIG_SYS_MEMTEST_END		0x380000
-
-#define CONFIG_SYS_HZ			1000
 
 #undef CONFIG_SYS_PLL_BYPASS		/* bypass PLL for test purpose */
 #define CONFIG_SYS_FAST_CLK

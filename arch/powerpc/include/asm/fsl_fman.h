@@ -3,23 +3,7 @@
  *
  * Copyright 2010-2011 Freescale Semiconductor, Inc.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __FSL_FMAN_H__
@@ -423,6 +407,14 @@ typedef struct fm_10gec_mdio {
 	u8	res[4*1024];
 } fm_10gec_mdio_t;
 
+typedef struct fm_memac {
+	u8	res[4*1024];
+} fm_memac_t;
+
+typedef struct fm_memac_mdio {
+	u8	res[4*1024];
+} fm_memac_mdio_t;
+
 typedef struct fm_1588 {
 	u8	res[4*1024];
 } fm_1588_t;
@@ -446,6 +438,14 @@ typedef struct ccsr_fman {
 	u8			res1[8*1024];
 	fm_soft_parser_t	fm_soft_parser;
 	u8			res2[96*1024];
+#ifdef CONFIG_SYS_FMAN_V3
+	struct {
+		fm_memac_t		fm_memac;
+		fm_memac_mdio_t		fm_memac_mdio;
+	} memac[10];
+	u8			res4[32*1024];
+	fm_memac_mdio_t		fm_dedicated_mdio[2];
+#else
 	struct {
 		fm_dtsec_t	fm_dtesc;
 		fm_mdio_t	fm_mdio;
@@ -455,6 +455,7 @@ typedef struct ccsr_fman {
 		fm_10gec_mdio_t		fm_10gec_mdio;
 	} mac_10g[1];
 	u8			res4[48*1024];
+#endif
 	fm_1588_t		fm_1588;
 	u8			res5[4*1024];
 } ccsr_fman_t;

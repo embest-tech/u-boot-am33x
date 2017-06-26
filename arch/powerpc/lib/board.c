@@ -2,23 +2,7 @@
  * (C) Copyright 2000-2011
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -91,15 +75,10 @@
 extern int update_flash_size(int flash_size);
 #endif
 
-#if defined(CONFIG_SC3)
-extern void sc3_read_eeprom(void);
-#endif
-
 #if defined(CONFIG_CMD_DOC)
 void doc_init(void);
 #endif
-#if defined(CONFIG_HARD_I2C) || \
-    defined(CONFIG_SOFT_I2C)
+#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
 #include <i2c.h>
 #endif
 #include <spi.h>
@@ -123,7 +102,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 
 extern ulong __init_end;
-extern ulong __bss_end__;
+extern ulong __bss_end;
 ulong monitor_flash_len;
 
 #if defined(CONFIG_CMD_BEDBUG)
@@ -163,7 +142,7 @@ static int init_baudrate(void)
 
 /***********************************************************************/
 
-void __board_add_ram_info(int use_default)
+static void __board_add_ram_info(int use_default)
 {
 	/* please define platform specific board_add_ram_info() */
 }
@@ -171,7 +150,7 @@ void __board_add_ram_info(int use_default)
 void board_add_ram_info(int)
 	__attribute__ ((weak, alias("__board_add_ram_info")));
 
-int __board_flash_wp_on(void)
+static int __board_flash_wp_on(void)
 {
 	/*
 	 * Most flashes can't be detected when write protection is enabled,
@@ -184,7 +163,7 @@ int __board_flash_wp_on(void)
 int board_flash_wp_on(void)
 	__attribute__ ((weak, alias("__board_flash_wp_on")));
 
-void __cpu_secondary_init_r(void)
+static void __cpu_secondary_init_r(void)
 {
 }
 
@@ -214,11 +193,15 @@ static int init_func_ram(void)
 
 /***********************************************************************/
 
-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SOFT_I2C)
+#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
 static int init_func_i2c(void)
 {
 	puts("I2C:   ");
+#ifdef CONFIG_SYS_I2C
+	i2c_init_all();
+#else
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+#endif
 	puts("ready\n");
 	return 0;
 }
@@ -237,32 +220,28 @@ static int init_func_spi(void)
 /***********************************************************************/
 
 #if defined(CONFIG_WATCHDOG)
-static int init_func_watchdog_init(void)
+int init_func_watchdog_init(void)
 {
+#if defined(CONFIG_MPC85xx)
+	init_85xx_watchdog();
+#endif
 	puts("       Watchdog enabled\n");
 	WATCHDOG_RESET();
 	return 0;
 }
 
-#define INIT_FUNC_WATCHDOG_INIT	init_func_watchdog_init,
-
-static int init_func_watchdog_reset(void)
+int init_func_watchdog_reset(void)
 {
 	WATCHDOG_RESET();
 	return 0;
 }
-
-#define INIT_FUNC_WATCHDOG_RESET	init_func_watchdog_reset,
-#else
-#define INIT_FUNC_WATCHDOG_INIT		/* undef */
-#define INIT_FUNC_WATCHDOG_RESET	/* undef */
 #endif /* CONFIG_WATCHDOG */
 
 /*
  * Initialization sequence
  */
 
-init_fnc_t *init_sequence[] = {
+static init_fnc_t *init_sequence[] = {
 #if defined(CONFIG_MPC85xx) || defined(CONFIG_MPC86xx)
 	probecpu,
 #endif
@@ -297,10 +276,10 @@ init_fnc_t *init_sequence[] = {
 	serial_init,
 	console_init_f,
 	display_options,
-#if defined(CONFIG_8260)
+#if defined(CONFIG_MPC8260)
 	prt_8260_rsr,
 	prt_8260_clks,
-#endif /* CONFIG_8260 */
+#endif /* CONFIG_MPC8260 */
 #if defined(CONFIG_MPC83xx)
 	prt_83xx_rsr,
 #endif
@@ -308,16 +287,13 @@ init_fnc_t *init_sequence[] = {
 #if defined(CONFIG_MPC5xxx)
 	prt_mpc5xxx_clks,
 #endif /* CONFIG_MPC5xxx */
-#if defined(CONFIG_MPC8220)
-	prt_mpc8220_clks,
-#endif
 	checkboard,
 	INIT_FUNC_WATCHDOG_INIT
 #if defined(CONFIG_MISC_INIT_F)
 	misc_init_f,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SOFT_I2C)
+#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
 	init_func_i2c,
 #endif
 #if defined(CONFIG_HARD_SPI)
@@ -326,7 +302,8 @@ init_fnc_t *init_sequence[] = {
 #ifdef CONFIG_POST
 	post_init_f,
 #endif
-	INIT_FUNC_WATCHDOG_RESET init_func_ram,
+	INIT_FUNC_WATCHDOG_RESET
+	init_func_ram,
 #if defined(CONFIG_SYS_DRAM_TEST)
 	testdram,
 #endif /* CONFIG_SYS_DRAM_TEST */
@@ -334,18 +311,7 @@ init_fnc_t *init_sequence[] = {
 	NULL,	/* Terminate this list */
 };
 
-ulong get_effective_memsize(void)
-{
-#ifndef	CONFIG_VERY_BIG_RAM
-	return gd->ram_size;
-#else
-	/* limit stack to what we can reasonable map */
-	return ((gd->ram_size > CONFIG_MAX_MEM_MAPPED) ?
-		CONFIG_MAX_MEM_MAPPED : gd->ram_size);
-#endif
-}
-
-int __fixup_cpu(void)
+static int __fixup_cpu(void)
 {
 	return 0;
 }
@@ -364,13 +330,6 @@ int fixup_cpu(void) __attribute__((weak, alias("__fixup_cpu")));
  * Be aware of the restrictions: global data is read-only, BSS is not
  * initialized, and stack space is limited to a few kB.
  */
-
-#ifdef CONFIG_LOGBUFFER
-unsigned long logbuffer_base(void)
-{
-	return CONFIG_SYS_SDRAM_BASE + get_effective_memsize() - LOGBUFF_LEN;
-}
-#endif
 
 void board_init_f(ulong bootflag)
 {
@@ -396,13 +355,15 @@ void board_init_f(ulong bootflag)
 	memset((void *) gd, 0, sizeof(gd_t));
 #endif
 
+	gd->flags = bootflag;
+
 	for (init_fnc_ptr = init_sequence; *init_fnc_ptr; ++init_fnc_ptr)
 		if ((*init_fnc_ptr) () != 0)
 			hang();
 
 #ifdef CONFIG_POST
 	post_bootmode_init();
-	post_run(NULL, POST_ROM | post_bootmode_get(0));
+	post_run(NULL, POST_ROM | post_bootmode_get(NULL));
 #endif
 
 	WATCHDOG_RESET();
@@ -419,7 +380,7 @@ void board_init_f(ulong bootflag)
 	 *  - monitor code
 	 *  - board info struct
 	 */
-	len = (ulong)&__bss_end__ - CONFIG_SYS_MONITOR_BASE;
+	len = (ulong)&__bss_end - CONFIG_SYS_MONITOR_BASE;
 
 	/*
 	 * Subtract specified amount of memory to hide so that it won't
@@ -440,8 +401,8 @@ void board_init_f(ulong bootflag)
 	 * We need to make sure the location we intend to put secondary core
 	 * boot code is reserved and not used by any part of u-boot
 	 */
-	if (addr > determine_mp_bootpg()) {
-		addr = determine_mp_bootpg();
+	if (addr > determine_mp_bootpg(NULL)) {
+		addr = determine_mp_bootpg(NULL);
 		debug("Reserving MP boot page to %08lx\n", addr);
 	}
 #endif
@@ -544,7 +505,7 @@ void board_init_f(ulong bootflag)
 	bd->bi_sramsize = CONFIG_SYS_SRAM_SIZE;		/* size  of SRAM */
 #endif
 
-#if defined(CONFIG_8xx) || defined(CONFIG_8260) || defined(CONFIG_5xx) || \
+#if defined(CONFIG_8xx) || defined(CONFIG_MPC8260) || defined(CONFIG_5xx) || \
     defined(CONFIG_E500) || defined(CONFIG_MPC86xx)
 	bd->bi_immr_base = CONFIG_SYS_IMMR;	/* base  of IMMR register     */
 #endif
@@ -554,45 +515,23 @@ void board_init_f(ulong bootflag)
 #if defined(CONFIG_MPC83xx)
 	bd->bi_immrbar = CONFIG_SYS_IMMR;
 #endif
-#if defined(CONFIG_MPC8220)
-	bd->bi_mbar_base = CONFIG_SYS_MBAR;	/* base of internal registers */
-	bd->bi_inpfreq = gd->inp_clk;
-	bd->bi_pcifreq = gd->pci_clk;
-	bd->bi_vcofreq = gd->vco_clk;
-	bd->bi_pevfreq = gd->pev_clk;
-	bd->bi_flbfreq = gd->flb_clk;
-
-	/* store bootparam to sram (backward compatible), here? */
-	{
-		u32 *sram = (u32 *) CONFIG_SYS_SRAM_BASE;
-
-		*sram++ = gd->ram_size;
-		*sram++ = gd->bus_clk;
-		*sram++ = gd->inp_clk;
-		*sram++ = gd->cpu_clk;
-		*sram++ = gd->vco_clk;
-		*sram++ = gd->flb_clk;
-		*sram++ = 0xb8c3ba11;	/* boot signature */
-	}
-#endif
 
 	WATCHDOG_RESET();
 	bd->bi_intfreq = gd->cpu_clk;	/* Internal Freq, in Hz */
 	bd->bi_busfreq = gd->bus_clk;	/* Bus Freq,      in Hz */
 #if defined(CONFIG_CPM2)
-	bd->bi_cpmfreq = gd->cpm_clk;
-	bd->bi_brgfreq = gd->brg_clk;
-	bd->bi_sccfreq = gd->scc_clk;
-	bd->bi_vco = gd->vco_out;
+	bd->bi_cpmfreq = gd->arch.cpm_clk;
+	bd->bi_brgfreq = gd->arch.brg_clk;
+	bd->bi_sccfreq = gd->arch.scc_clk;
+	bd->bi_vco = gd->arch.vco_out;
 #endif /* CONFIG_CPM2 */
 #if defined(CONFIG_MPC512X)
-	bd->bi_ipsfreq = gd->ips_clk;
+	bd->bi_ipsfreq = gd->arch.ips_clk;
 #endif /* CONFIG_MPC512X */
 #if defined(CONFIG_MPC5xxx)
-	bd->bi_ipbfreq = gd->ipb_clk;
+	bd->bi_ipbfreq = gd->arch.ipb_clk;
 	bd->bi_pcifreq = gd->pci_clk;
 #endif /* CONFIG_MPC5xxx */
-	bd->bi_baudrate = gd->baudrate;	/* Console Baudrate     */
 
 #ifdef CONFIG_SYS_EXTBDINFO
 	strncpy((char *) bd->bi_s_version, "1.2", sizeof(bd->bi_s_version));
@@ -649,10 +588,11 @@ void board_init_r(gd_t *id, ulong dest_addr)
 
 #if defined(CONFIG_MPC85xx) || defined(CONFIG_MPC86xx)
 	/*
-	 * The gd->cpu pointer is set to an address in flash before relocation.
-	 * We need to update it to point to the same CPU entry in RAM.
+	 * The gd->arch.cpu pointer is set to an address in flash before
+	 * relocation.  We need to update it to point to the same CPU entry
+	 * in RAM.
 	 */
-	gd->cpu += dest_addr - CONFIG_SYS_MONITOR_BASE;
+	gd->arch.cpu += dest_addr - CONFIG_SYS_MONITOR_BASE;
 
 	/*
 	 * If we didn't know the cpu mask & # cores, we can save them of
@@ -672,9 +612,7 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	gd->env_addr += dest_addr - CONFIG_SYS_MONITOR_BASE;
 #endif
 
-#ifdef CONFIG_SERIAL_MULTI
 	serial_initialize();
-#endif
 
 	debug("Now running in RAM - U-Boot at: %08lx\n", dest_addr);
 
@@ -741,16 +679,13 @@ void board_init_r(gd_t *id, ulong dest_addr)
 		flash_size = 0;
 	} else if ((flash_size = flash_init()) > 0) {
 #ifdef CONFIG_SYS_FLASH_CHECKSUM
-		char *s;
-
 		print_size(flash_size, "");
 		/*
 		 * Compute and print flash CRC if flashchecksum is set to 'y'
 		 *
 		 * NOTE: Maybe we should add some WATCHDOG_RESET()? XXX
 		 */
-		s = getenv("flashchecksum");
-		if (s && (*s == 'y')) {
+		if (getenv_yesno("flashchecksum") == 1) {
 			printf("  CRC: %08X",
 			       crc32(0,
 				     (const unsigned char *)
@@ -843,9 +778,7 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	 * "i2cfast" into account
 	 */
 	{
-		char *s = getenv("i2cfast");
-
-		if (s && ((*s == 'y') || (*s == 'Y'))) {
+		if (getenv_yesno("i2cfast") == 1) {
 			bd->bi_iic_fast[0] = 1;
 			bd->bi_iic_fast[1] = 1;
 		}
@@ -854,19 +787,8 @@ void board_init_r(gd_t *id, ulong dest_addr)
 #endif /* CONFIG_405GP, CONFIG_405EP */
 #endif /* CONFIG_SYS_EXTBDINFO */
 
-#if defined(CONFIG_SC3)
-	sc3_read_eeprom();
-#endif
-
 #if defined(CONFIG_ID_EEPROM) || defined(CONFIG_SYS_I2C_MAC_OFFSET)
 	mac_read_from_eeprom();
-#endif
-
-#ifdef	CONFIG_HERMES
-	if ((gd->board_type >> 16) == 2)
-		bd->bi_ethspeed = gd->board_type & 0xFFFF;
-	else
-		bd->bi_ethspeed = 0xFFFF;
 #endif
 
 #ifdef CONFIG_CMD_NET
@@ -918,11 +840,6 @@ void board_init_r(gd_t *id, ulong dest_addr)
 	misc_init_r();
 #endif
 
-#ifdef	CONFIG_HERMES
-	if (bd->bi_ethspeed != 0xFFFF)
-		hermes_start_lxt980((int) bd->bi_ethspeed);
-#endif
-
 #if defined(CONFIG_CMD_KGDB)
 	WATCHDOG_RESET();
 	puts("KGDB:  ");
@@ -965,7 +882,7 @@ void board_init_r(gd_t *id, ulong dest_addr)
 #if defined(CONFIG_CMD_NET)
 	WATCHDOG_RESET();
 	puts("Net:   ");
-	eth_initialize(bd);
+	eth_initialize();
 #endif
 
 #if defined(CONFIG_CMD_NET) && defined(CONFIG_RESET_PHY_R)
@@ -1033,7 +950,7 @@ void board_init_r(gd_t *id, ulong dest_addr)
 		pram += (LOGBUFF_LEN + LOGBUFF_OVERHEAD) / 1024;
 #endif
 #endif
-		sprintf(memsz, "%ldk", (bd->bi_memsize / 1024) - pram);
+		sprintf(memsz, "%ldk", (ulong) (bd->bi_memsize / 1024) - pram);
 		setenv("mem", memsz);
 	}
 #endif
@@ -1041,14 +958,6 @@ void board_init_r(gd_t *id, ulong dest_addr)
 #ifdef CONFIG_PS2KBD
 	puts("PS/2:  ");
 	kbd_init();
-#endif
-
-#ifdef CONFIG_MODEM_SUPPORT
-	{
-		extern int do_mdm_init;
-
-		do_mdm_init = gd->do_mdm_init;
-	}
 #endif
 
 	/* Initialization complete - start the monitor */
@@ -1061,15 +970,6 @@ void board_init_r(gd_t *id, ulong dest_addr)
 
 	/* NOTREACHED - no way out of command loop except booting */
 }
-
-void hang(void)
-{
-	puts("### ERROR ### Please RESET the board ###\n");
-	bootstage_error(BOOTSTAGE_ID_NEED_RESET);
-	for (;;)
-		;
-}
-
 
 #if 0	/* We could use plain global data, but the resulting code is bigger */
 /*

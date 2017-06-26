@@ -4,20 +4,7 @@
  * Martin Krause, Martin.Krause@tqs.de
  * reworked original enc28j60.c
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -34,8 +21,8 @@
  * enc_miiphy_read(), enc_miiphy_write(), enc_write_hwaddr(),
  * enc_init(), enc_recv(), enc_send(), enc_halt()
  * ALL other functions assume that the bus has already been claimed!
- * Since NetReceive() might call enc_send() in return, the bus must be
- * released, NetReceive() called and claimed again.
+ * Since net_process_received_packet() might call enc_send() in return, the bus
+ * must be released, net_process_received_packet() called and claimed again.
  */
 
 /*
@@ -428,7 +415,7 @@ static void enc_reset_rx_call(enc_dev_t *enc)
  */
 static void enc_receive(enc_dev_t *enc)
 {
-	u8 *packet = (u8 *)NetRxPackets[0];
+	u8 *packet = (u8 *)net_rx_packets[0];
 	u16 pkt_len;
 	u16 copy_len;
 	u16 status;
@@ -481,11 +468,12 @@ static void enc_receive(enc_dev_t *enc)
 			continue;
 		}
 		/*
-		 * Because NetReceive() might call enc_send(), we need to
-		 * release the SPI bus, call NetReceive(), reclaim the bus
+		 * Because net_process_received_packet() might call enc_send(),
+		 * we need to release the SPI bus, call
+		 * net_process_received_packet(), reclaim the bus.
 		 */
 		enc_release_bus(enc);
-		NetReceive(packet, pkt_len);
+		net_process_received_packet(packet, pkt_len);
 		if (enc_claim_bus(enc))
 			return;
 		(void)enc_r8(enc, CTL_REG_EIR);

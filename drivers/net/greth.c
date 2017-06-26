@@ -5,29 +5,14 @@
  * (C) Copyright 2007
  * Daniel Hellstrom, Gaisler Research, daniel@gaisler.com
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* #define DEBUG */
 
 #include <common.h>
 #include <command.h>
+#include <errno.h>
 #include <net.h>
 #include <netdev.h>
 #include <malloc.h>
@@ -549,7 +534,7 @@ int greth_recv(struct eth_device *dev)
 			sparc_dcache_flush_all();
 
 			/* pass packet on to network subsystem */
-			NetReceive((void *)d, len);
+			net_process_received_packet((void *)d, len);
 
 			/* bump stats counters */
 			greth->stats.rx_packets++;
@@ -669,13 +654,8 @@ int greth_initialize(bd_t * bis)
 			}
 		}
 	} else {
-		/* HW Address not found in environment, Set default HW address */
-		addr[0] = GRETH_HWADDR_0;	/* MSB */
-		addr[1] = GRETH_HWADDR_1;
-		addr[2] = GRETH_HWADDR_2;
-		addr[3] = GRETH_HWADDR_3;
-		addr[4] = GRETH_HWADDR_4;
-		addr[5] = GRETH_HWADDR_5;	/* LSB */
+		/* No ethaddr set */
+		return -EINVAL;
 	}
 
 	/* set and remember MAC address */

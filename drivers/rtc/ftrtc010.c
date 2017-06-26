@@ -4,19 +4,7 @@
  * (C) Copyright 2009 Faraday Technology
  * Po-Yu Chuang <ratbert@faraday-tech.com>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <config.h>
@@ -98,7 +86,7 @@ int rtc_get(struct rtc_time *tmp)
 	now = ftrtc010_time() + readl(&rtc->record);
 #endif
 
-	to_tm(now, tmp);
+	rtc_to_tm(now, tmp);
 
 	return 0;
 }
@@ -116,8 +104,7 @@ int rtc_set(struct rtc_time *tmp)
 	      tmp->tm_year, tmp->tm_mon, tmp->tm_mday, tmp->tm_wday,
 	      tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 
-	new = mktime(tmp->tm_year, tmp->tm_mon, tmp->tm_mday, tmp->tm_hour,
-		     tmp->tm_min, tmp->tm_sec);
+	new = rtc_mktime(tmp);
 
 	now = ftrtc010_time();
 

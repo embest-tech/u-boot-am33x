@@ -2,27 +2,25 @@
  * (C) Copyright 2009
  * Stefano Babic, DENX Software Engineering, sbabic@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __ASM_ARCH_CLOCK_H
 #define __ASM_ARCH_CLOCK_H
+
+#include <common.h>
+
+#ifdef CONFIG_SYS_MX6_HCLK
+#define MXC_HCLK	CONFIG_SYS_MX6_HCLK
+#else
+#define MXC_HCLK	24000000
+#endif
+
+#ifdef CONFIG_SYS_MX6_CLK32
+#define MXC_CLK32	CONFIG_SYS_MX6_CLK32
+#else
+#define MXC_CLK32	32768
+#endif
 
 enum mxc_clock {
 	MXC_ARM_CLK = 0,
@@ -41,13 +39,34 @@ enum mxc_clock {
 	MXC_ESDHC4_CLK,
 	MXC_SATA_CLK,
 	MXC_NFC_CLK,
+	MXC_I2C_CLK,
+};
+
+enum enet_freq {
+	ENET_25MHZ,
+	ENET_50MHZ,
+	ENET_100MHZ,
+	ENET_125MHZ,
 };
 
 u32 imx_get_uartclk(void);
 u32 imx_get_fecclk(void);
 unsigned int mxc_get_clock(enum mxc_clock clk);
+void setup_gpmi_io_clk(u32 cfg);
+void hab_caam_clock_enable(unsigned char enable);
+void enable_ocotp_clk(unsigned char enable);
 void enable_usboh3_clk(unsigned char enable);
+void enable_uart_clk(unsigned char enable);
+int enable_cspi_clock(unsigned char enable, unsigned spi_num);
+int enable_usdhc_clk(unsigned char enable, unsigned bus_num);
 int enable_sata_clock(void);
+void disable_sata_clock(void);
+int enable_pcie_clock(void);
 int enable_i2c_clk(unsigned char enable, unsigned i2c_num);
-
+int enable_spi_clk(unsigned char enable, unsigned spi_num);
+void enable_ipu_clock(void);
+int enable_fec_anatop_clock(enum enet_freq freq);
+void enable_enet_clk(unsigned char enable);
+void enable_qspi_clk(int qspi_num);
+void enable_thermal_clk(void);
 #endif /* __ASM_ARCH_CLOCK_H */

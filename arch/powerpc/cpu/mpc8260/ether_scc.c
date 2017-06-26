@@ -16,23 +16,7 @@
  * DENX Software Engineerin GmbH
  * Gary Jennejohn <garyj@denx.de>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -162,7 +146,7 @@ static int sec_rx(struct eth_device *dev)
 	else
 	{
 	    /* Pass the packet up to the protocol layers. */
-	    NetReceive(NetRxPackets[rxIdx], length - 4);
+	    net_process_received_packet(net_rx_packets[rxIdx], length - 4);
 	}
 
 
@@ -279,7 +263,7 @@ static int sec_init(struct eth_device *dev, bd_t *bis)
     {
 	rtx->rxbd[i].cbd_sc = BD_ENET_RX_EMPTY;
 	rtx->rxbd[i].cbd_datlen = 0;                  /* Reset */
-	rtx->rxbd[i].cbd_bufaddr = (uint)NetRxPackets[i];
+	rtx->rxbd[i].cbd_bufaddr = (uint)net_rx_packets[i];
     }
 
     rtx->rxbd[PKTBUFSRX - 1].cbd_sc |= BD_ENET_RX_WRAP;

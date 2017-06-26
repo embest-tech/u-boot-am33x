@@ -2,23 +2,7 @@
  *
  * Copyright (c) 2005 Freescale Semiconductor, Inc.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Description:
  *   Ethernet interface for Tundra TSI108 bridge chip
@@ -820,11 +804,11 @@ static int tsi108_eth_probe (struct eth_device *dev, bd_t * bis)
 	rx_descr_current = rx_descr;
 	for (index = 0; index < NUM_RX_DESC; index++) {
 		/* make sure the receive buffers are not in cache */
-		invalidate_dcache_range((unsigned long)NetRxPackets[index],
-					(unsigned long)NetRxPackets[index] +
+		invalidate_dcache_range((unsigned long)net_rx_packets[index],
+					(unsigned long)net_rx_packets[index] +
 					RX_BUFFER_SIZE);
 		rx_descr->start_addr0 =
-		    cpu_to_le32((vuint32) NetRxPackets[index]);
+		    cpu_to_le32((vuint32) net_rx_packets[index]);
 		rx_descr->start_addr1 = 0;
 		rx_descr->next_descr_addr0 =
 		    cpu_to_le32((vuint32) (rx_descr + 1));
@@ -982,7 +966,7 @@ static int tsi108_eth_recv (struct eth_device *dev)
 
 			/*** process packet ***/
 			buffer = (uchar *)(le32_to_cpu(rx_descr->start_addr0));
-			NetReceive(buffer, length);
+			net_process_received_packet(buffer, length);
 
 			invalidate_dcache_range ((unsigned long)buffer,
 						(unsigned long)buffer +

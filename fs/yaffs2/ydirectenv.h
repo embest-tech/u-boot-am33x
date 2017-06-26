@@ -56,11 +56,7 @@ void yaffs_qsort(void *aa, size_t n, size_t es,
 
 #ifdef NO_inline
 #define inline
-#else
-#define inline __inline__
 #endif
-
-#define cond_resched()  do {} while (0)
 
 #define yaffs_trace(msk, fmt, ...) do { \
 	if (yaffs_trace_mask & (msk)) \
@@ -79,7 +75,7 @@ void yaffs_qsort(void *aa, size_t n, size_t es,
 #define YAFFS_ROOT_MODE			0666
 #define YAFFS_LOSTNFOUND_MODE		0666
 
-#include "yaffs_list.h"
+#include "linux/list.h"
 
 #include "yaffsfs.h"
 

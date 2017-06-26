@@ -75,8 +75,6 @@
 		SSYNC(); \
 	} while (0)
 #define CONFIG_HOSTNAME		bf533-ezkit
-/* Uncomment next line to use fixed MAC address */
-/* #define CONFIG_ETHADDR	02:80:ad:20:31:e8 */
 
 
 /*
@@ -94,10 +92,15 @@
 /*
  * I2C Settings
  */
-#define CONFIG_SOFT_I2C
+#define CONFIG_SYS_I2C_SOFT
+#ifdef CONFIG_SYS_I2C_SOFT
+#define CONFIG_SYS_I2C
 #define CONFIG_SOFT_I2C_GPIO_SCL GPIO_PF0
 #define CONFIG_SOFT_I2C_GPIO_SDA GPIO_PF1
-
+#define CONFIG_SYS_I2C_SOFT_SPEED	50000
+#define CONFIG_SYS_I2C_SOFT_SLAVE	0
+#define I2C_DELAY              udelay(5)       /* 1/4 I2C clock duration */
+#endif
 
 /*
  * Misc Settings
@@ -105,7 +108,6 @@
 #define CONFIG_MISC_INIT_R
 #define CONFIG_RTC_BFIN
 #define CONFIG_UART_CONSOLE	0
-
 
 /*
  * Pull in common ADI header for remaining command/environment setup

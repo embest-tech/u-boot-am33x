@@ -4,24 +4,7 @@
  * Written by: Rafal Czubak <rcz@semihalf.com>
  *             Bartlomiej Sieka <tur@semihalf.com>
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- *
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -37,6 +20,7 @@
 #include <command.h>
 #include <flash.h>
 #include <net.h>
+#include <net/tftp.h>
 #include <malloc.h>
 
 /* env variable holding the location of the update file */
@@ -55,8 +39,8 @@
 #define CONFIG_UPDATE_TFTP_CNT_MAX	0
 #endif
 
-extern ulong TftpRRQTimeoutMSecs;
-extern int TftpRRQTimeoutCountMax;
+extern ulong tftp_timeout_ms;
+extern int tftp_timeout_count_max;
 extern flash_info_t flash_info[];
 extern ulong load_addr;
 
@@ -71,22 +55,22 @@ static int update_load(char *filename, ulong msec_max, int cnt_max, ulong addr)
 
 	rv = 0;
 	/* save used globals and env variable */
-	saved_timeout_msecs = TftpRRQTimeoutMSecs;
-	saved_timeout_count = TftpRRQTimeoutCountMax;
+	saved_timeout_msecs = tftp_timeout_ms;
+	saved_timeout_count = tftp_timeout_count_max;
 	saved_netretry = strdup(getenv("netretry"));
-	saved_bootfile = strdup(BootFile);
+	saved_bootfile = strdup(net_boot_file_name);
 
 	/* set timeouts for auto-update */
-	TftpRRQTimeoutMSecs = msec_max;
-	TftpRRQTimeoutCountMax = cnt_max;
+	tftp_timeout_ms = msec_max;
+	tftp_timeout_count_max = cnt_max;
 
 	/* we don't want to retry the connection if errors occur */
 	setenv("netretry", "no");
 
 	/* download the update file */
 	load_addr = addr;
-	copy_filename(BootFile, filename, sizeof(BootFile));
-	size = NetLoop(TFTPGET);
+	copy_filename(net_boot_file_name, filename, sizeof(net_boot_file_name));
+	size = net_loop(TFTPGET);
 
 	if (size < 0)
 		rv = 1;
@@ -94,15 +78,16 @@ static int update_load(char *filename, ulong msec_max, int cnt_max, ulong addr)
 		flush_cache(addr, size);
 
 	/* restore changed globals and env variable */
-	TftpRRQTimeoutMSecs = saved_timeout_msecs;
-	TftpRRQTimeoutCountMax = saved_timeout_count;
+	tftp_timeout_ms = saved_timeout_msecs;
+	tftp_timeout_count_max = saved_timeout_count;
 
 	setenv("netretry", saved_netretry);
 	if (saved_netretry != NULL)
 		free(saved_netretry);
 
 	if (saved_bootfile != NULL) {
-		copy_filename(BootFile, saved_bootfile, sizeof(BootFile));
+		copy_filename(net_boot_file_name, saved_bootfile,
+			      sizeof(net_boot_file_name));
 		free(saved_bootfile);
 	}
 
@@ -296,7 +281,7 @@ got_update_file:
 		printf("Processing update '%s' :",
 			fit_get_name(fit, noffset, NULL));
 
-		if (!fit_image_check_hashes(fit, noffset)) {
+		if (!fit_image_verify(fit, noffset)) {
 			printf("Error: invalid update hash, aborting\n");
 			ret = 1;
 			goto next_node;

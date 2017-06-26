@@ -6,23 +6,7 @@
  * (C) Copyright 2000
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Hacked for MPC8260 by Murray.Jensen@cmst.csiro.au, 19-Oct-00.
  */
@@ -34,6 +18,8 @@
 
 #include <common.h>
 #include <asm/cpm_85xx.h>
+#include <serial.h>
+#include <linux/compiler.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -85,7 +71,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #endif
 
-int serial_init (void)
+static int mpc85xx_serial_init(void)
 {
 	volatile ccsr_cpm_t *cpm = (ccsr_cpm_t *)CONFIG_SYS_MPC85xx_CPM_ADDR;
 	volatile ccsr_cpm_scc_t *sp;
@@ -184,8 +170,7 @@ int serial_init (void)
 	return (0);
 }
 
-void
-serial_setbrg (void)
+static void mpc85xx_serial_setbrg(void)
 {
 #if defined(CONFIG_CONS_USE_EXTC)
 	m8560_cpm_extcbrg(SCC_INDEX, gd->baudrate,
@@ -195,8 +180,7 @@ serial_setbrg (void)
 #endif
 }
 
-void
-serial_putc(const char c)
+static void mpc85xx_serial_putc(const char c)
 {
 	volatile scc_uart_t	*up;
 	volatile cbd_t		*tbdf;
@@ -220,16 +204,7 @@ serial_putc(const char c)
 	tbdf->cbd_sc |= BD_SC_READY;
 }
 
-void
-serial_puts (const char *s)
-{
-	while (*s) {
-		serial_putc (*s++);
-	}
-}
-
-int
-serial_getc(void)
+static int mpc85xx_serial_getc(void)
 {
 	volatile cbd_t		*rbdf;
 	volatile scc_uart_t	*up;
@@ -252,8 +227,7 @@ serial_getc(void)
 	return (c);
 }
 
-int
-serial_tstc()
+static int mpc85xx_serial_tstc(void)
 {
 	volatile cbd_t		*rbdf;
 	volatile scc_uart_t	*up;
@@ -265,4 +239,24 @@ serial_tstc()
 	return ((rbdf->cbd_sc & BD_SC_EMPTY) == 0);
 }
 
+static struct serial_device mpc85xx_serial_drv = {
+	.name	= "mpc85xx_serial",
+	.start	= mpc85xx_serial_init,
+	.stop	= NULL,
+	.setbrg	= mpc85xx_serial_setbrg,
+	.putc	= mpc85xx_serial_putc,
+	.puts	= default_serial_puts,
+	.getc	= mpc85xx_serial_getc,
+	.tstc	= mpc85xx_serial_tstc,
+};
+
+void mpc85xx_serial_initialize(void)
+{
+	serial_register(&mpc85xx_serial_drv);
+}
+
+__weak struct serial_device *default_serial_console(void)
+{
+	return &mpc85xx_serial_drv;
+}
 #endif	/* CONFIG_CONS_ON_SCC */

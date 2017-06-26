@@ -16,246 +16,45 @@
 #include <common.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/hardware.h>
+#include <asm/arch/mux.h>
 #include <asm/io.h>
 #include <i2c.h>
-
-#define MUX_CFG(value, offset)	\
-	__raw_writel(value, (CTRL_BASE + offset));
-
-/* PAD Control Fields */
-#define SLEWCTRL	(0x1 << 6)
-#define RXACTIVE	(0x1 << 5)
-#define PULLUP_EN	(0x1 << 4) /* Pull UP Selection */
-#define PULLUDEN	(0x0 << 3) /* Pull up enabled */
-#define PULLUDDIS	(0x1 << 3) /* Pull up disabled */
-#define MODE(val)	val	/* used for Readability */
-
-/*
- * PAD CONTROL OFFSETS
- * Field names corresponds to the pad signal name
- */
-struct pad_signals {
-	int gpmc_ad0;
-	int gpmc_ad1;
-	int gpmc_ad2;
-	int gpmc_ad3;
-	int gpmc_ad4;
-	int gpmc_ad5;
-	int gpmc_ad6;
-	int gpmc_ad7;
-	int gpmc_ad8;
-	int gpmc_ad9;
-	int gpmc_ad10;
-	int gpmc_ad11;
-	int gpmc_ad12;
-	int gpmc_ad13;
-	int gpmc_ad14;
-	int gpmc_ad15;
-	int gpmc_a0;
-	int gpmc_a1;
-	int gpmc_a2;
-	int gpmc_a3;
-	int gpmc_a4;
-	int gpmc_a5;
-	int gpmc_a6;
-	int gpmc_a7;
-	int gpmc_a8;
-	int gpmc_a9;
-	int gpmc_a10;
-	int gpmc_a11;
-	int gpmc_wait0;
-	int gpmc_wpn;
-	int gpmc_be1n;
-	int gpmc_csn0;
-	int gpmc_csn1;
-	int gpmc_csn2;
-	int gpmc_csn3;
-	int gpmc_clk;
-	int gpmc_advn_ale;
-	int gpmc_oen_ren;
-	int gpmc_wen;
-	int gpmc_be0n_cle;
-	int lcd_data0;
-	int lcd_data1;
-	int lcd_data2;
-	int lcd_data3;
-	int lcd_data4;
-	int lcd_data5;
-	int lcd_data6;
-	int lcd_data7;
-	int lcd_data8;
-	int lcd_data9;
-	int lcd_data10;
-	int lcd_data11;
-	int lcd_data12;
-	int lcd_data13;
-	int lcd_data14;
-	int lcd_data15;
-	int lcd_vsync;
-	int lcd_hsync;
-	int lcd_pclk;
-	int lcd_ac_bias_en;
-	int mmc0_dat3;
-	int mmc0_dat2;
-	int mmc0_dat1;
-	int mmc0_dat0;
-	int mmc0_clk;
-	int mmc0_cmd;
-	int mii1_col;
-	int mii1_crs;
-	int mii1_rxerr;
-	int mii1_txen;
-	int mii1_rxdv;
-	int mii1_txd3;
-	int mii1_txd2;
-	int mii1_txd1;
-	int mii1_txd0;
-	int mii1_txclk;
-	int mii1_rxclk;
-	int mii1_rxd3;
-	int mii1_rxd2;
-	int mii1_rxd1;
-	int mii1_rxd0;
-	int rmii1_refclk;
-	int mdio_data;
-	int mdio_clk;
-	int spi0_sclk;
-	int spi0_d0;
-	int spi0_d1;
-	int spi0_cs0;
-	int spi0_cs1;
-	int ecap0_in_pwm0_out;
-	int uart0_ctsn;
-	int uart0_rtsn;
-	int uart0_rxd;
-	int uart0_txd;
-	int uart1_ctsn;
-	int uart1_rtsn;
-	int uart1_rxd;
-	int uart1_txd;
-	int i2c0_sda;
-	int i2c0_scl;
-	int mcasp0_aclkx;
-	int mcasp0_fsx;
-	int mcasp0_axr0;
-	int mcasp0_ahclkr;
-	int mcasp0_aclkr;
-	int mcasp0_fsr;
-	int mcasp0_axr1;
-	int mcasp0_ahclkx;
-	int xdma_event_intr0;
-	int xdma_event_intr1;
-	int nresetin_out;
-	int porz;
-	int nnmi;
-	int osc0_in;
-	int osc0_out;
-	int rsvd1;
-	int tms;
-	int tdi;
-	int tdo;
-	int tck;
-	int ntrst;
-	int emu0;
-	int emu1;
-	int osc1_in;
-	int osc1_out;
-	int pmic_power_en;
-	int rtc_porz;
-	int rsvd2;
-	int ext_wakeup;
-	int enz_kaldo_1p8v;
-	int usb0_dm;
-	int usb0_dp;
-	int usb0_ce;
-	int usb0_id;
-	int usb0_vbus;
-	int usb0_drvvbus;
-	int usb1_dm;
-	int usb1_dp;
-	int usb1_ce;
-	int usb1_id;
-	int usb1_vbus;
-	int usb1_drvvbus;
-	int ddr_resetn;
-	int ddr_csn0;
-	int ddr_cke;
-	int ddr_ck;
-	int ddr_nck;
-	int ddr_casn;
-	int ddr_rasn;
-	int ddr_wen;
-	int ddr_ba0;
-	int ddr_ba1;
-	int ddr_ba2;
-	int ddr_a0;
-	int ddr_a1;
-	int ddr_a2;
-	int ddr_a3;
-	int ddr_a4;
-	int ddr_a5;
-	int ddr_a6;
-	int ddr_a7;
-	int ddr_a8;
-	int ddr_a9;
-	int ddr_a10;
-	int ddr_a11;
-	int ddr_a12;
-	int ddr_a13;
-	int ddr_a14;
-	int ddr_a15;
-	int ddr_odt;
-	int ddr_d0;
-	int ddr_d1;
-	int ddr_d2;
-	int ddr_d3;
-	int ddr_d4;
-	int ddr_d5;
-	int ddr_d6;
-	int ddr_d7;
-	int ddr_d8;
-	int ddr_d9;
-	int ddr_d10;
-	int ddr_d11;
-	int ddr_d12;
-	int ddr_d13;
-	int ddr_d14;
-	int ddr_d15;
-	int ddr_dqm0;
-	int ddr_dqm1;
-	int ddr_dqs0;
-	int ddr_dqsn0;
-	int ddr_dqs1;
-	int ddr_dqsn1;
-	int ddr_vref;
-	int ddr_vtp;
-	int ddr_strben0;
-	int ddr_strben1;
-	int ain7;
-	int ain6;
-	int ain5;
-	int ain4;
-	int ain3;
-	int ain2;
-	int ain1;
-	int ain0;
-	int vrefp;
-	int vrefn;
-};
-
-struct module_pin_mux {
-	short reg_offset;
-	unsigned char val;
-};
-
-/* Pad control register offset */
-#define PAD_CTRL_BASE	0x800
-#define OFFSET(x)	(unsigned int) (&((struct pad_signals *) \
-				(PAD_CTRL_BASE))->x)
+#include <board-common/board_detect.h>
+#include "board.h"
 
 static struct module_pin_mux uart0_pin_mux[] = {
 	{OFFSET(uart0_rxd), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* UART0_RXD */
 	{OFFSET(uart0_txd), (MODE(0) | PULLUDEN)},		/* UART0_TXD */
+	{-1},
+};
+
+static struct module_pin_mux uart1_pin_mux[] = {
+	{OFFSET(uart1_rxd), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* UART1_RXD */
+	{OFFSET(uart1_txd), (MODE(0) | PULLUDEN)},		/* UART1_TXD */
+	{-1},
+};
+
+static struct module_pin_mux uart2_pin_mux[] = {
+	{OFFSET(spi0_sclk), (MODE(1) | PULLUP_EN | RXACTIVE)},	/* UART2_RXD */
+	{OFFSET(spi0_d0), (MODE(1) | PULLUDEN)},		/* UART2_TXD */
+	{-1},
+};
+
+static struct module_pin_mux uart3_pin_mux[] = {
+	{OFFSET(spi0_cs1), (MODE(1) | PULLUP_EN | RXACTIVE)},	/* UART3_RXD */
+	{OFFSET(ecap0_in_pwm0_out), (MODE(1) | PULLUDEN)},	/* UART3_TXD */
+	{-1},
+};
+
+static struct module_pin_mux uart4_pin_mux[] = {
+	{OFFSET(gpmc_wait0), (MODE(6) | PULLUP_EN | RXACTIVE)},	/* UART4_RXD */
+	{OFFSET(gpmc_wpn), (MODE(6) | PULLUDEN)},		/* UART4_TXD */
+	{-1},
+};
+
+static struct module_pin_mux uart5_pin_mux[] = {
+	{OFFSET(lcd_data9), (MODE(4) | PULLUP_EN | RXACTIVE)},	/* UART5_RXD */
+	{OFFSET(lcd_data8), (MODE(4) | PULLUDEN)},		/* UART5_TXD */
 	{-1},
 };
 
@@ -268,6 +67,17 @@ static struct module_pin_mux mmc0_pin_mux[] = {
 	{OFFSET(mmc0_cmd), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_CMD */
 	{OFFSET(mcasp0_aclkr), (MODE(4) | RXACTIVE)},		/* MMC0_WP */
 	{OFFSET(spi0_cs1), (MODE(5) | RXACTIVE | PULLUP_EN)},	/* MMC0_CD */
+	{-1},
+};
+
+static struct module_pin_mux mmc0_no_cd_pin_mux[] = {
+	{OFFSET(mmc0_dat3), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT3 */
+	{OFFSET(mmc0_dat2), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT2 */
+	{OFFSET(mmc0_dat1), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT1 */
+	{OFFSET(mmc0_dat0), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT0 */
+	{OFFSET(mmc0_clk), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_CLK */
+	{OFFSET(mmc0_cmd), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_CMD */
+	{OFFSET(mcasp0_aclkr), (MODE(4) | RXACTIVE)},		/* MMC0_WP */
 	{-1},
 };
 
@@ -291,6 +101,16 @@ static struct module_pin_mux mmc1_pin_mux[] = {
 	{OFFSET(gpmc_csn2), (MODE(2) | RXACTIVE | PULLUP_EN)},	/* MMC1_CMD */
 	{OFFSET(gpmc_csn0), (MODE(7) | RXACTIVE | PULLUP_EN)},	/* MMC1_WP */
 	{OFFSET(gpmc_advn_ale), (MODE(7) | RXACTIVE | PULLUP_EN)},	/* MMC1_CD */
+	{-1},
+};
+
+static struct module_pin_mux mmc0_no_cd_no_wp_pin_mux[] = {
+	{OFFSET(mmc0_dat3), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT3 */
+	{OFFSET(mmc0_dat2), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT2 */
+	{OFFSET(mmc0_dat1), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT1 */
+	{OFFSET(mmc0_dat0), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT0 */
+	{OFFSET(mmc0_clk), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_CLK */
+	{OFFSET(mmc0_cmd), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_CMD */
 	{-1},
 };
 
@@ -325,6 +145,53 @@ static struct module_pin_mux gpio0_7_pin_mux[] = {
 	{-1},
 };
 
+static struct module_pin_mux gpio0_31_pin_mux[] = {
+	{OFFSET(gpmc_wpn), (MODE(7) | PULLDOWN_EN)},	/* GPIO0_31 */
+	{-1},
+};
+
+static struct module_pin_mux leds_pin_mux[] = {
+	{OFFSET(gpmc_csn1), (MODE(7) | PULLUDEN)},	/* GPIO1_30 */
+	{-1},
+};
+
+static struct module_pin_mux lcdc_pin_mux[] = {
+	{OFFSET(lcd_data0), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data1), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data2), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data3), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data4), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data5), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data6), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data7), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data8), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data9), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data10), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data11), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data12), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data13), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data14), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_data15), MODE(0) | PULLUDDIS},
+	{OFFSET(gpmc_ad8), MODE(1) | PULLUDDIS},
+	{OFFSET(gpmc_ad9), MODE(1) | PULLUDDIS},
+	{OFFSET(gpmc_ad10), MODE(1) | PULLUDDIS},
+	{OFFSET(gpmc_ad11), MODE(1) | PULLUDDIS},
+	{OFFSET(gpmc_ad12), MODE(1) | PULLUDDIS},
+	{OFFSET(gpmc_ad13), MODE(1) | PULLUDDIS},
+	{OFFSET(gpmc_ad14), MODE(1) | PULLUDDIS},
+	{OFFSET(gpmc_ad15), MODE(1) | PULLUDDIS},
+	{OFFSET(lcd_vsync), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_hsync), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_pclk), MODE(0) | PULLUDDIS},
+	{OFFSET(lcd_ac_bias_en), MODE(0) | PULLUDDIS},
+	{-1},
+};
+
+static struct module_pin_mux backlight_pin_mux[] = {
+	{OFFSET(mcasp0_ahclkr), MODE(7) | PULLUDDIS},
+	{-1},
+};
+
 static struct module_pin_mux rgmii1_pin_mux[] = {
 	{OFFSET(mii1_txen), MODE(2)},			/* RGMII1_TCTL */
 	{OFFSET(mii1_rxdv), MODE(2) | RXACTIVE},	/* RGMII1_RCTL */
@@ -338,6 +205,24 @@ static struct module_pin_mux rgmii1_pin_mux[] = {
 	{OFFSET(mii1_rxd2), MODE(2) | RXACTIVE},	/* RGMII1_RD2 */
 	{OFFSET(mii1_rxd1), MODE(2) | RXACTIVE},	/* RGMII1_RD1 */
 	{OFFSET(mii1_rxd0), MODE(2) | RXACTIVE},	/* RGMII1_RD0 */
+	{OFFSET(mdio_data), MODE(0) | RXACTIVE | PULLUP_EN},/* MDIO_DATA */
+	{OFFSET(mdio_clk), MODE(0) | PULLUP_EN},	/* MDIO_CLK */
+	{-1},
+};
+
+static struct module_pin_mux rgmii2_pin_mux[] = {
+	{OFFSET(gpmc_a0), MODE(2)},			/* RGMII2_TCTL */
+	{OFFSET(gpmc_a1), MODE(2) | RXACTIVE},	/* RGMII2_RCTL */
+	{OFFSET(gpmc_a2), MODE(2)},			/* RGMII2_TD3 */
+	{OFFSET(gpmc_a3), MODE(2)},			/* RGMII2_TD2 */
+	{OFFSET(gpmc_a4), MODE(2)},			/* RGMII2_TD1 */
+	{OFFSET(gpmc_a5), MODE(2)},			/* RGMII2_TD0 */
+	{OFFSET(gpmc_a6), MODE(2)},			/* RGMII2_TCLK */
+	{OFFSET(gpmc_a7), MODE(2) | RXACTIVE},	/* RGMII2_RCLK */
+	{OFFSET(gpmc_a8), MODE(2) | RXACTIVE},	/* RGMII2_RD3 */
+	{OFFSET(gpmc_a9), MODE(2) | RXACTIVE},	/* RGMII2_RD2 */
+	{OFFSET(gpmc_a10), MODE(2) | RXACTIVE},	/* RGMII2_RD1 */
+	{OFFSET(gpmc_a11), MODE(2) | RXACTIVE},	/* RGMII2_RD0 */
 	{OFFSET(mdio_data), MODE(0) | RXACTIVE | PULLUP_EN},/* MDIO_DATA */
 	{OFFSET(mdio_clk), MODE(0) | PULLUP_EN},	/* MDIO_CLK */
 	{-1},
@@ -362,93 +247,107 @@ static struct module_pin_mux mii1_pin_mux[] = {
 	{-1},
 };
 
+#ifdef CONFIG_NAND
 static struct module_pin_mux nand_pin_mux[] = {
-	{OFFSET(gpmc_ad0), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD0 */
-	{OFFSET(gpmc_ad1), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD1 */
-	{OFFSET(gpmc_ad2), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD2 */
-	{OFFSET(gpmc_ad3), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD3 */
-	{OFFSET(gpmc_ad4), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD4 */
-	{OFFSET(gpmc_ad5), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD5 */
-	{OFFSET(gpmc_ad6), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD6 */
-	{OFFSET(gpmc_ad7), (MODE(0) | PULLUP_EN | RXACTIVE)},	/* NAND AD7 */
-	{OFFSET(gpmc_wait0), (MODE(0) | RXACTIVE | PULLUP_EN)}, /* NAND WAIT */
-	{OFFSET(gpmc_wpn), (MODE(7) | PULLUP_EN | RXACTIVE)},	/* NAND_WPN */
-	{OFFSET(gpmc_csn0), (MODE(0) | PULLUDEN)},	/* NAND_CS0 */
-	{OFFSET(gpmc_advn_ale), (MODE(0) | PULLUDEN)}, /* NAND_ADV_ALE */
-	{OFFSET(gpmc_oen_ren), (MODE(0) | PULLUDEN)},	/* NAND_OE */
-	{OFFSET(gpmc_wen), (MODE(0) | PULLUDEN)},	/* NAND_WEN */
-	{OFFSET(gpmc_be0n_cle), (MODE(0) | PULLUDEN)},	/* NAND_BE_CLE */
+	{OFFSET(gpmc_ad0),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD0  */
+	{OFFSET(gpmc_ad1),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD1  */
+	{OFFSET(gpmc_ad2),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD2  */
+	{OFFSET(gpmc_ad3),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD3  */
+	{OFFSET(gpmc_ad4),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD4  */
+	{OFFSET(gpmc_ad5),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD5  */
+	{OFFSET(gpmc_ad6),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD6  */
+	{OFFSET(gpmc_ad7),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD7  */
+#ifdef CONFIG_SYS_NAND_BUSWIDTH_16BIT
+	{OFFSET(gpmc_ad8),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD8  */
+	{OFFSET(gpmc_ad9),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD9  */
+	{OFFSET(gpmc_ad10),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD10 */
+	{OFFSET(gpmc_ad11),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD11 */
+	{OFFSET(gpmc_ad12),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD12 */
+	{OFFSET(gpmc_ad13),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD13 */
+	{OFFSET(gpmc_ad14),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD14 */
+	{OFFSET(gpmc_ad15),	(MODE(0) | PULLUDDIS | RXACTIVE)}, /* AD15 */
+#endif
+	{OFFSET(gpmc_wait0),	(MODE(0) | PULLUP_EN | RXACTIVE)}, /* nWAIT */
+	{OFFSET(gpmc_wpn),	(MODE(7) | PULLUP_EN)},		   /* nWP */
+	{OFFSET(gpmc_csn0),	(MODE(0) | PULLUP_EN)},		   /* nCS */
+	{OFFSET(gpmc_wen),	(MODE(0) | PULLDOWN_EN)},	   /* WEN */
+	{OFFSET(gpmc_oen_ren),	(MODE(0) | PULLDOWN_EN)},	   /* OE */
+	{OFFSET(gpmc_advn_ale),	(MODE(0) | PULLDOWN_EN)},	   /* ADV_ALE */
+	{OFFSET(gpmc_be0n_cle),	(MODE(0) | PULLDOWN_EN)},	   /* BE_CLE */
 	{-1},
 };
-
-#if defined(CONFIG_NOR) && !defined(CONFIG_NOR_BOOT)
+#elif defined(CONFIG_NOR)
 static struct module_pin_mux bone_norcape_pin_mux[] = {
-	{OFFSET(lcd_data0), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A0 */
-	{OFFSET(lcd_data1), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A1 */
-	{OFFSET(lcd_data2), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A2 */
-	{OFFSET(lcd_data3), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A3 */
-	{OFFSET(lcd_data4), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A4 */
-	{OFFSET(lcd_data5), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A5 */
-	{OFFSET(lcd_data6), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A6 */
-	{OFFSET(lcd_data7), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A7 */
-	{OFFSET(lcd_vsync), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A8 */
-	{OFFSET(lcd_hsync), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A9 */
-	{OFFSET(lcd_pclk), MODE(1)| PULLUDEN | RXACTIVE},	/* NOR_A10 */
-	{OFFSET(lcd_ac_bias_en), MODE(1)| PULLUDEN | RXACTIVE},	/* NOR_A11 */
-	{OFFSET(lcd_data8), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A12 */
-	{OFFSET(lcd_data9), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A13 */
-	{OFFSET(lcd_data10), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A14 */
-	{OFFSET(lcd_data11), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A15 */
-	{OFFSET(lcd_data12), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A16 */
-	{OFFSET(lcd_data13), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A17 */
-	{OFFSET(lcd_data14), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A18 */
-	{OFFSET(lcd_data15), MODE(1) | PULLUDEN | RXACTIVE},	/* NOR_A19 */
-	{OFFSET(gpmc_ad0), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD0 */
-	{OFFSET(gpmc_ad1), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD1 */
-	{OFFSET(gpmc_ad2), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD2 */
-	{OFFSET(gpmc_ad3), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD3 */
-	{OFFSET(gpmc_ad4), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD4 */
-	{OFFSET(gpmc_ad5), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD5 */
-	{OFFSET(gpmc_ad6), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD6 */
-	{OFFSET(gpmc_ad7), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD7 */
-	{OFFSET(gpmc_ad8), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD8 */
-	{OFFSET(gpmc_ad9), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD9 */
-	{OFFSET(gpmc_ad10), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD10 */
-	{OFFSET(gpmc_ad11), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD11 */
-	{OFFSET(gpmc_ad12), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD12 */
-	{OFFSET(gpmc_ad13), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD13 */
-	{OFFSET(gpmc_ad14), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD14 */
-	{OFFSET(gpmc_ad15), MODE(0) | PULLUDEN | RXACTIVE},	/* NOR_AD15 */
-
-	{OFFSET(gpmc_csn0), (MODE(0) | PULLUDEN) | RXACTIVE},	/* NOR_CE */
-	{OFFSET(gpmc_advn_ale), (MODE(0) | PULLUDEN) | RXACTIVE}, /* NOR_ADVN_ALE */
-	{OFFSET(gpmc_oen_ren), (MODE(0) | PULLUDEN | RXACTIVE)},/* NOR_OE */
-	{OFFSET(gpmc_be0n_cle), (MODE(0) | PULLUDEN | RXACTIVE)},/* NOR_BE0N_CLE */
-	{OFFSET(gpmc_wen), (MODE(0) | PULLUDEN | RXACTIVE)},	/* NOR_WEN */
-	{OFFSET(gpmc_wait0), (MODE(0) | RXACTIVE | PULLUDEN)}, /* NOR WAIT */
+	{OFFSET(gpmc_a0), MODE(0) | PULLUDDIS},			/* NOR_A0 */
+	{OFFSET(gpmc_a1), MODE(0) | PULLUDDIS},			/* NOR_A1 */
+	{OFFSET(gpmc_a2), MODE(0) | PULLUDDIS},			/* NOR_A2 */
+	{OFFSET(gpmc_a3), MODE(0) | PULLUDDIS},			/* NOR_A3 */
+	{OFFSET(gpmc_a4), MODE(0) | PULLUDDIS},			/* NOR_A4 */
+	{OFFSET(gpmc_a5), MODE(0) | PULLUDDIS},			/* NOR_A5 */
+	{OFFSET(gpmc_a6), MODE(0) | PULLUDDIS},			/* NOR_A6 */
+	{OFFSET(gpmc_a7), MODE(0) | PULLUDDIS},			/* NOR_A7 */
+	{OFFSET(gpmc_ad0), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD0 */
+	{OFFSET(gpmc_ad1), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD1 */
+	{OFFSET(gpmc_ad2), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD2 */
+	{OFFSET(gpmc_ad3), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD3 */
+	{OFFSET(gpmc_ad4), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD4 */
+	{OFFSET(gpmc_ad5), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD5 */
+	{OFFSET(gpmc_ad6), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD6 */
+	{OFFSET(gpmc_ad7), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD7 */
+	{OFFSET(gpmc_ad8), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD8 */
+	{OFFSET(gpmc_ad9), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD9 */
+	{OFFSET(gpmc_ad10), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD10 */
+	{OFFSET(gpmc_ad11), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD11 */
+	{OFFSET(gpmc_ad12), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD12 */
+	{OFFSET(gpmc_ad13), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD13 */
+	{OFFSET(gpmc_ad14), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD14 */
+	{OFFSET(gpmc_ad15), MODE(0) | PULLUDDIS | RXACTIVE},	/* NOR_AD15 */
+	{OFFSET(gpmc_csn0), MODE(0) | PULLUDEN | PULLUP_EN},     /* CE */
+	{OFFSET(gpmc_advn_ale), MODE(0) | PULLUDEN | PULLDOWN_EN}, /* ALE */
+	{OFFSET(gpmc_oen_ren), MODE(0) | PULLUDEN | PULLDOWN_EN},/* OEn_REN */
+	{OFFSET(gpmc_be0n_cle), MODE(0) | PULLUDEN | PULLDOWN_EN},/* unused */
+	{OFFSET(gpmc_wen), MODE(0) | PULLUDEN | PULLDOWN_EN},    /* WEN */
+	{OFFSET(gpmc_wait0), MODE(0) | PULLUDEN | PULLUP_EN | RXACTIVE},/*WAIT*/
 	{-1},
 };
 #endif
 
-/*
- * Configure the pin mux for the module
- */
-static void configure_module_pin_mux(struct module_pin_mux *mod_pin_mux)
+#if defined(CONFIG_NOR_BOOT)
+void enable_norboot_pin_mux(void)
 {
-	int i;
-
-	if (!mod_pin_mux)
-		return;
-
-	for (i = 0; mod_pin_mux[i].reg_offset != -1; i++)
-		MUX_CFG(mod_pin_mux[i].val, mod_pin_mux[i].reg_offset);
+	configure_module_pin_mux(bone_norcape_pin_mux);
 }
+#endif
 
 void enable_uart0_pin_mux(void)
 {
 	configure_module_pin_mux(uart0_pin_mux);
 }
 
+void enable_uart1_pin_mux(void)
+{
+	configure_module_pin_mux(uart1_pin_mux);
+}
+
+void enable_uart2_pin_mux(void)
+{
+	configure_module_pin_mux(uart2_pin_mux);
+}
+
+void enable_uart3_pin_mux(void)
+{
+	configure_module_pin_mux(uart3_pin_mux);
+}
+
+void enable_uart4_pin_mux(void)
+{
+	configure_module_pin_mux(uart4_pin_mux);
+}
+
+void enable_uart5_pin_mux(void)
+{
+	configure_module_pin_mux(uart5_pin_mux);
+}
 
 void enable_i2c0_pin_mux(void)
 {
@@ -489,18 +388,22 @@ static unsigned short detect_daughter_board_profile(void)
 	return (1 << (val & PROFILE_MASK));
 }
 
-void enable_board_pin_mux(struct am335x_baseboard_id *header)
+void enable_board_pin_mux(struct ti_am_eeprom *header)
 {
 	/* Do board-specific muxes. */
-	if (!strncmp(header->name, "A335BONE", HDR_NAME_LEN)) {
+	if (board_is_bone()) {
 		/* Beaglebone pinmux */
 		configure_module_pin_mux(i2c1_pin_mux);
 		configure_module_pin_mux(mii1_pin_mux);
 		configure_module_pin_mux(mmc0_pin_mux);
-#if defined(CONFIG_NOR) && !defined(CONFIG_NOR_BOOT)
+#if defined(CONFIG_NAND)
+		configure_module_pin_mux(nand_pin_mux);
+#elif defined(CONFIG_NOR)
 		configure_module_pin_mux(bone_norcape_pin_mux);
+#else
+		configure_module_pin_mux(mmc1_pin_mux);
 #endif
-	} else if (!strncmp(header->config, "SKU#01", 6)) {
+	} else if (board_is_gp_evm()) {
 		/* General Purpose EVM */
 		unsigned short profile = detect_daughter_board_profile();
 		configure_module_pin_mux(rgmii1_pin_mux);
@@ -509,18 +412,55 @@ void enable_board_pin_mux(struct am335x_baseboard_id *header)
 		if (profile & ~PROFILE_2)
 			configure_module_pin_mux(i2c1_pin_mux);
 		/* Profiles 2 & 3 don't have NAND */
+#ifdef CONFIG_NAND
 		if (profile & ~(PROFILE_2 | PROFILE_3))
 			configure_module_pin_mux(nand_pin_mux);
+#endif
 		else if (profile == PROFILE_2) {
 			configure_module_pin_mux(mmc1_pin_mux);
 			configure_module_pin_mux(spi0_pin_mux);
 		}
-	} else if (!strncmp(header->name, "A335X_SK", HDR_NAME_LEN)) {
+	} else if (board_is_idk(header)) {
+		/* Industrial Motor Control (IDK) */
+		configure_module_pin_mux(mii1_pin_mux);
+		configure_module_pin_mux(mmc0_no_cd_pin_mux);
+	} else if (board_is_evm_sk()) {
 		/* Starter Kit EVM */
 		configure_module_pin_mux(i2c1_pin_mux);
 		configure_module_pin_mux(gpio0_7_pin_mux);
 		configure_module_pin_mux(rgmii1_pin_mux);
 		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
+	} else if (board_is_bone_lt()) {
+		/* Beaglebone LT pinmux */
+		configure_module_pin_mux(i2c1_pin_mux);
+		configure_module_pin_mux(mii1_pin_mux);
+		configure_module_pin_mux(mmc0_pin_mux);
+#if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
+		configure_module_pin_mux(nand_pin_mux);
+#elif defined(CONFIG_NOR) && defined(CONFIG_EMMC_BOOT)
+		configure_module_pin_mux(bone_norcape_pin_mux);
+#else
+		configure_module_pin_mux(mmc1_pin_mux);
+#endif
+	} else if (board_is_som_ph8700()) {
+		configure_module_pin_mux(mmc0_pin_mux);
+		configure_module_pin_mux(mmc1_pin_mux);
+		configure_module_pin_mux(i2c0_pin_mux);
+		configure_module_pin_mux(rgmii1_pin_mux);
+		configure_module_pin_mux(rgmii2_pin_mux);
+		configure_module_pin_mux(gpio0_31_pin_mux);
+	} else if(board_is_sbc8600()) {
+		configure_module_pin_mux(mmc0_no_cd_no_wp_pin_mux);
+		configure_module_pin_mux(rgmii1_pin_mux);
+		configure_module_pin_mux(rgmii2_pin_mux);
+		configure_module_pin_mux(lcdc_pin_mux);
+		configure_module_pin_mux(backlight_pin_mux);
+#if defined(CONFIG_NAND)
+		configure_module_pin_mux(nand_pin_mux);
+#endif
+#if defined(STATUS_LED_BIT)
+		configure_module_pin_mux(leds_pin_mux);
+#endif
 	} else {
 		puts("Unknown board, cannot configure pinmux.");
 		hang();

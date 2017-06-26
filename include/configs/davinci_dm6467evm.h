@@ -1,20 +1,7 @@
 /*
  * Copyright (C) 2009 Texas Instruments Incorporated
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -28,7 +15,6 @@
 #define CONFIG_SKIP_LOWLEVEL_INIT
 
 /* SoC Configuration */
-#define CONFIG_ARM926EJS				/* arm926ejs CPU */
 
 /* Clock rates detection */
 #ifndef __ASSEMBLY__
@@ -40,7 +26,6 @@ extern unsigned int davinci_arm_clk_get(void);
 /* Timer Input clock freq */
 #define CONFIG_SYS_HZ_CLOCK		(CONFIG_SYS_CLK_FREQ/2)
 #define CONFIG_SYS_TIMERBASE		0x01c21400	/* use timer 0 */
-#define CONFIG_SYS_HZ			1000
 #define CONFIG_SOC_DM646X
 
 /* EEPROM definitions for EEPROM */
@@ -74,25 +59,25 @@ extern unsigned int davinci_arm_clk_get(void);
 #define CONFIG_BAUDRATE			115200
 
 /* I2C Configuration */
-#define CONFIG_HARD_I2C
-#define CONFIG_DRIVER_DAVINCI_I2C
-#define CONFIG_SYS_I2C_SPEED		80000
-#define CONFIG_SYS_I2C_SLAVE		10
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_DAVINCI
+#define CONFIG_SYS_DAVINCI_I2C_SPEED		80000
+#define CONFIG_SYS_DAVINCI_I2C_SLAVE		10
 
 /* Network & Ethernet Configuration */
 #define CONFIG_DRIVER_TI_EMAC
 #define CONFIG_MII
-#define CONFIG_BOOTP_DEFAULT
 #define CONFIG_BOOTP_DNS
 #define CONFIG_BOOTP_DNS2
 #define CONFIG_BOOTP_SEND_HOSTNAME
 #define CONFIG_NET_RETRY_COUNT	10
-#define CONFIG_CMD_NET
 
 /* Flash & Environment */
 #define CONFIG_SYS_NO_FLASH
 #ifdef CONFIG_SYS_USE_NAND
 #define CONFIG_NAND_DAVINCI
+#define CONFIG_SYS_NAND_MASK_CLE	0x80000
+#define CONFIG_SYS_NAND_MASK_ALE	0x40000
 #define CONFIG_SYS_NAND_CS		2
 #undef CONFIG_ENV_IS_IN_FLASH
 #define CONFIG_ENV_IS_IN_NAND
@@ -127,7 +112,6 @@ extern unsigned int davinci_arm_clk_get(void);
 					"root=/dev/hda1 rw noinitrd ip=dhcp"
 
 /* U-Boot commands */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DIAG
 #define CONFIG_CMD_I2C
@@ -136,12 +120,7 @@ extern unsigned int davinci_arm_clk_get(void);
 #define CONFIG_CMD_EEPROM
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
-#undef CONFIG_CMD_BDI
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_SETGETDCR
 #ifdef CONFIG_SYS_USE_NAND
-#undef CONFIG_CMD_FLASH
-#undef CONFIG_CMD_IMLS
 #define CONFIG_CMD_NAND
 #endif
 

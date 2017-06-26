@@ -11,24 +11,11 @@
  *       Developed by Simple Network Magic Corporation (SNMC)
  * Copyright (C) 1996 by Erik Stahlman (ES)
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Information contained in this file was obtained from the LAN91C96
  * manual from SMC.  To get a copy, if you really want one, you can find
  * information under www.smsc.com.
- *
  *
  * "Features" of the SMC chip:
  *   6144 byte packet memory. ( for the 91C96 )
@@ -581,29 +568,30 @@ static int smc_rcv(struct eth_device *dev)
 		   to send the DWORDs or the bytes first, or some
 		   mixture.  A mixture might improve already slow PIO
 		   performance  */
-		SMC_insl(dev, LAN91C96_DATA_HIGH, NetRxPackets[0],
-				packet_length >> 2);
+		SMC_insl(dev, LAN91C96_DATA_HIGH, net_rx_packets[0],
+			 packet_length >> 2);
 		/* read the left over bytes */
 		if (packet_length & 3) {
 			int i;
 
-			byte *tail = (byte *) (NetRxPackets[0] + (packet_length & ~3));
+			byte *tail = (byte *)(net_rx_packets[0] +
+				(packet_length & ~3));
 			dword leftover = SMC_inl(dev, LAN91C96_DATA_HIGH);
 
 			for (i = 0; i < (packet_length & 3); i++)
 				*tail++ = (byte) (leftover >> (8 * i)) & 0xff;
 		}
 #else
-		PRINTK3 (" Reading %d words and %d byte(s) \n",
-				 (packet_length >> 1), packet_length & 1);
-		SMC_insw(dev, LAN91C96_DATA_HIGH, NetRxPackets[0],
-				packet_length >> 1);
+		PRINTK3(" Reading %d words and %d byte(s)\n",
+			(packet_length >> 1), packet_length & 1);
+		SMC_insw(dev, LAN91C96_DATA_HIGH, net_rx_packets[0],
+			 packet_length >> 1);
 
 #endif /* USE_32_BIT */
 
 #if	SMC_DEBUG > 2
 		printf ("Receiving Packet\n");
-		print_packet((byte *)NetRxPackets[0], packet_length);
+		print_packet((byte *)net_rx_packets[0], packet_length);
 #endif
 	} else {
 		/* error ... */
@@ -622,7 +610,7 @@ static int smc_rcv(struct eth_device *dev)
 
 	if (!is_error) {
 		/* Pass the packet up to the protocol layers. */
-		NetReceive (NetRxPackets[0], packet_length);
+		net_process_received_packet(net_rx_packets[0], packet_length);
 		return packet_length;
 	} else {
 		return 0;
@@ -737,12 +725,6 @@ static int smc_get_ethaddr(bd_t *bd, struct eth_device *dev)
 
 static int get_rom_mac(struct eth_device *dev, unsigned char *v_rom_mac)
 {
-#ifdef HARDCODE_MAC	/* used for testing or to supress run time warnings */
-	char hw_mac_addr[] = { 0x02, 0x80, 0xad, 0x20, 0x31, 0xb8 };
-
-	memcpy (v_rom_mac, hw_mac_addr, 6);
-	return (1);
-#else
 	int i;
 	SMC_SELECT_BANK(dev, 1);
 	for (i=0; i<6; i++)
@@ -750,7 +732,6 @@ static int get_rom_mac(struct eth_device *dev, unsigned char *v_rom_mac)
 		v_rom_mac[i] = SMC_inb(dev, LAN91C96_IA0 + i);
 	}
 	return (1);
-#endif
 }
 
 /* Structure to detect the device IDs */
@@ -779,7 +760,7 @@ static int lan91c96_detect_chip(struct eth_device *dev)
 	SMC_SELECT_BANK(dev, 3);
 	chip_id = (SMC_inw(dev, 0xA) & LAN91C96_REV_CHIPID) >> 4;
 	SMC_SELECT_BANK(dev, 0);
-	for (r = 0; r < sizeof(supported_chips) / sizeof(struct id_type); r++)
+	for (r = 0; r < ARRAY_SIZE(supported_chips); r++)
 		if (chip_id == supported_chips[r].id)
 			return r;
 	return 0;

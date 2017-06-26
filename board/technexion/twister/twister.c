@@ -4,23 +4,7 @@
  *
  * Copyright (C) 2009 TechNexion Ltd.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -32,6 +16,8 @@
 #include <asm/omap_gpio.h>
 #include <asm/arch/mmc_host_def.h>
 #include <i2c.h>
+#include <spl.h>
+#include <mmc.h>
 #include <asm/gpio.h>
 #ifdef CONFIG_USB_EHCI
 #include <usb.h>
@@ -67,12 +53,13 @@ static struct omap_usbhs_board_data usbhs_bdata = {
 	.port_mode[2] = OMAP_USBHS_PORT_MODE_UNUSED,
 };
 
-int ehci_hcd_init(void)
+int ehci_hcd_init(int index, enum usb_init_type init,
+		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
-	return omap_ehci_hcd_init(&usbhs_bdata);
+	return omap_ehci_hcd_init(index, &usbhs_bdata, hccr, hcor);
 }
 
-int ehci_hcd_stop(void)
+int ehci_hcd_stop(int index)
 {
 	return omap_ehci_hcd_stop();
 }
@@ -98,9 +85,12 @@ int board_init(void)
 	return 0;
 }
 
+#ifndef CONFIG_SPL_BUILD
 int misc_init_r(void)
 {
 	char *eth_addr;
+	struct tam3517_module_info info;
+	int ret;
 
 	dieid_num_r();
 
@@ -108,12 +98,13 @@ int misc_init_r(void)
 	if (eth_addr)
 		return 0;
 
-#ifndef CONFIG_SPL_BUILD
-	TAM3517_READ_MAC_FROM_EEPROM;
-#endif
+	TAM3517_READ_EEPROM(&info, ret);
+	if (!ret)
+		TAM3517_READ_MAC_FROM_EEPROM(&info);
 
 	return 0;
 }
+#endif
 
 /*
  * Routine: set_muxconf_regs
@@ -143,7 +134,7 @@ int board_eth_init(bd_t *bis)
 	!defined(CONFIG_SPL_BUILD)
 int board_mmc_init(bd_t *bis)
 {
-	return omap_mmc_init(0, 0, 0);
+	return omap_mmc_init(0, 0, 0, -1, -1);
 }
 #endif
 
@@ -161,10 +152,10 @@ void spl_board_prepare_for_linux(void)
 int spl_start_uboot(void)
 {
 	int val = 0;
-	if (!gpio_request(CONFIG_SPL_OS_BOOT_KEY, "U-Boot key")) {
-		gpio_direction_input(CONFIG_SPL_OS_BOOT_KEY);
-		val = gpio_get_value(CONFIG_SPL_OS_BOOT_KEY);
-		gpio_free(CONFIG_SPL_OS_BOOT_KEY);
+	if (!gpio_request(SPL_OS_BOOT_KEY, "U-Boot key")) {
+		gpio_direction_input(SPL_OS_BOOT_KEY);
+		val = gpio_get_value(SPL_OS_BOOT_KEY);
+		gpio_free(SPL_OS_BOOT_KEY);
 	}
 	return val;
 }

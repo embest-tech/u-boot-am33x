@@ -2,23 +2,7 @@
  * (C) Copyright 2000 - 2010
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  *
  * Based ont the MPC5200 PSC driver.
  * Adapted for MPC512x by Jan Wrobel <wrr@semihalf.com>
@@ -37,7 +21,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#if defined(CONFIG_PSC_CONSOLE) || defined(CONFIG_SERIAL_MULTI)
+#if defined(CONFIG_PSC_CONSOLE)
 
 static void fifo_init (volatile psc512x_t *psc)
 {
@@ -52,7 +36,6 @@ static void fifo_init (volatile psc512x_t *psc)
 	out_be32(&psc->rfintmask, 0);
 	out_be32(&psc->tfintmask, 0);
 
-#if defined(CONFIG_SERIAL_MULTI)
 	switch (((u32)psc & 0xf00) >> 8) {
 	case 0:
 		tfsize = FIFOC_PSC0_TX_SIZE | (FIFOC_PSC0_TX_ADDR << 16);
@@ -105,10 +88,7 @@ static void fifo_init (volatile psc512x_t *psc)
 	default:
 		return;
 	}
-#else
-	tfsize = CONSOLE_FIFO_TX_SIZE | (CONSOLE_FIFO_TX_ADDR << 16);
-	rfsize = CONSOLE_FIFO_RX_SIZE | (CONSOLE_FIFO_RX_ADDR << 16);
-#endif
+
 	out_be32(&psc->tfsize, tfsize);
 	out_be32(&psc->rfsize, rfsize);
 
@@ -144,7 +124,7 @@ void serial_setbrg_dev(unsigned int idx)
 	}
 
 	/* calculate divisor for setting PSC CTUR and CTLR registers */
-	baseclk = (gd->ips_clk + 8) / 16;
+	baseclk = (gd->arch.ips_clk + 8) / 16;
 	div = (baseclk + (baudrate / 2)) / baudrate;
 
 	out_8(&psc->ctur, (div >> 8) & 0xff);
@@ -155,12 +135,10 @@ int serial_init_dev(unsigned int idx)
 {
 	volatile immap_t *im = (immap_t *) CONFIG_SYS_IMMR;
 	volatile psc512x_t *psc = (psc512x_t *) &im->psc[idx];
-#if defined(CONFIG_SERIAL_MULTI)
 	u32 reg;
 
 	reg = in_be32(&im->clk.sccr[0]);
 	out_be32(&im->clk.sccr[0], reg | CLOCK_SCCR1_PSC_EN(idx));
-#endif
 
 	fifo_init (psc);
 
@@ -285,9 +263,7 @@ int serial_getcts_dev(unsigned int idx)
 
 	return (in_8(&psc->ip) & 0x1) ? 0 : 1;
 }
-#endif /* CONFIG_PSC_CONSOLE || CONFIG_SERIAL_MULTI */
-
-#if defined(CONFIG_SERIAL_MULTI)
+#endif /* CONFIG_PSC_CONSOLE */
 
 #define DECLARE_PSC_SERIAL_FUNCTIONS(port) \
 	int serial##port##_init(void) \
@@ -319,15 +295,15 @@ int serial_getcts_dev(unsigned int idx)
 		serial_puts_dev(port, s); \
 	}
 
-#define INIT_PSC_SERIAL_STRUCTURE(port, name) { \
-	name, \
-	serial##port##_init, \
-	serial##port##_uninit, \
-	serial##port##_setbrg, \
-	serial##port##_getc, \
-	serial##port##_tstc, \
-	serial##port##_putc, \
-	serial##port##_puts, \
+#define INIT_PSC_SERIAL_STRUCTURE(port, __name) {	\
+	.name	= __name,				\
+	.start	= serial##port##_init,			\
+	.stop	= serial##port##_uninit,		\
+	.setbrg	= serial##port##_setbrg,		\
+	.getc	= serial##port##_getc,			\
+	.tstc	= serial##port##_tstc,			\
+	.putc	= serial##port##_putc,			\
+	.puts	= serial##port##_puts,			\
 }
 
 #if defined(CONFIG_SYS_PSC1)
@@ -365,55 +341,22 @@ __weak struct serial_device *default_serial_console(void)
 #endif
 }
 
-#else
-
-void serial_setbrg(void)
+void mpc512x_serial_initialize(void)
 {
-	serial_setbrg_dev(CONFIG_PSC_CONSOLE);
+#if defined(CONFIG_SYS_PSC1)
+	serial_register(&serial1_device);
+#endif
+#if defined(CONFIG_SYS_PSC3)
+	serial_register(&serial3_device);
+#endif
+#if defined(CONFIG_SYS_PSC4)
+	serial_register(&serial4_device);
+#endif
+#if defined(CONFIG_SYS_PSC6)
+	serial_register(&serial6_device);
+#endif
 }
 
-int serial_init(void)
-{
-	return serial_init_dev(CONFIG_PSC_CONSOLE);
-}
-
-void serial_putc(const char c)
-{
-	serial_putc_dev(CONFIG_PSC_CONSOLE, c);
-}
-
-void serial_putc_raw(const char c)
-{
-	serial_putc_raw_dev(CONFIG_PSC_CONSOLE, c);
-}
-
-void serial_puts(const char *s)
-{
-	serial_puts_dev(CONFIG_PSC_CONSOLE, s);
-}
-
-int serial_getc(void)
-{
-	return serial_getc_dev(CONFIG_PSC_CONSOLE);
-}
-
-int serial_tstc(void)
-{
-	return serial_tstc_dev(CONFIG_PSC_CONSOLE);
-}
-
-void serial_setrts(int s)
-{
-	return serial_setrts_dev(CONFIG_PSC_CONSOLE, s);
-}
-
-int serial_getcts(void)
-{
-	return serial_getcts_dev(CONFIG_PSC_CONSOLE);
-}
-#endif /* CONFIG_PSC_CONSOLE */
-
-#if defined(CONFIG_SERIAL_MULTI)
 #include <stdio_dev.h>
 /*
  * Routines for communication with serial devices over PSC
@@ -441,7 +384,7 @@ struct stdio_dev *open_port(int num, int baudrate)
 		sprintf(env_val, "%d", baudrate);
 		setenv(env_var, env_val);
 
-		if (port->start())
+		if (port->start(port))
 			return NULL;
 
 		set_bit(num, &initialized);
@@ -464,7 +407,7 @@ int close_port(int num)
 	if (!port)
 		return -1;
 
-	ret = port->stop();
+	ret = port->stop(port);
 	clear_bit(num, &initialized);
 
 	return ret;
@@ -475,7 +418,7 @@ int write_port(struct stdio_dev *port, char *buf)
 	if (!port || !buf)
 		return -1;
 
-	port->puts(buf);
+	port->puts(port, buf);
 
 	return 0;
 }
@@ -490,12 +433,11 @@ int read_port(struct stdio_dev *port, char *buf, int size)
 	if (!size)
 		return 0;
 
-	while (port->tstc()) {
-		buf[cnt++] = port->getc();
+	while (port->tstc(port)) {
+		buf[cnt++] = port->getc(port);
 		if (cnt > size)
 			break;
 	}
 
 	return cnt;
 }
-#endif /* CONFIG_SERIAL_MULTI */

@@ -35,24 +35,12 @@
  *
  * -------------------------------------------------------------------------
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <usb/musb_udc.h>
+#include <usbdevice.h>
+#include <usb/udc.h>
 #include "../gadget/ep0.h"
 #include "musb_core.h"
 #if defined(CONFIG_USB_OMAP3)
@@ -641,63 +629,66 @@ static void musb_peri_ep0(void)
 static void musb_peri_rx_ep(unsigned int ep)
 {
 	u16 peri_rxcount;
-
 	u8 peri_rxcsr = readw(&musbr->ep[ep].epN.rxcsr);
-	if ((peri_rxcsr & MUSB_RXCSR_RXPKTRDY)) {
-		peri_rxcount = readw(&musbr->ep[ep].epN.rxcount);
-		if (peri_rxcount) {
-			struct usb_endpoint_instance *endpoint;
-			u32 length;
-			u8 *data;
 
-			endpoint = GET_ENDPOINT(udc_device, ep);
-			if (endpoint && endpoint->rcv_urb) {
-				struct urb *urb = endpoint->rcv_urb;
-				unsigned int remaining_space =
-					urb->buffer_length -
-					urb->actual_length;
+	if (!(peri_rxcsr & MUSB_RXCSR_RXPKTRDY)) {
+		if (debug_level > 0)
+			serial_printf("ERROR : %s %d without MUSB_RXCSR_RXPKTRDY set\n",
+				      __PRETTY_FUNCTION__, ep);
+		return;
+	}
 
-				if (remaining_space) {
-					int urb_bad = 0; /* urb is good */
+	peri_rxcount = readw(&musbr->ep[ep].epN.rxcount);
+	if (peri_rxcount) {
+		struct usb_endpoint_instance *endpoint;
+		u32 length;
+		u8 *data;
 
-					if (peri_rxcount > remaining_space)
-						length = remaining_space;
-					else
-						length = peri_rxcount;
+		endpoint = GET_ENDPOINT(udc_device, ep);
+		if (endpoint && endpoint->rcv_urb) {
+			struct urb *urb = endpoint->rcv_urb;
+			unsigned int remaining_space = urb->buffer_length -
+				urb->actual_length;
 
-					data = (u8 *) urb->buffer_data;
-					data += urb->actual_length;
+			if (remaining_space) {
+				int urb_bad = 0; /* urb is good */
 
-					/* The common musb fifo reader */
-					read_fifo(ep, length, data);
+				if (peri_rxcount > remaining_space)
+					length = remaining_space;
+				else
+					length = peri_rxcount;
 
-					musb_peri_rx_ack(ep);
+				data = (u8 *) urb->buffer_data;
+				data += urb->actual_length;
 
-					/*
-					 * urb's actual_length is updated in
-					 * usbd_rcv_complete
-					 */
-					usbd_rcv_complete(endpoint, length,
-							urb_bad);
+				/* The common musb fifo reader */
+				read_fifo(ep, length, data);
 
-				} else {
-					if (debug_level > 0)
-						serial_printf("ERROR : %s %d no space "
-							      "in rcv buffer\n",
-							      __PRETTY_FUNCTION__, ep);
-				}
+				musb_peri_rx_ack(ep);
+
+				/*
+				 * urb's actual_length is updated in
+				 * usbd_rcv_complete
+				 */
+				usbd_rcv_complete(endpoint, length, urb_bad);
+
 			} else {
 				if (debug_level > 0)
-					serial_printf("ERROR : %s %d problem with "
-						      "endpoint\n",
+					serial_printf("ERROR : %s %d no space "
+						      "in rcv buffer\n",
 						      __PRETTY_FUNCTION__, ep);
 			}
-
 		} else {
 			if (debug_level > 0)
-				serial_printf("ERROR : %s %d with nothing to do\n",
+				serial_printf("ERROR : %s %d problem with "
+					      "endpoint\n",
 					      __PRETTY_FUNCTION__, ep);
 		}
+
+	} else {
+		if (debug_level > 0)
+			serial_printf("ERROR : %s %d with nothing to do\n",
+				      __PRETTY_FUNCTION__, ep);
 	}
 }
 
@@ -891,8 +882,7 @@ void udc_setup_ep(struct usb_device_instance *device, unsigned int id,
 			epinfo[id * 2].epsize = endpoint->rcv_packetSize;
 		}
 
-		musb_configure_ep(&epinfo[0],
-				  sizeof(epinfo) / sizeof(struct musb_epinfo));
+		musb_configure_ep(&epinfo[0], ARRAY_SIZE(epinfo));
 	} else {
 		if (debug_level > 0)
 			serial_printf("ERROR : %s endpoint request %d "

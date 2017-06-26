@@ -3,33 +3,20 @@
  * Copyright (C) 2010 Ilya Yanok, Emcraft Systems, yanok@emcraft.com
  *
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#define CONFIG_SYS_GENERIC_BOARD
+#define CONFIG_DISPLAY_BOARDINFO
+
 /*
  * High Level Configuration Options
  */
 #define CONFIG_E300		1 /* E300 family */
-#define CONFIG_MPC83xx		1 /* MPC83xx family */
+#define CONFIG_MPC830x		1 /* MPC830x family */
 #define CONFIG_MPC8308		1 /* MPC8308 CPU specific */
 #define CONFIG_MPC8308_P1M	1 /* mpc8308_p1m board specific */
 
@@ -326,13 +313,14 @@
 #define CONFIG_OF_STDOUT_VIA_ALIAS	1
 
 /* I2C */
-#define CONFIG_HARD_I2C		/* I2C with hardware support */
-#define CONFIG_FSL_I2C
-#define CONFIG_I2C_MULTI_BUS
-#define CONFIG_SYS_I2C_SPEED	400000 /* I2C speed and slave address */
-#define CONFIG_SYS_I2C_SLAVE	0x7F
-#define CONFIG_SYS_I2C_OFFSET	0x3000
-#define CONFIG_SYS_I2C2_OFFSET	0x3100
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_FSL
+#define CONFIG_SYS_FSL_I2C_SPEED	400000
+#define CONFIG_SYS_FSL_I2C_SLAVE	0x7F
+#define CONFIG_SYS_FSL_I2C2_SPEED	400000
+#define CONFIG_SYS_FSL_I2C2_SLAVE	0x7F
+#define CONFIG_SYS_FSL_I2C_OFFSET	0x3000
+#define CONFIG_SYS_FSL_I2C2_OFFSET	0x3100
 
 /*
  * General PCI
@@ -352,6 +340,7 @@
 #define CONFIG_SYS_SCCR_PCIEXP1CM	1
 
 #define CONFIG_PCI
+#define CONFIG_PCI_INDIRECT_BRIDGE
 #define CONFIG_PCIE
 
 #define CONFIG_PCI_PNP		/* do pci plug-and-play */
@@ -409,12 +398,9 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_PCI
 #define CONFIG_CMD_PING
 
@@ -425,7 +411,6 @@
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_LOAD_ADDR		0x2000000 /* default load address */
-#define CONFIG_SYS_PROMPT		"=> "	/* Monitor Command Prompt */
 
 #define CONFIG_SYS_CBSIZE	1024 /* Console I/O Buffer Size */
 
@@ -434,7 +419,6 @@
 #define CONFIG_SYS_MAXARGS	16	/* max number of command args */
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE
-#define CONFIG_SYS_HZ		1000	/* decrementer freq: 1ms ticks */
 
 /*
  * For booting Linux, the board info and command line data
@@ -506,9 +490,6 @@
 
 #define CONFIG_BOOTDELAY	5	/* -1 disables auto-boot */
 
-#define xstr(s)	str(s)
-#define str(s)	#s
-
 #define	CONFIG_EXTRA_ENV_SETTINGS					\
 	"netdev=eth0\0"							\
 	"consoledev=ttyS0\0"						\
@@ -542,10 +523,10 @@
 		"bootm ${kernel_addr_r} - ${fdt_addr_r}\0"		\
 	"bootcmd=run flash_self\0"					\
 	"load=tftp ${loadaddr} ${u-boot}\0"				\
-	"update=protect off " xstr(CONFIG_SYS_MONITOR_BASE)		\
-		" +${filesize};era " xstr(CONFIG_SYS_MONITOR_BASE)	\
+	"update=protect off " __stringify(CONFIG_SYS_MONITOR_BASE)	\
+		" +${filesize};era " __stringify(CONFIG_SYS_MONITOR_BASE)\
 		" +${filesize};cp.b ${fileaddr} "			\
-		xstr(CONFIG_SYS_MONITOR_BASE) " ${filesize}\0"		\
+		__stringify(CONFIG_SYS_MONITOR_BASE) " ${filesize}\0"	\
 	"upd=run load update\0"						\
 
 #endif	/* __CONFIG_H */

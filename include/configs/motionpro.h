@@ -4,23 +4,7 @@
  *
  * Based on Motion-PRO board config file by Robert McCullough, rob@promessinc.com
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -31,8 +15,7 @@
  */
 
 /* CPU and board */
-#define CONFIG_MPC5xxx		1	/* This is an MPC5xxx CPU */
-#define CONFIG_MPC5200		1	/* More exactly a MPC5200 */
+#define CONFIG_MPC5200		1	/* This is a MPC5200 CPU */
 #define CONFIG_MOTIONPRO	1	/* ... on Promess Motion-PRO board */
 
 #define CONFIG_HIGH_BATS	1	/* High BATs supported */
@@ -50,8 +33,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_BEDBUG
 #define CONFIG_CMD_DATE
@@ -65,7 +46,6 @@
 #define CONFIG_CMD_IMMAP
 #define CONFIG_CMD_JFFS2
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
 
@@ -90,20 +70,12 @@
  * Autobooting
  */
 #define CONFIG_BOOTDELAY	2	/* autoboot after 2 seconds */
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_STOP_STR	"\x1b\x1b"
-#define DEBUG_BOOTKEYS		0
-#undef CONFIG_AUTOBOOT_DELAY_STR
 #undef CONFIG_BOOTARGS
-#define CONFIG_AUTOBOOT_PROMPT	"Autobooting in %d seconds, "		\
-				"press \"<Esc><Esc>\" to stop\n", bootdelay
 
 #define CONFIG_CMDLINE_EDITING		1	/* add command line history	*/
 #define	CONFIG_SYS_HUSH_PARSER		1	/* use "hush" command parser	*/
 #define	CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 
-#define CONFIG_ETHADDR		00:50:C2:40:10:00
-#define CONFIG_OVERWRITE_ETHADDR_ONCE	1
 #define CONFIG_VERSION_VARIABLE	1	/* include version env variable */
 
 /*
@@ -384,7 +356,6 @@ extern void __led_set(led_id_t id, int state);
  * Miscellaneous configurable options
  */
 #define CONFIG_SYS_LONGHELP			/* undef to save memory    */
-#define CONFIG_SYS_PROMPT		"=> "	/* Monitor Command Prompt   */
 #define CONFIG_SYS_CBSIZE		1024	/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)	/* Print Buffer Size */
 #define CONFIG_SYS_MAXARGS		16		/* max number of command args */
@@ -395,8 +366,6 @@ extern void __led_set(led_id_t id, int state);
 #define CONFIG_SYS_ALT_MEMTEST
 
 #define CONFIG_SYS_LOAD_ADDR		0x200000	/* default kernel load addr */
-
-#define CONFIG_SYS_HZ			1000	/* decrementer freq: 1 ms ticks */
 
 /*
  * Various low-level settings

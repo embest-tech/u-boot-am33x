@@ -5,23 +5,7 @@
  * (C) Copyright 2007 Freescale Semiconductor, Inc.
  * TsiChung Liew (Tsi-Chung.Liew@freescale.com)
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -260,7 +244,7 @@ static int fec_recv(struct eth_device *dev)
 	struct fec_info_dma *info = dev->priv;
 	volatile fecdma_t *fecp = (fecdma_t *) (info->iobase);
 
-	cbd_t *pRbd = &info->rxbd[info->rxIdx];
+	cbd_t *prbd = &info->rxbd[info->rxIdx];
 	u32 ievent;
 	int frame_length, len = 0;
 
@@ -292,26 +276,27 @@ static int fec_recv(struct eth_device *dev)
 		}
 	}
 
-	if (!(pRbd->cbd_sc & BD_ENET_RX_EMPTY)) {
-		if ((pRbd->cbd_sc & BD_ENET_RX_LAST)
-		    && !(pRbd->cbd_sc & BD_ENET_RX_ERR)
-		    && ((pRbd->cbd_datlen - 4) > 14)) {
+	if (!(prbd->cbd_sc & BD_ENET_RX_EMPTY)) {
+		if ((prbd->cbd_sc & BD_ENET_RX_LAST) &&
+		    !(prbd->cbd_sc & BD_ENET_RX_ERR) &&
+		    ((prbd->cbd_datlen - 4) > 14)) {
 
 			/* Get buffer address and size */
-			frame_length = pRbd->cbd_datlen - 4;
+			frame_length = prbd->cbd_datlen - 4;
 
 			/* Fill the buffer and pass it to upper layers */
-			NetReceive((uchar *)pRbd->cbd_bufaddr, frame_length);
+			net_process_received_packet((uchar *)prbd->cbd_bufaddr,
+						    frame_length);
 			len = frame_length;
 		}
 
 		/* Reset buffer descriptor as empty */
 		if ((info->rxIdx) == (PKTBUFSRX - 1))
-			pRbd->cbd_sc = (BD_ENET_RX_WRAP | BD_ENET_RX_EMPTY);
+			prbd->cbd_sc = (BD_ENET_RX_WRAP | BD_ENET_RX_EMPTY);
 		else
-			pRbd->cbd_sc = BD_ENET_RX_EMPTY;
+			prbd->cbd_sc = BD_ENET_RX_EMPTY;
 
-		pRbd->cbd_datlen = PKTSIZE_ALIGN;
+		prbd->cbd_datlen = PKTSIZE_ALIGN;
 
 		/* Now, we have an empty RxBD, restart the DMA receive task */
 		MCD_continDma(info->rxTask);
@@ -415,7 +400,7 @@ static int fec_init(struct eth_device *dev, bd_t * bd)
 	for (i = 0; i < PKTBUFSRX; i++) {
 		info->rxbd[i].cbd_sc = BD_ENET_RX_EMPTY;
 		info->rxbd[i].cbd_datlen = PKTSIZE_ALIGN;
-		info->rxbd[i].cbd_bufaddr = (uint) NetRxPackets[i];
+		info->rxbd[i].cbd_bufaddr = (uint) net_rx_packets[i];
 	}
 	info->rxbd[PKTBUFSRX - 1].cbd_sc |= BD_ENET_RX_WRAP;
 
@@ -520,7 +505,7 @@ int mcdmafec_initialize(bd_t * bis)
 	u32 tmp = CONFIG_SYS_INTSRAM + 0x2000;
 #endif
 
-	for (i = 0; i < sizeof(fec_info) / sizeof(fec_info[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(fec_info); i++) {
 
 		dev =
 		    (struct eth_device *)memalign(CONFIG_SYS_CACHELINE_SIZE,

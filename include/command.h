@@ -2,23 +2,7 @@
  * (C) Copyright 2000-2009
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -27,7 +11,7 @@
 #ifndef __COMMAND_H
 #define __COMMAND_H
 
-#include <config.h>
+#include <linker_lists.h>
 
 #ifndef NULL
 #define NULL	0
@@ -61,8 +45,6 @@ struct cmd_tbl_s {
 
 typedef struct cmd_tbl_s	cmd_tbl_t;
 
-extern cmd_tbl_t  __u_boot_cmd_start;
-extern cmd_tbl_t  __u_boot_cmd_end;
 
 #if defined(CONFIG_CMD_RUN)
 extern int do_run(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
@@ -81,6 +63,15 @@ extern int var_complete(int argc, char * const argv[], char last_char, int maxv,
 extern int cmd_auto_complete(const char *const prompt, char *buf, int *np, int *colp);
 #endif
 
+/**
+ * cmd_process_error() - report and process a possible error
+ *
+ * @cmdtp: Command which caused the error
+ * @err: Error code (0 if none, -ve for error, like -EIO)
+ * @return 0 if there is not error, 1 (CMD_RET_FAILURE) if an error is found
+ */
+int cmd_process_error(cmd_tbl_t *cmdtp, int err);
+
 /*
  * Monitor Command
  *
@@ -90,10 +81,10 @@ extern int cmd_auto_complete(const char *const prompt, char *buf, int *np, int *
  */
 
 #if defined(CONFIG_CMD_MEMORY)		\
-    || defined(CONFIG_CMD_I2C)		\
-    || defined(CONFIG_CMD_ITEST)	\
-    || defined(CONFIG_CMD_PCI)		\
-    || defined(CONFIG_CMD_PORTIO)
+	|| defined(CONFIG_CMD_I2C)	\
+	|| defined(CONFIG_CMD_ITEST)	\
+	|| defined(CONFIG_CMD_PCI)	\
+	|| defined(CONFIG_CMD_PORTIO)
 #define CMD_DATA_SIZE
 extern int cmd_get_data_size(char* arg, int default_size);
 #endif
@@ -110,6 +101,8 @@ static inline int bootm_maybe_autostart(cmd_tbl_t *cmdtp, const char *cmd)
 	return 0;
 }
 #endif
+
+extern int do_bootz(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 
 extern int common_diskboot(cmd_tbl_t *cmdtp, const char *intf, int argc,
 			   char *const argv[]);
@@ -140,10 +133,12 @@ enum command_ret_t {
  * @param repeatable	This function sets this to 0 if the command is not
  *			repeatable. If the command is repeatable, the value
  *			is left unchanged.
+ * @param ticks		If ticks is not null, this function set it to the
+ *			number of ticks the command took to complete.
  * @return 0 if the command succeeded, 1 if it failed
  */
 int cmd_process(int flag, int argc, char * const argv[],
-			       int *repeatable);
+			       int *repeatable, unsigned long *ticks);
 
 #endif	/* __ASSEMBLY__ */
 
@@ -152,9 +147,7 @@ int cmd_process(int flag, int argc, char * const argv[],
  */
 #define CMD_FLAG_REPEAT		0x0001	/* repeat last command		*/
 #define CMD_FLAG_BOOTD		0x0002	/* command is from bootd	*/
-
-#define Struct_Section  __attribute__((unused, section(".u_boot_cmd"), \
-		aligned(4)))
+#define CMD_FLAG_ENV		0x0004	/* command is from the environment */
 
 #ifdef CONFIG_AUTO_COMPLETE
 # define _CMD_COMPLETE(x) x,
@@ -167,18 +160,22 @@ int cmd_process(int flag, int argc, char * const argv[],
 # define _CMD_HELP(x)
 #endif
 
-#define U_BOOT_CMD_MKENT_COMPLETE(name,maxargs,rep,cmd,usage,help,comp) \
-	{#name, maxargs, rep, cmd, usage, _CMD_HELP(help) _CMD_COMPLETE(comp)}
+#define U_BOOT_CMD_MKENT_COMPLETE(_name, _maxargs, _rep, _cmd,		\
+				_usage, _help, _comp)			\
+		{ #_name, _maxargs, _rep, _cmd, _usage,			\
+			_CMD_HELP(_help) _CMD_COMPLETE(_comp) }
 
-#define U_BOOT_CMD_MKENT(name,maxargs,rep,cmd,usage,help) \
-	U_BOOT_CMD_MKENT_COMPLETE(name,maxargs,rep,cmd,usage,help,NULL)
+#define U_BOOT_CMD_MKENT(_name, _maxargs, _rep, _cmd, _usage, _help)	\
+	U_BOOT_CMD_MKENT_COMPLETE(_name, _maxargs, _rep, _cmd,		\
+					_usage, _help, NULL)
 
-#define U_BOOT_CMD_COMPLETE(name,maxargs,rep,cmd,usage,help,comp) \
-	cmd_tbl_t __u_boot_cmd_##name Struct_Section = \
-		U_BOOT_CMD_MKENT_COMPLETE(name,maxargs,rep,cmd,usage,help,comp)
+#define U_BOOT_CMD_COMPLETE(_name, _maxargs, _rep, _cmd, _usage, _help, _comp) \
+	ll_entry_declare(cmd_tbl_t, _name, cmd) =			\
+		U_BOOT_CMD_MKENT_COMPLETE(_name, _maxargs, _rep, _cmd,	\
+						_usage, _help, _comp);
 
-#define U_BOOT_CMD(name,maxargs,rep,cmd,usage,help) \
-	U_BOOT_CMD_COMPLETE(name,maxargs,rep,cmd,usage,help,NULL)
+#define U_BOOT_CMD(_name, _maxargs, _rep, _cmd, _usage, _help)		\
+	U_BOOT_CMD_COMPLETE(_name, _maxargs, _rep, _cmd, _usage, _help, NULL)
 
 #if defined(CONFIG_NEEDS_MANUAL_RELOC)
 void fixup_cmdtable(cmd_tbl_t *cmdtp, int size);

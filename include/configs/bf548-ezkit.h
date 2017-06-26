@@ -73,8 +73,6 @@
 #define CONFIG_SMC911X_BASE	0x24000000
 #define CONFIG_SMC911X_16_BIT
 #define CONFIG_HOSTNAME		bf548-ezkit
-/* Uncomment next line to use fixed MAC address */
-/* #define CONFIG_ETHADDR	02:80:ad:20:31:e8 */
 
 
 /*
@@ -94,7 +92,6 @@
 #define CONFIG_BFIN_SPI
 #define CONFIG_ENV_SPI_MAX_HZ	30000000
 #define CONFIG_SF_DEFAULT_SPEED	30000000
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_STMICRO
 
 
@@ -120,24 +117,22 @@
 #define CONFIG_ENV_SECT_SIZE	0x8000
 #endif
 
-
 /*
  * NAND Settings
  */
-#define CONFIG_BFIN_NFC_CTL_VAL	0x0033
 #if (CONFIG_BFIN_BOOT_MODE == BFIN_BOOT_NAND)
-# define CONFIG_BFIN_NFC_BOOTROM_ECC
-#endif
+#define CONFIG_BFIN_NFC_CTL_VAL        0x0033
+#define CONFIG_BFIN_NFC_BOOTROM_ECC
 #define CONFIG_DRIVER_NAND_BFIN
-#define CONFIG_SYS_NAND_BASE		0 /* not actually used */
-#define CONFIG_SYS_MAX_NAND_DEVICE	1
-
+#define CONFIG_SYS_NAND_BASE           0 /* not actually used */
+#define CONFIG_SYS_MAX_NAND_DEVICE     1
+#endif
 
 /*
  * I2C Settings
  */
-#define CONFIG_BFIN_TWI_I2C	1
-#define CONFIG_HARD_I2C		1
+#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_ADI
 
 
 /*
@@ -184,13 +179,12 @@
 #define CONFIG_UART_CONSOLE	1
 #define CONFIG_BFIN_SPI_IMG_SIZE 0x50000
 
-#ifndef __ADSPBF542__
-/* Don't waste time transferring a logo over the UART */
-# if (CONFIG_BFIN_BOOT_MODE != BFIN_BOOT_UART)
-#  define CONFIG_VIDEO
-#  define EASYLOGO_HEADER <asm/bfin_logo_230x230_gzip.h>
-# endif
-# define CONFIG_DEB_DMA_URGENT
+#define CONFIG_ADI_GPIO2
+
+#undef CONFIG_VIDEO
+#ifdef CONFIG_VIDEO
+#define EASYLOGO_HEADER < asm/bfin_logo_230x230_gzip.h >
+#define CONFIG_DEB_DMA_URGENT
 #endif
 
 /* Define if want to do post memory test */

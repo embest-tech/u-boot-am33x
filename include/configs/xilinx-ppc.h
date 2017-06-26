@@ -6,21 +6,14 @@
  *  (C) Copyright 2008
  *  Georg Schardt <schardt@team-ctech.de>
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier:	GPL-2.0+
 */
 
 #ifndef __CONFIG_XLX_H
 #define __CONFIG_XLX_H
+
+#define CONFIG_SYS_GENERIC_BOARD
+
 /*
 #define DEBUG
 #define ET_DEBUG
@@ -33,7 +26,6 @@
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 128 * 1024)
 
 /*Cmd*/
-#include <config_cmd_default.h>
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DIAG
@@ -45,12 +37,9 @@
 #undef CONFIG_CMD_SPI
 #undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_DTT
-#undef CONFIG_CMD_NET
 #undef CONFIG_CMD_PING
 #undef CONFIG_CMD_DHCP
 #undef CONFIG_CMD_EEPROM
-#undef CONFIG_CMD_IMLS
-#undef CONFIG_CMD_NFS
 
 /*Misc*/
 #define CONFIG_BOOTDELAY		5/* autoboot after 5 seconds     */
@@ -74,7 +63,6 @@
 					/* default load address       */
 #define CONFIG_SYS_EXTBDINFO		1
 					/* Extended board_into (bd_t) */
-#define CONFIG_SYS_HZ			1000
 					/* decrementer freq: 1 ms ticks */
 #define CONFIG_CMDLINE_EDITING		/* add command line history     */
 #define CONFIG_AUTO_COMPLETE		/* add autocompletion support   */

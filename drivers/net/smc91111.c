@@ -10,19 +10,7 @@
  .	 Developed by Simple Network Magic Corporation (SNMC)
  . Copyright (C) 1996 by Erik Stahlman (ES)
  .
- . This program is free software; you can redistribute it and/or modify
- . it under the terms of the GNU General Public License as published by
- . the Free Software Foundation; either version 2 of the License, or
- . (at your option) any later version.
- .
- . This program is distributed in the hope that it will be useful,
- . but WITHOUT ANY WARRANTY; without even the implied warranty of
- . MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- . GNU General Public License for more details.
- .
- . You should have received a copy of the GNU General Public License
- . along with this program; if not, write to the Free Software
- . Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307	 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  .
  . Information contained in this file was obtained from the LAN91C111
  . manual from SMC.  To get a copy, if you really want one, you can find
@@ -177,8 +165,6 @@ static void smc_phy_configure(struct eth_device *dev);
  * packets being corrupt (shifted) on the wire, etc.  Switching to the
  * inx,outx functions fixed this problem.
  */
-
-#define barrier() __asm__ __volatile__("": : :"memory")
 
 static inline word SMC_inw(struct eth_device *dev, dword offset)
 {
@@ -770,35 +756,35 @@ static int smc_rcv(struct eth_device *dev)
 
 
 #ifdef USE_32_BIT
-		PRINTK3(" Reading %d dwords (and %d bytes) \n",
+		PRINTK3(" Reading %d dwords (and %d bytes)\n",
 			packet_length >> 2, packet_length & 3 );
 		/* QUESTION:  Like in the TX routine, do I want
 		   to send the DWORDs or the bytes first, or some
 		   mixture.  A mixture might improve already slow PIO
 		   performance	*/
-		SMC_insl( dev, SMC91111_DATA_REG, NetRxPackets[0],
-			packet_length >> 2 );
+		SMC_insl(dev, SMC91111_DATA_REG, net_rx_packets[0],
+			 packet_length >> 2);
 		/* read the left over bytes */
 		if (packet_length & 3) {
 			int i;
 
-			byte *tail = (byte *)(NetRxPackets[0] +
+			byte *tail = (byte *)(net_rx_packets[0] +
 				(packet_length & ~3));
 			dword leftover = SMC_inl(dev, SMC91111_DATA_REG);
 			for (i=0; i<(packet_length & 3); i++)
 				*tail++ = (byte) (leftover >> (8*i)) & 0xff;
 		}
 #else
-		PRINTK3(" Reading %d words and %d byte(s) \n",
+		PRINTK3(" Reading %d words and %d byte(s)\n",
 			(packet_length >> 1 ), packet_length & 1 );
-		SMC_insw(dev, SMC91111_DATA_REG , NetRxPackets[0],
-			packet_length >> 1);
+		SMC_insw(dev, SMC91111_DATA_REG , net_rx_packets[0],
+			 packet_length >> 1);
 
 #endif /* USE_32_BIT */
 
 #if	SMC_DEBUG > 2
 		printf("Receiving Packet\n");
-		print_packet( NetRxPackets[0], packet_length );
+		print_packet(net_rx_packets[0], packet_length);
 #endif
 	} else {
 		/* error ... */
@@ -829,7 +815,7 @@ static int smc_rcv(struct eth_device *dev)
 
 	if (!is_error) {
 		/* Pass the packet up to the protocol layers. */
-		NetReceive(NetRxPackets[0], packet_length);
+		net_process_received_packet(net_rx_packets[0], packet_length);
 		return packet_length;
 	} else {
 		return 0;

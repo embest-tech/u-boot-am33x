@@ -4,20 +4,7 @@
  * based on:
  * Copyright (C) 2009 Ilya Yanok <yanok@emcraft.com>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __IMX27LITE_COMMON_CONFIG_H
@@ -26,10 +13,8 @@
 /*
  * SoC Configuration
  */
-#define CONFIG_ARM926EJS			/* arm926ejs CPU core */
 #define CONFIG_MX27
 #define CONFIG_MX27_CLK32	32768		/* OSC32K frequency */
-#define CONFIG_SYS_HZ		1000
 
 #define CONFIG_DISPLAY_BOARDINFO
 #define CONFIG_DISPLAY_CPUINFO
@@ -173,7 +158,6 @@
 /*
  * U-Boot general configuration
  */
-#define CONFIG_SYS_PROMPT	"=> "	/* Monitor Command Prompt */
 #define CONFIG_SYS_CBSIZE	1024	/* Console I/O Buffer Size  */
 /* Print buffer sz */
 #define CONFIG_SYS_PBSIZE	(CONFIG_SYS_CBSIZE + \
@@ -187,7 +171,6 @@
 /*
  * U-Boot commands
  */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DHCP
@@ -204,9 +187,6 @@
 #define CONFIG_LOADADDR		0xa0800000	/* loadaddr env var */
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
 
-#define xstr(s)	str(s)
-#define str(s)	#s
-
 #define	CONFIG_EXTRA_ENV_SETTINGS					\
 	"netdev=eth0\0"							\
 	"nfsargs=setenv bootargs root=/dev/nfs rw "			\
@@ -219,19 +199,19 @@
 		" console=ttymxc0,${baudrate}\0"			\
 	"addmtd=setenv bootargs ${bootargs} ${mtdparts}\0"		\
 	"addmisc=setenv bootargs ${bootargs}\0"				\
-	"u-boot=" xstr(CONFIG_HOSTNAME) "/u-boot.bin\0"			\
+	"u-boot=" __stringify(CONFIG_HOSTNAME) "/u-boot.bin\0"		\
 	"kernel_addr_r=a0800000\0"					\
-	"bootfile=" xstr(CONFIG_HOSTNAME) "/uImage\0"			\
+	"bootfile=" __stringify(CONFIG_HOSTNAME) "/uImage\0"		\
 	"rootpath=/opt/eldk-4.2-arm/arm\0"				\
 	"net_nfs=tftp ${kernel_addr_r} ${bootfile};"			\
 		"run nfsargs addip addtty addmtd addmisc;"		\
 		"bootm\0"						\
-	"bootcmd=run net_nfs\0"					\
+	"bootcmd=run net_nfs\0"						\
 	"load=tftp ${loadaddr} ${u-boot}\0"				\
-	"update=protect off " xstr(CONFIG_SYS_MONITOR_BASE)		\
-		" +${filesize};era " xstr(CONFIG_SYS_MONITOR_BASE)	\
+	"update=protect off " __stringify(CONFIG_SYS_MONITOR_BASE)	\
+		" +${filesize};era " __stringify(CONFIG_SYS_MONITOR_BASE)\
 		" +${filesize};cp.b ${fileaddr} "			\
-		xstr(CONFIG_SYS_MONITOR_BASE) " ${filesize}\0"		\
+		__stringify(CONFIG_SYS_MONITOR_BASE) " ${filesize}\0"	\
 	"upd=run load update\0"						\
 	"mtdids=" MTDIDS_DEFAULT "\0"					\
 	"mtdparts=" MTDPARTS_DEFAULT "\0"				\

@@ -4,23 +4,7 @@
  * Copyright (c) 2012 The Chromium OS Authors.
  * (C) Copyright 2004 DENX Software Engineering, Wolfgang Denk, wd@denx.de
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -45,6 +29,9 @@ static int has_ghosting(struct key_matrix *config, struct key_matrix_key *keys,
 {
 	int key_in_same_col = 0, key_in_same_row = 0;
 	int i, j;
+
+	if (!config->ghost_filter || valid < 3)
+		return 0;
 
 	for (i = 0; i < valid; i++) {
 		/*
@@ -92,7 +79,7 @@ int key_matrix_decode(struct key_matrix *config, struct key_matrix_key keys[],
 	}
 
 	/* For a ghost key config, ignore the keypresses for this iteration. */
-	if (valid >= 3 && has_ghosting(config, keys, valid)) {
+	if (has_ghosting(config, keys, valid)) {
 		valid = 0;
 		debug("    ghosting detected!\n");
 	}
@@ -142,6 +129,8 @@ static uchar *create_keymap(struct key_matrix *config, u32 *data, int len,
 		key_code = tmp & 0xffff;
 		entry = row * config->num_cols + col;
 		map[entry] = key_code;
+		debug("   map %d, %d: pos=%d, keycode=%d\n", row, col,
+		      entry, key_code);
 		if (pos && map_keycode == key_code)
 			*pos = entry;
 	}
@@ -149,60 +138,53 @@ static uchar *create_keymap(struct key_matrix *config, u32 *data, int len,
 	return map;
 }
 
-int key_matrix_decode_fdt(struct key_matrix *config, const void *blob,
-			  int node)
+int key_matrix_decode_fdt(struct key_matrix *config, const void *blob, int node)
 {
 	const struct fdt_property *prop;
-	int offset;
+	int proplen;
+	uchar *plain_keycode;
 
-	/* Check each property name for ones that we understand */
-	for (offset = fdt_first_property_offset(blob, node);
-		      offset > 0;
-		      offset = fdt_next_property_offset(blob, offset)) {
-		const char *name;
-		int len;
-
-		prop = fdt_get_property_by_offset(blob, offset, NULL);
-		name = fdt_string(blob, fdt32_to_cpu(prop->nameoff));
-		len = strlen(name);
-
-		/* Name needs to match "1,<type>keymap" */
-		debug("%s: property '%s'\n", __func__, name);
-		if (strncmp(name, "1,", 2) || len < 8 ||
-		    strcmp(name + len - 6, "keymap"))
-			continue;
-
-		len -= 8;
-		if (len == 0) {
-			config->plain_keycode = create_keymap(config,
-				(u32 *)prop->data, fdt32_to_cpu(prop->len),
-				KEY_FN, &config->fn_pos);
-		} else if (0 == strncmp(name + 2, "fn-", len)) {
-			config->fn_keycode = create_keymap(config,
-				(u32 *)prop->data, fdt32_to_cpu(prop->len),
-				-1, NULL);
-		} else {
-			debug("%s: unrecognised property '%s'\n", __func__,
-			      name);
-		}
-	}
-	debug("%s: Decoded key maps %p, %p from fdt\n", __func__,
-	      config->plain_keycode, config->fn_keycode);
-
-	if (!config->plain_keycode) {
+	prop = fdt_get_property(blob, node, "linux,keymap", &proplen);
+	/* Basic keymap is required */
+	if (!prop) {
 		debug("%s: cannot find keycode-plain map\n", __func__);
 		return -1;
 	}
 
+	plain_keycode = create_keymap(config, (u32 *)prop->data,
+		proplen, KEY_FN, &config->fn_pos);
+	config->plain_keycode = plain_keycode;
+	/* Conversion error -> fail */
+	if (!config->plain_keycode)
+		return -1;
+
+	prop = fdt_get_property(blob, node, "linux,fn-keymap", &proplen);
+	/* fn keymap is optional */
+	if (!prop)
+		goto done;
+
+	config->fn_keycode = create_keymap(config, (u32 *)prop->data,
+		proplen, -1, NULL);
+	/* Conversion error -> fail */
+	if (!config->fn_keycode) {
+		free(plain_keycode);
+		return -1;
+	}
+
+done:
+	debug("%s: Decoded key maps %p, %p from fdt\n", __func__,
+	      config->plain_keycode, config->fn_keycode);
 	return 0;
 }
 
-int key_matrix_init(struct key_matrix *config, int rows, int cols)
+int key_matrix_init(struct key_matrix *config, int rows, int cols,
+		    int ghost_filter)
 {
 	memset(config, '\0', sizeof(*config));
 	config->num_rows = rows;
 	config->num_cols = cols;
 	config->key_count = rows * cols;
+	config->ghost_filter = ghost_filter;
 	assert(config->key_count > 0);
 
 	return 0;
