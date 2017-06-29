@@ -516,11 +516,6 @@ static struct cpsw_platform_data cpsw_data = {
 	.control		= cpsw_control,
 	.host_port_num		= 0,
 	.version		= CPSW_CTRL_VERSION_2,
-	/* uboot can only activate one network port;
-	 * There are two Ethernet ports on SOM-PH8700,enabled by default J17;
-	 * If you want to use the J16 , can be modified by changing ".active_slave=1"
-	 */
-	.active_slave		= 0,
 };
 #endif
 

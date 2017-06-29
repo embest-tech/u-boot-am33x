@@ -745,6 +745,8 @@ static int cpdma_process(struct cpsw_priv *priv, struct cpdma_chan *chan,
 	return 0;
 }
 
+static int cpsw_phy_init(struct eth_device *dev, struct cpsw_slave *slave);
+
 static int cpsw_init(struct eth_device *dev, bd_t *bis)
 {
 	struct cpsw_priv	*priv = dev->priv;
@@ -776,10 +778,21 @@ static int cpsw_init(struct eth_device *dev, bd_t *bis)
 			   ALE_SECURE);
 	cpsw_ale_add_mcast(priv, net_bcast_ethaddr, 1 << priv->host_port);
 
-	for_active_slave(slave, priv)
-		cpsw_slave_init(slave, priv);
+	for (i = 0; i < priv->data.slaves; i++) {
+		for_active_slave(slave, priv) {
+			if (priv->phydev->addr != slave->data->phy_addr)
+				cpsw_phy_init(dev, slave);
+			cpsw_slave_init(slave, priv);
+		}
 
-	cpsw_update_link(priv);
+		if (!cpsw_update_link(priv)) {
+			u32 active_slave = priv->data.active_slave + 1;
+			priv->data.active_slave = (active_slave < priv->data.slaves) ?
+				active_slave : active_slave - priv->data.slaves;
+		}
+		else
+			break;
+	}
 
 	/* init descriptor pool */
 	for (i = 0; i < NUM_DESCS; i++) {
