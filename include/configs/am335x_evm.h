@@ -537,6 +537,13 @@
 #define STATUS_LED_PERIOD			(CONFIG_SYS_HZ / 2)
 #define STATUS_LED_BOOT				0
 
+/*
+ * Boot Prompt
+ */
+#define CONFIG_AUTOBOOT_KEYED
+#define CONFIG_AUTOBOOT_PROMPT      "Hit any key to stop autoboot: %2d \n"
+#define CONFIG_AUTOBOOT_DELAY_STR   " "
+
 #endif	/* !CONFIG_BOARD_SBC8600 */
 
 #endif	/* ! __CONFIG_AM335X_EVM_H */

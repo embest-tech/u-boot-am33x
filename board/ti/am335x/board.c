@@ -676,7 +676,7 @@ static struct am335x_lcdpanel lcdpanels[] = {
 		.vfp		= 12,
 		.vbp		= 25,
 		.vsw		= 3,
-		.pxl_clk_div	= 10000000UL,
+		.pxl_clk_div	= 20000000UL,
 	},
 };
 
@@ -704,6 +704,19 @@ static int load_lcdtiming(struct am335x_lcdpanel *panel)
 
 	return 0;
 }
+void lcd_enable(void)
+{
+#ifdef GPIO_LCD_BACKLIGHT_PIN
+	gpio_direction_output(GPIO_LCD_BACKLIGHT_PIN, 1);
+#endif
+}
+
+void lcd_disable(void)
+{
+#ifdef GPIO_LCD_BACKLIGHT_PIN
+	gpio_direction_output(GPIO_LCD_BACKLIGHT_PIN, 0);
+#endif
+}
 
 void lcd_ctrl_init(void *lcdbase)
 {
@@ -726,13 +739,7 @@ void lcd_ctrl_init(void *lcdbase)
 #ifdef GPIO_LCD_BACKLIGHT_PIN
 	gpio_request(GPIO_LCD_BACKLIGHT_PIN, "backlight");
 #endif
-}
-
-void lcd_enable(void)
-{
-#ifdef GPIO_LCD_BACKLIGHT_PIN
-	gpio_direction_output(GPIO_LCD_BACKLIGHT_PIN, 1);
-#endif
+	lcd_disable();
 }
 #endif	/* CONFIG_LCD */
 
