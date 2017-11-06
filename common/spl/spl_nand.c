@@ -24,6 +24,7 @@ void spl_nand_load_image(void)
 #else
 void spl_nand_load_image(void)
 {
+	int err;
 	struct image_header *header;
 	int *src __attribute__((unused));
 	int *dst __attribute__((unused));
@@ -89,9 +90,22 @@ void spl_nand_load_image(void)
 	/* Load u-boot */
 	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS,
 		sizeof(*header), (void *)header);
-	spl_parse_image_header(header);
-	nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS,
-		spl_image.size, (void *)(unsigned long)spl_image.load_addr);
+	err = spl_parse_image_header(header);
+	if (!err) {
+		err = nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS,
+			spl_image.size, (void *)(unsigned long)spl_image.load_addr);
+	}
+
+#ifdef CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND
+#if CONFIG_SYS_NAND_U_BOOT_OFFS != CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND
+	if (err) {
+		nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND, sizeof(*header), (void *)header);
+		spl_parse_image_header(header);
+		err = nand_spl_load_image(CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND, spl_image.size, (void *)(unsigned long)spl_image.load_addr);
+	}
+#endif
+#endif
+	
 	nand_deselect();
 }
 #endif

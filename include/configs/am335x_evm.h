@@ -50,24 +50,28 @@
 # define SPLASHPOS			"splashpos=m,m\0"
 # define ERASEENV			"erase_env=nand erase.part NAND.u-boot-env; nand erase.part NAND.u-boot-env.backup1\0"
 # define UPDATE_MLO			"update_mlo=if fatload mmc 0 80008000 MLO; then nand erase.part NAND.SPL; nand erase.part NAND.SPL.backup1; nand erase.part NAND.SPL.backup2; nand erase.part NAND.SPL.backup3; nand write.i 80008000 NAND.SPL ${filesize}; nand write.i 80008000 NAND.SPL.backup1 ${filesize}; nand write.i 80008000 NAND.SPL.backup2 ${filesize}; nand write.i 80008000 NAND.SPL.backup3 ${filesize};fi\0"
-# define UPDATE_UBOOT		"update_uboot=if fatload mmc 0 80008000 u-boot.img; then nand erase.part NAND.u-boot; nand erase.part NAND.u-boot-env; nand erase.part NAND.u-boot-env.backup1; nand write.i 80008000 NAND.u-boot ${filesize}; fi\0"
+# define UPDATE_UBOOT		"update_uboot=if fatload mmc 0 80008000 u-boot.img; then nand erase.part NAND.u-boot; nand write.i 80008000 NAND.u-boot ${filesize}; nand erase.part NAND.u-boot.backup1; nand write.i 80008000 NAND.u-boot.backup1 ${filesize}; fi\0"
 # define UPDATE_LOGO		"update_logo=if fatload mmc 0 80008000 logo.bmp; then nand erase.part NAND.logo; nand write.i 80008000 NAND.logo ${filesize}; fi\0"
-# define UPDATE_DTB			"update_dtb=if fatload mmc 0 80008000 embest-SBC-SBC8600.dtb; then nand erase.part NAND.u-boot-spl-os; nand write.i 80008000 NAND.u-boot-spl-os ${filesize}; fi\0"
-# define UPDATE_KERNEL		"update_kernel=if fatload mmc 0 80008000 zImage; then nand erase.part NAND.kernel; nand write.i 80008000 NAND.kernel ${filesize}; fi\0"
+# define UPDATE_DTB			"update_dtb=if fatload mmc 0 80008000 embest-SBC-SBC8600.dtb; then nand erase.part NAND.u-boot-spl-os; nand write.i 80008000 NAND.u-boot-spl-os ${filesize}; nand erase.part NAND.u-boot-spl-os.backup1; nand write.i 80008000 NAND.u-boot-spl-os.backup1 ${filesize}; fi\0"
+# define UPDATE_KERNEL		"update_kernel=if fatload mmc 0 80008000 zImage; then nand erase.part NAND.kernel; nand write.i 80008000 NAND.kernel ${filesize}; nand erase.part NAND.kernel.backup1; nand write.i 80008000 NAND.kernel.backup1 ${filesize}; fi\0"
+# define UPDATE_RAMDISK		"update_ramdisk=if fatload mmc 0 80008000 ramdisk.img; then nand erase.part NAND.ramdisk; nand write.i 80008000 NAND.ramdisk ${filesize}; fi\0"
 # define UPDATE_UBIFS		"update_ubifs=if fatload mmc 0 80008000 rootfs.ubi; then nand erase.part NAND.file-system; nand write.i 80008000 NAND.file-system ${filesize}; fi\0"
 # define UPDATESYS			UPDATE_MLO \
 							UPDATE_UBOOT \
 							UPDATE_LOGO \
 							UPDATE_DTB \
 							UPDATE_KERNEL \
+							UPDATE_RAMDISK \
 							UPDATE_UBIFS \
 							"updatesys=if run update_mlo && run update_uboot && run update_logo && run update_dtb && run update_kernel && run update_ubifs; then echo Info: UPDATE COMPLETE!; while true; do led 0 blink 30; done; else echo Err: UPDATE FAIL!; led 0 off; fi\0"
+# define NANDRAMBOOT		"nandramboot=nand read.i ${rdaddr} NAND.ramdisk; if nand read ${fdtaddr} NAND.u-boot-spl-os && nand read ${loadaddr} NAND.kernel && run ramboot; then; else nand read ${fdtaddr} NAND.u-boot-spl-os.backup1 && nand read ${loadaddr} NAND.kernel.backup1 && run ramboot; fi\0"
 #else
 # define LCDMODE
 # define SPLASHENV
 # define SPLASHPOS
 # define ERASEENV
 # define UPDATESYS
+# define NANDRAMBOOT
 #endif
 
 /* Custom script for NOR */
@@ -183,6 +187,7 @@
 	SPLASHPOS \
 	ERASEENV \
 	UPDATESYS \
+	NANDRAMBOOT \
 	DFUARGS
 #endif
 
@@ -269,8 +274,7 @@
 					"128k(NAND.u-boot-env.backup1)," \
 					"4m(NAND.logo)," \
 					"8m(NAND.kernel)," \
-					"400m(NAND.file-system)," \
-					"-(NAND.user)"
+					"-(NAND.file-system)"
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x000c0000
 /* NAND: SPL related configs */
 #ifdef CONFIG_SPL_NAND_SUPPORT
@@ -503,6 +507,66 @@
 
 #if defined(CONFIG_BOARD_SBC8600)
 /*
+ * NAND Settings
+ */
+#ifdef MTDPARTS_DEFAULT
+#undef MTDPARTS_DEFAULT
+#endif
+#ifdef CONFIG_SYS_NAND_U_BOOT_OFFS
+#undef CONFIG_SYS_NAND_U_BOOT_OFFS
+#endif
+#ifdef NANDARGS
+#undef NANDARGS
+#endif
+#ifdef CONFIG_ENV_OFFSET
+#undef CONFIG_ENV_OFFSET
+#endif
+#ifdef CONFIG_ENV_OFFSET_REDUND
+#undef CONFIG_ENV_OFFSET_REDUND
+#endif
+#define CONFIG_ENV_OFFSET			0x00300000
+#define CONFIG_ENV_OFFSET_REDUND	0x00320000
+#define NANDARGS \
+	"mtdids=" MTDIDS_DEFAULT "\0" \
+	"mtdparts=" MTDPARTS_DEFAULT "\0" \
+	"nandargs=setenv bootargs console=${console} " \
+		"${optargs} " \
+		"dispmode=${dispmode} " \
+		"root=${nandroot} " \
+		"rootfstype=${nandrootfstype}\0" \
+	"nandroot=ubi0:rootfs rw ubi.mtd=NAND.file-system,2048\0" \
+	"nandrootfstype=ubifs rootwait=1\0" \
+	"nandboot=echo Booting from nand ...; " \
+		"run nandargs; " \
+		"if nand read ${fdtaddr} NAND.u-boot-spl-os && " \
+		"nand read ${loadaddr} NAND.kernel && " \
+		"bootz ${loadaddr} - ${fdtaddr}; then; else " \
+		"nand read ${fdtaddr} NAND.u-boot-spl-os.backup1 && " \
+		"nand read ${loadaddr} NAND.kernel.backup1 && " \
+		"bootz ${loadaddr} - ${fdtaddr}; fi\0"
+
+#define CONFIG_SPL_ABORT_ON_RAW_IMAGE
+#define MTDPARTS_DEFAULT		"mtdparts=nand.0:" \
+					"128k(NAND.SPL)," \
+					"128k(NAND.SPL.backup1)," \
+					"128k(NAND.SPL.backup2)," \
+					"128k(NAND.SPL.backup3)," \
+					"256k(NAND.u-boot-spl-os)," \
+					"256k(NAND.u-boot-spl-os.backup1)," \
+					"1m(NAND.u-boot)," \
+					"1m(NAND.u-boot.backup1)," \
+					"128k(NAND.u-boot-env)," \
+					"128k(NAND.u-boot-env.backup1)," \
+					"4m(NAND.logo)," \
+					"8m(NAND.kernel)," \
+					"8m(NAND.kernel.backup1)," \
+					"16m(NAND.ramdisk)," \
+					"400m(NAND.file-system)," \
+					"-(NAND.user)"
+#define CONFIG_SYS_NAND_U_BOOT_OFFS				0x00100000
+#define CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND		0x00200000
+
+/*
  * LCD Settings
  */
 #define CONFIG_LCD
@@ -519,6 +583,7 @@
 #define CONFIG_SPLASH_SCREEN_ALIGN
 #define CONFIG_SPLASH_SOURCE
 #define CONFIG_SPLASHIMAGE_GUARD
+#define CONFIG_SPLASH_SCREEN_NAND_OFFSET	0x00340000
 
 #define GPIO_LCD_BACKLIGHT_PIN		(32 * 3 + 17)	/* gpio3_17 */
 

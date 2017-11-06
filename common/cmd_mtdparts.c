@@ -1275,7 +1275,7 @@ static void print_partition_table(void)
 
 		list_for_each(pentry, &dev->parts) {
 			part = list_entry(pentry, struct part_info, link);
-			printf("%2d: %-20s0x%08llx\t0x%08llx\t%d\n",
+			printf("%2d: %-20s0x%08llX\t0x%08llX\t%d\n",
 					part_num, part->name, part->size,
 					part->offset, part->mask_flags);
 #endif /* defined(CONFIG_CMD_MTDPARTS_SHOW_NET_SIZES) */

@@ -787,7 +787,7 @@ static int cpsw_init(struct eth_device *dev, bd_t *bis)
 
 		if (!cpsw_update_link(priv)) {
 			u32 active_slave = priv->data.active_slave + 1;
-			priv->data.active_slave = (active_slave < priv->data.slaves) ?
+			priv->data.active_slave = (active_slave < priv->data.slaves) ? 
 				active_slave : active_slave - priv->data.slaves;
 		}
 		else

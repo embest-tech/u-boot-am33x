@@ -678,6 +678,18 @@ static struct am335x_lcdpanel lcdpanels[] = {
 		.vsw		= 3,
 		.pxl_clk_div	= 20000000UL,
 	},
+	{
+		.hactive	= 1024,
+		.vactive	= 768,
+		.bpp		= 32,
+		.hfp		= 1,
+		.hbp		= 1,
+		.hsw		= 48,
+		.vfp		= 12,
+		.vbp		= 25,
+		.vsw		= 3,
+		.pxl_clk_div	= 30000000UL,
+	},
 };
 
 static int load_lcdtiming(struct am335x_lcdpanel *panel)
@@ -691,6 +703,8 @@ static int load_lcdtiming(struct am335x_lcdpanel *panel)
 			idx = 0;
 		else if (!strncmp("7.0inch_LCD", s, 12))
 			idx = 1;
+		else if (!strncmp("VGA", s, 4))
+			idx = 2;
 	}
 
 	if (idx >= ARRAY_SIZE(lcdpanels)) {
@@ -748,7 +762,11 @@ struct splash_location splash_locations[] = {
 	{
 		.name = "nand",
 		.storage = SPLASH_STORAGE_NAND,
-		.offset = 0x200000,
+#ifdef CONFIG_SPLASH_SCREEN_NAND_OFFSET
+		.offset = CONFIG_SPLASH_SCREEN_NAND_OFFSET,
+#else
+		.offset = 0x20000;
+#endif
 	},
 };
 

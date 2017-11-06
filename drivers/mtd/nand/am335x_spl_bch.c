@@ -121,6 +121,7 @@ static int nand_is_bad_block(int block)
 
 static int nand_read_page(int block, int page, void *dst)
 {
+	int rc = 0;
 	struct nand_chip *this = nand_info[0].priv;
 	u_char ecc_calc[ECCTOTAL];
 	u_char ecc_code[ECCTOTAL];
@@ -164,7 +165,11 @@ static int nand_read_page(int block, int page, void *dst)
 		 * from correct_data(). We just hope that all possible errors
 		 * are corrected by this routine.
 		 */
-		this->ecc.correct(&nand_info[0], p, &ecc_code[i], &ecc_calc[i]);
+		rc = this->ecc.correct(&nand_info[0], p, &ecc_code[i], &ecc_calc[i]);
+#ifdef CONFIG_BOARD_SBC8600
+		if (rc == -EBADMSG)
+			return rc;
+#endif
 	}
 
 	return 0;
@@ -172,6 +177,7 @@ static int nand_read_page(int block, int page, void *dst)
 
 int nand_spl_load_image(uint32_t offs, unsigned int size, void *dst)
 {
+	int rc = 0;
 	unsigned int block, lastblock;
 	unsigned int page;
 
@@ -188,7 +194,11 @@ int nand_spl_load_image(uint32_t offs, unsigned int size, void *dst)
 			 * Skip bad blocks
 			 */
 			while (page < CONFIG_SYS_NAND_PAGE_COUNT) {
-				nand_read_page(block, page, dst);
+				rc = nand_read_page(block, page, dst);
+#ifdef CONFIG_BOARD_SBC8600
+				if (rc == -EBADMSG)
+					return rc;
+#endif
 				dst += CONFIG_SYS_NAND_PAGE_SIZE;
 				page++;
 			}
