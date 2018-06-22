@@ -9,7 +9,7 @@ CROSS=arm-linux-
 export ARCH=arm
 export CROSS_COMPILE=$CROSS
 
-build_uboot() {
+build_sbc8600() {
     if ! [ -f ".config" ]; then
         make am335x_sbc8600_defconfig
         [ $? != 0 ] && exit 1
@@ -22,5 +22,18 @@ build_uboot() {
     cp -rf MLO u-boot.img $DEST
 }
 
-build_uboot
+build_weidian() {
+    if ! [ -f ".config" ]; then
+        make am335x_weidian_defconfig
+        [ $? != 0 ] && exit 1
+    fi
 
+    make -j8
+    [ $? != 0 ] && exit 1
+
+    echo "Build Info: COPY MLO u-boot.img -> $DEST"
+    cp -rf MLO u-boot.img $DEST
+}
+
+build_sbc8600
+# build_weidian

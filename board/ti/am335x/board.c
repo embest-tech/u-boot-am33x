@@ -667,6 +667,18 @@ static struct am335x_lcdpanel lcdpanels[] = {
 		.pxl_clk_div	= 10000000UL,
 	},
 	{
+		.hactive	= 640,
+		.vactive	= 480,
+		.bpp		= 16,
+		.hfp		= 39,
+		.hbp		= 39,
+		.hsw		= 47,
+		.vfp		= 13,
+		.vbp		= 29,
+		.vsw		= 2,
+		.pxl_clk_div	= 15000000UL,
+	},
+	{
 		.hactive	= 800,
 		.vactive	= 480,
 		.bpp		= 32,
@@ -695,16 +707,18 @@ static struct am335x_lcdpanel lcdpanels[] = {
 static int load_lcdtiming(struct am335x_lcdpanel *panel)
 {
 	char *s = getenv("dispmode");
-	int idx_default = 1;	/* 7inch as default */
+	int idx_default = 2;	/* 7inch as default */
 	int idx = idx_default;
 
 	if (s != NULL) {
 		if (!strncmp("4.3inch_LCD", s, 12))
 			idx = 0;
-		else if (!strncmp("7.0inch_LCD", s, 12))
+		else if (!strncmp("5.6inch_LCD", s, 12))
 			idx = 1;
-		else if (!strncmp("VGA", s, 4))
+		else if (!strncmp("7.0inch_LCD", s, 12))
 			idx = 2;
+		else if (!strncmp("VGA", s, 4))
+			idx = 3;
 	}
 
 	if (idx >= ARRAY_SIZE(lcdpanels)) {
@@ -720,6 +734,9 @@ static int load_lcdtiming(struct am335x_lcdpanel *panel)
 }
 void lcd_enable(void)
 {
+#ifdef GPIO_LCD_EN_PIN
+	gpio_direction_output(GPIO_LCD_EN_PIN, 1);
+#endif
 #ifdef GPIO_LCD_BACKLIGHT_PIN
 	gpio_direction_output(GPIO_LCD_BACKLIGHT_PIN, 1);
 #endif
@@ -727,6 +744,9 @@ void lcd_enable(void)
 
 void lcd_disable(void)
 {
+#ifdef GPIO_LCD_EN_PIN
+	gpio_direction_output(GPIO_LCD_EN_PIN, 0);
+#endif
 #ifdef GPIO_LCD_BACKLIGHT_PIN
 	gpio_direction_output(GPIO_LCD_BACKLIGHT_PIN, 0);
 #endif
@@ -750,6 +770,9 @@ void lcd_ctrl_init(void *lcdbase)
 
 	lcd_set_flush_dcache(1);
 
+#ifdef GPIO_LCD_EN_PIN
+	gpio_request(GPIO_LCD_EN_PIN, "lcden");
+#endif
 #ifdef GPIO_LCD_BACKLIGHT_PIN
 	gpio_request(GPIO_LCD_BACKLIGHT_PIN, "backlight");
 #endif

@@ -32,6 +32,9 @@
 #define CONFIG_MACH_TYPE		MACH_TYPE_TIAM335EVM
 #define CONFIG_BOARD_LATE_INIT
 
+/* GPIO pin + bank to pin ID mapping */
+#define GPIO_PIN(_bank, _pin)		((_bank << 5) + _pin)
+
 /* Clock Defines */
 #ifdef CONFIG_BOARD_SBC8600
 # define V_OSCK				25000000  /* Clock output from T2 */
@@ -45,7 +48,11 @@
  * dispmode:				4.3inch_LCD
  *							7.0inch_LCD
  */
+#ifdef CONFIG_BOARD_WEIDIAN
+# define LCDMODE			"dispmode=5.6inch_LCD\0"
+#else
 # define LCDMODE			"dispmode=4.3inch_LCD\0"
+#endif
 # define SPLASHENV			"splashimage=0x8000a002\0"
 # define SPLASHPOS			"splashpos=m,m\0"
 # define ERASEENV			"erase_env=nand erase.part NAND.u-boot-env; nand erase.part NAND.u-boot-env.backup1\0"
@@ -585,10 +592,16 @@
 #define CONFIG_SPLASHIMAGE_GUARD
 #define CONFIG_SPLASH_SCREEN_NAND_OFFSET	0x00340000
 
-#define GPIO_LCD_BACKLIGHT_PIN		(32 * 3 + 17)	/* gpio3_17 */
-
-/* GPIO pin + bank to pin ID mapping */
-#define GPIO_PIN(_bank, _pin)		((_bank << 5) + _pin)
+#if defined(CONFIG_BOARD_WEIDIAN)
+#ifdef LCD_BPP
+# undef LCD_BPP
+#endif
+#define LCD_BPP				LCD_COLOR16
+#define GPIO_LCD_EN_PIN				GPIO_PIN(1, 13)	/* gpio1_13 */
+#define GPIO_LCD_BACKLIGHT_PIN		GPIO_PIN(3, 17)	/* gpio3_17 */
+#else	/* !CONFIG_BOARD_WEIDIAN */
+#define GPIO_LCD_BACKLIGHT_PIN		GPIO_PIN(3, 17)	/* gpio3_17 */
+#endif	/* CONFIG_BOARD_WEIDIAN */
 
 /*
  * LED Settings

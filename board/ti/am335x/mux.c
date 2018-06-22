@@ -188,7 +188,10 @@ static struct module_pin_mux lcdc_pin_mux[] = {
 };
 
 static struct module_pin_mux backlight_pin_mux[] = {
-	{OFFSET(mcasp0_ahclkr), MODE(7) | PULLUDDIS},
+#ifdef CONFIG_BOARD_WEIDIAN
+	{OFFSET(gpmc_ad13), MODE(7) | PULLUDDIS},		/* lcden: gpmc_ad13.gpio1_13 */
+#endif
+	{OFFSET(mcasp0_ahclkr), MODE(7) | PULLUDDIS},	/* backlight: mcasp0_ahclkr.gpio3_17 */
 	{-1},
 };
 
