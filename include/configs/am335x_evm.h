@@ -553,6 +553,23 @@
 		"bootz ${loadaddr} - ${fdtaddr}; fi\0"
 
 #define CONFIG_SPL_ABORT_ON_RAW_IMAGE
+#if defined(CONFIG_BOARD_WEIDIAN)
+#define MTDPARTS_DEFAULT		"mtdparts=nand.0:" \
+					"128k(NAND.SPL)," \
+					"128k(NAND.SPL.backup1)," \
+					"128k(NAND.SPL.backup2)," \
+					"128k(NAND.SPL.backup3)," \
+					"256k(NAND.u-boot-spl-os)," \
+					"256k(NAND.u-boot-spl-os.backup1)," \
+					"1m(NAND.u-boot)," \
+					"1m(NAND.u-boot.backup1)," \
+					"128k(NAND.u-boot-env)," \
+					"128k(NAND.u-boot-env.backup1)," \
+					"4m(NAND.logo)," \
+					"14m(NAND.kernel)," \
+					"384m(NAND.file-system)," \
+					"-(NAND.user)"
+#else
 #define MTDPARTS_DEFAULT		"mtdparts=nand.0:" \
 					"128k(NAND.SPL)," \
 					"128k(NAND.SPL.backup1)," \
@@ -570,6 +587,7 @@
 					"16m(NAND.ramdisk)," \
 					"400m(NAND.file-system)," \
 					"-(NAND.user)"
+#endif
 #define CONFIG_SYS_NAND_U_BOOT_OFFS				0x00100000
 #define CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND		0x00200000
 
